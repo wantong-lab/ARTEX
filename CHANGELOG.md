@@ -4,9 +4,10 @@
 
 ## [Unreleased]
 
-## [0.4.1] - 2026-11-21
+## [0.4.2] - 2026-11-22
 
 ### 新增的功能
+- Docker 镜像与 demo 数据（P3-17）：Release 工作流改为使用仓库自带的 GITHUB_TOKEN 推送多架构镜像到 GHCR（ghcr.io/wantong-lab/artex，amd64/arm64），无需再配置 DOCKERHUB_* secrets；docker-compose 默认镜像同步切换；新增幂等 demo 种子 scripts/demo/seed_demo.py（2 个已暂停 [DEMO] 任务、4 条知识库、4 个示例资产，全用 example.test/192.0.2.0/24 保留地址），镜像内置 /app/seed_demo.py 并写入 README「5 分钟体验」与安装脚本提示。
 - 前端打磨（P3-16）：新增全局/主界面错误边界（ErrorState + error.tsx，含重试/返回/错误详情）与页面级加载骨架（PageSkeleton、app/loading、主路由 loading，内网中枢加载态替换为骨架）；API 统一错误体验（网络不可达与 5xx toast、403 统一无权限提示、401 跳登录并携带 next，登录后回跳原页面）；暗色主题对比度提升（muted/border/input/ring 与图表色板）；移动端关键页面（仪表盘/C2/内网中枢/任务）390px 宽度无横向溢出；C2 页面已完成真实功能（P1-6），侧栏无 Soon 占位。
 
 - 文档（P3-15）：新增 docs/llm-config.md（协议格式、profile 全字段、opencode-go + session_header_key 实战配方、流式/非流式、失败转移与五层重试、用量记录、排障速查与密钥管理）、docs/ops-manual.md（C2/代理池/保留清理/调度与监控运维手册）、docs/faq.md（24 条实战 FAQ）；README 与部署指南补充文档索引。
@@ -30,6 +31,8 @@
 - C2 完善（P1-6）：新增 HTTP beacon 监听器（迁移 0010，kind 字段；POST /c2/beacon/<token> 心跳/领取任务/回传结果）与 Python/Bash/PowerShell 植入端模板（GET /api/c2/implant）；新增 DELETE /api/c2/listeners/{id} 与 POST /api/c2/sessions/{id}/tasks；前端新增 C2 管理页（启用开关、监听器/会话/任务、植入端生成），侧栏 C2 由 Soon 转为可用。
 - 数据保留前端页（P1-5，`/system/retention`）：策略编辑、到期预览、试运行（dry-run）、带确认的真实清理、审计与目标侧清理清单、定时调度状态与手动执行；侧栏「系统」新增「数据保留」入口。
 - 维护性定时调度器（P1-4）：统一调度保留自动清理（默认关，可配 1–168 小时）、CVE 自动同步（复用既有 cve_autosync 开关，默认关）、代理池健康巡检（默认开、30 分钟、空池跳过）；新增 `GET /api/scheduler/status` 与 `POST /api/scheduler/run/{name}`（运维手动触发），支持 `ARTEX_SCHEDULER_TICK_SECONDS` 环境变量调整 tick。
+
+## [0.4.1] - 2026-11-21
 
 ### 变更
 - CI 增加 `gofmt` 检查与 API 冒烟门禁（14 个无 LLM/无外网用例）；新增 `scripts/smoke/api_smoke.py`、`scripts/smoke/ui_smoke.mjs` 与使用说明。

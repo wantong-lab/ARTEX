@@ -234,3 +234,9 @@
 - 动作：新增 components/error-state.tsx、components/page-skeleton.tsx、components/api-error-toaster.tsx、app/error.tsx、(main)/error.tsx、app/loading.tsx、(main)/loading.tsx；api.ts http() 统一网络/5xx/403/401 体验（401 带 next 回跳）；登录页支持 ?next=；proxy 与主布局跳登录带 next；暗色主题提升对比度；内网中枢加载态改骨架；C2 页面确认已是真实功能页。
 - 验证：tsc --noEmit 通过、npm run build:static EXIT=0、Go embed 构建通过；Playwright 13 项全 PASS：暗色 5 页截图、401→/login/?next=%2Ffunction%2Ftasks%2F、登录后回跳 /function/tasks/、403 toast「无权限：无权限-e2e」、加载骨架 role=status 可见、移动端 390px 四页 scrollWidth==390 无溢出。
 - 下一步：P3-17 Docker 镜像发布启用（secrets）/ demo seed 数据 / 安装体验，然后补丁 tag 收口。
+
+
+## 轮次 38 · 2026-11-22（P3-17 Docker 镜像 / demo seed / 安装体验 + v0.4.2 收口）
+- 动作：① .github/workflows/release.yml 的 docker job 改为 GHCR（GITHUB_TOKEN + packages: write，多架构 amd64/arm64，ghcr.io/wantong-lab/artex），移除失败的 DockerHub secrets 依赖；docker-compose.yml 默认镜像改 ghcr；② 新增 scripts/demo/seed_demo.py（HTTP API 幂等种子）并 COPY 进镜像 /app/seed_demo.py；③ README 新增「5 分钟体验：灌入 demo 数据」与 GHCR 可见性说明，install.sh 启动后提示；④ CHANGELOG 拆出 [0.4.2] 并写入 P1–P3 全部条目与 P3-17。
+- 验证：seed 在全新库实跑 SEED1=0/SEED2=0（2 任务 paused、4 KB、资产写入，二次执行幂等）；release.yml YAML 解析、docker compose config 通过；本地 docker build 与镜像内二进制验证；tag v0.4.2 后将由 Release 工作流产出五平台 zip + GHCR 镜像。
+- 下一步：打 v0.4.2 tag → 等 Release 工作流（binaries/release/docker）成功 → 校验 Release 资产与 GHCR 镜像 → 目标收口。

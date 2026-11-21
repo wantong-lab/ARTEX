@@ -109,7 +109,7 @@ cd ARTEX
 git clone https://github.com/Autumn-27/ARTEX.git
 cd ARTEX
 cp .env.example .env          # 填 POSTGRES_PASSWORD、可选 ANTHROPIC_API_KEY
-docker compose up -d          # 拉取 autumn27/artex 镜像 + postgres
+docker compose up -d          # 拉取 ghcr.io/wantong-lab/artex 镜像 + postgres
 # → http://localhost:8787
 ```
 
@@ -119,6 +119,25 @@ docker compose up -d          # 拉取 autumn27/artex 镜像 + postgres
 旧版 SSE 服务通常使用 `GET /sse` 建立事件流，再通过服务返回的
 `/message?sessionId=...` 接收 JSON-RPC 请求；配置时将 URL 填为 `/sse`，请求头按
 `Authorization=Bearer <token>` 填写。
+
+#### 5 分钟体验：灌入 demo 数据（可选）
+
+设置管理员密码后，可一键灌入示例数据（不配置 LLM、不访问外网也能看到完整界面）：
+
+```bash
+docker compose exec artex python3 /app/seed_demo.py \
+  --base http://127.0.0.1:8787 --password 你的管理员密码
+```
+
+会生成 2 个 [DEMO] 已暂停任务、4 条知识库条目（ammo/tactic/negative）和 4 个示例资产
+（demo.example.test / 192.0.2.0/24 保留地址）。脚本幂等，可重复执行；清理时在任务页与情报页
+删除带 [DEMO] 前缀的数据即可。
+
+本地二进制运行时用 scripts/demo/seed_demo.py（--base 与 --password 同上）。
+
+> 镜像发布在 GHCR：首次发布后如仓库 Packages 里 artex 包仍为 private，拉取需要
+> docker login ghcr.io；到 GitHub -> Packages -> artex -> Package settings 把可见性改为 public
+> 即可匿名拉取。
 
 ### 方式三：下载预编译二进制（Releases）
 

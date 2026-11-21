@@ -50,6 +50,7 @@ install_docker(){
   docker compose up -d
   ok "启动完成 → http://localhost:8787"
   info "查看日志：docker compose logs -f artex"
+  info "体验 demo 数据（首次设置管理员密码后）：docker compose exec artex python3 /app/seed_demo.py --base http://127.0.0.1:8787 --password 你的管理员密码"
 }
 
 # ── ② 本地编译运行 ──────────────────────────────
