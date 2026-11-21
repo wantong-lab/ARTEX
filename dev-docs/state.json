@@ -2,10 +2,10 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "p2",
-  "round": 31,
-  "current_pr": "P2-11",
-  "current_branch": "test/p2-11-llm-e2e",
-  "development_branch": "test/p2-11-llm-e2e",
+  "round": 32,
+  "current_pr": "P2-12",
+  "current_branch": "test/p2-12-race-soak",
+  "development_branch": "test/p2-12-race-soak",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -208,13 +208,14 @@
     "p1_07_webshell_creds": "migration 0011; physical cleanup verified; Go tests + Playwright 6/6; full db/server/c2 green",
     "p1_08_kb": "kb/manage.go pagination/update/delete/SQL insights; planner extras; API 13 checks + Playwright 5/5; tests green",
     "p1_09_proxypool": "mihomo import adapter; unified outbound sploitus+cve; UI auth/health/latency; API 8 checks + Playwright 4/4",
-    "p1_10_ssh_smb_tunnel": "SSH/SMB registration+UI; SSH protocol test; real chisel loopback e2e PASS; real VPS SSH exec/read/write PASS; suo5/SMB real target not available"
+    "p1_10_ssh_smb_tunnel": "SSH/SMB registration+UI; SSH protocol test; real chisel loopback e2e PASS; real VPS SSH exec/read/write PASS; suo5/SMB real target not available",
+    "p2_11_llm_e2e": "scripts/acceptance/llm_e2e.py full run EXIT=0: task done, marker in plan+intent, 202535 tokens, intercept denied executed=false; planner guard gap filed to P2-13"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-22T00:00:00+08:00",
+  "updated_at": "2026-11-22T00:15:00+08:00",
   "release": {
     "tag": "v0.4.1",
     "commit": "237a26f",
@@ -232,7 +233,7 @@
       "total": 7
     },
     "p2": {
-      "done": 0,
+      "done": 1,
       "total": 4
     },
     "p3": {

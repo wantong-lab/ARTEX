@@ -197,3 +197,10 @@
 - 结果：SSH 协议级测试（内置 sshd：登录/执行/读写/坏密码/门禁）通过；SMB 登记+恢复+无 wmiexec 明确报错通过；真实 chisel 二进制 loopback 隧道 e2e 通过（server/client 进程、socks 入口、经隧道 HTTP 取回 marker、台账 alive）；用户提供的真实 VPS 上 SSH 会话执行 hostname/uname、远端文件读写通过。全量 session/server/tunnel/agent 测试通过。
 - 偏差：suo5 真机未验证（无二进制/payload）；SMB 无 Windows 真机（仅登记/错误路径）；VPS 反向回连隧道受 NAT/ssh -R 路径限制，实验未闭环（chisel 以本机 loopback 真机验证）。
 - 下一步：进入 P2 验证与加固（P2-11 LLM 全链路 E2E 与治理强制场景）。
+
+
+## 轮次 32 · 2026-11-22（P2-11 LLM 全链路 E2E + 治理强制场景）
+- 动作：新增 scripts/acceptance/llm_e2e.py 可重复验收脚本（标准库，跑在已启动服务上）；用 artex_accept 库中真实 opencode-go 配置（非流式）执行：登录→激活配置→/api/llm/test 真实连通→创建任务→要件「Bash 执行 echo ARTEX-P2-LLM-OK」→轮询终态→按 main/plan/intent 会话拉活动历史核对标记与 usage tokens→登记全局 deny 规则→创建 seed_first_intent 治理任务→校验拦截历史 denied 且 worker 未真实执行。
+- 结果（三轮真实运行，最终全绿）：LLM 连通回复 OK；任务 #13 status=done；标记命中 plan 与 intent:40；usage 202535 tokens；拦截规则 #23 命中 worker Bash 调用 status=denied（matched 2、denied 2、executed=false），脚本 EXIT=0。
+- 发现（转 P2-13）：planner 自己的直接工具调用未挂 Guard（全局拦截规则对 planner 不生效）；当前验收用 seed_first_intent 把治理场景固定到 worker 路径。
+- 下一步：P2-12 全量 race / soak / 升级回滚演练 / 备份恢复。
