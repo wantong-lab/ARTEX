@@ -47,6 +47,10 @@ type Server struct {
 	skillDir string // root directory for skill subdirectories
 	jwtKey   []byte // HS256 signing key loaded from / generated into dataDir/jwt.key
 
+	// P2-14 可观测性：进程内 HTTP 指标与启动时间。
+	metrics   *httpMetrics
+	startedAt time.Time
+
 	// sessionMu 保护 sessHub；会话中枢是进程级共享（注册表跨任务/worker 复用）。
 	sessionMu sync.Mutex
 	sessHub   *sessionHub
@@ -183,7 +187,8 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 		triggerActive: map[string]int{}, triggerCfg: map[string]triggerBehavior{},
 		profChatAgents: map[int64]*agent.ChatAgent{},
 		provByProfile:  map[int64]*provEntry{}, llmHealth: newLLMHealthRegistry(m.pg),
-		taskAgents: map[string]*taskAgentBundle{}, archiveWake: make(chan struct{}, 1)}
+		taskAgents: map[string]*taskAgentBundle{}, archiveWake: make(chan struct{}, 1),
+		metrics: newHTTPMetrics(), startedAt: time.Now()}
 	s.initSideQuestions()
 	// 熔断阈值/冷却是失败路径上的热参数，启动时把全局重试策略推给 Registry 一次；
 	// 之后每次保存策略再推一次（saveLLMRetryPolicy）。
@@ -697,6 +702,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerProxyPoolRoutes(mux)
 	s.registerRetentionRoutes(mux)
 	mux.HandleFunc("GET /api/scheduler/status", s.schedulerStatus)
+	mux.HandleFunc("GET /api/observability/status", s.observabilityStatus)
 	mux.HandleFunc("POST /api/scheduler/run/{name}", s.schedulerRun)
 
 	// Auth routes — exempt from JWT check (handled in requireAuth)
@@ -986,7 +992,9 @@ func (s *Server) Handler() http.Handler {
 	// no-embed build the webui handler just 404s (run `next dev` separately).
 	api := cors(s.requireAuth(mux))
 	root := http.NewServeMux()
-	root.Handle("/api/", api)
+	root.Handle("/api/", s.metricsMiddleware(api))
+	// /metrics 不走 JWT：默认仅回环可抓取；跨机抓取用 ARTEX_METRICS_TOKEN。
+	root.Handle("/metrics", s.metricsHandler())
 	root.Handle("/", s.webuiHandler())
 	return root
 }

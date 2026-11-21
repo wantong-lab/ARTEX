@@ -383,6 +383,18 @@ func (e *Engine) EndLLMCall(taskID string) {
 	}
 }
 
+// SumActiveLLMCalls 聚合所有任务的进行中 LLM 调用数（/metrics 用）。
+func (e *Engine) SumActiveLLMCalls() int64 {
+	var total int64
+	e.llmCalls.Range(func(_, v any) bool {
+		if p, ok := v.(*int64); ok {
+			total += atomic.LoadInt64(p)
+		}
+		return true
+	})
+	return total
+}
+
 func (e *Engine) ActiveLLMCalls(taskID string) int64 {
 	if v, ok := e.llmCalls.Load(taskID); ok {
 		return atomic.LoadInt64(v.(*int64))

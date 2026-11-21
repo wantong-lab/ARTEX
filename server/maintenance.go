@@ -124,6 +124,7 @@ func (m *maintainer) exec(j *maintenanceJob) {
 			log.Printf("[scheduler] %s panic: %v", j.name, r)
 		}
 	}()
+	m.srv.obsLog("info", "scheduler_job_start", map[string]any{"job": j.name})
 	res, err := j.run(ctx)
 	m.mu.Lock()
 	j.running = false
@@ -131,13 +132,13 @@ func (m *maintainer) exec(j *maintenanceJob) {
 	if err != nil {
 		j.lastErr = err.Error()
 		m.mu.Unlock()
-		log.Printf("[scheduler] %s 失败: %v", j.name, err)
+		m.srv.obsLog("error", "scheduler_job_failed", map[string]any{"job": j.name, "error": err.Error()})
 		return
 	}
 	j.lastErr = ""
 	m.mu.Unlock()
 	if res != "" {
-		log.Printf("[scheduler] %s: %s", j.name, res)
+		m.srv.obsLog("info", "scheduler_job_done", map[string]any{"job": j.name, "result": res})
 	}
 }
 

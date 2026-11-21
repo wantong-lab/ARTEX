@@ -1752,6 +1752,24 @@ func (m *Manager) Task(id string) (*Task, bool) {
 	return t, ok
 }
 
+// TaskStatusCounts 汇总内存中任务的状态计数（/metrics 与 observability status 用）。
+func (m *Manager) TaskStatusCounts() map[string]int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := map[string]int{}
+	for _, t := range m.tasks {
+		if t == nil {
+			continue
+		}
+		st := t.lifecycleSnapshot().Status
+		if st == "" {
+			st = "unknown"
+		}
+		out[st]++
+	}
+	return out
+}
+
 // ActiveTask returns the currently active task (or nil).
 func (m *Manager) ActiveTask() *Task {
 	m.mu.RLock()

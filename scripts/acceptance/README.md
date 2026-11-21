@@ -66,3 +66,12 @@ CGO_ENABLED=1 ARTEX_PG_DSN='postgres://artex:artex@127.0.0.1:55432/artex_race?ss
 ```bash
 python3 scripts/acceptance/security_audit.py --base http://127.0.0.1:18905 --db artex_p213
 ```
+
+
+## 可观测性（P2-14）
+
+observability_check.py
+
+对运行中的服务校验 /metrics 指标集合与请求计数增长、/api/observability/status JSON、以及 ARTEX_LOG_FORMAT=json 时的结构化访问日志；服务需以 JSON 日志模式启动并传入 --log-file。
+
+python3 scripts/acceptance/observability_check.py --base http://127.0.0.1:18907 --log-file /tmp/artex-obs.log

@@ -216,3 +216,9 @@
 - 动作：① C2 非回环校验（c2.ValidateBindHost + 创建/启动双重复核 + settings.c2_allow_non_loopback）；② master key 轮换：db.RotateSecretKeys 事务内重加密四类密文 + cmd/artex-rotate-key CLI（dry-run/原子替换 key）；③ host_ledger 审计哈希链（迁移 0012、写路径锁表串行、VerifyHostLedger + GET /api/security/audit/verify）；④ planner Guard 缺口修复：agent.Planner.SetHooks + 任务 Guard hooks 接线 + 拦截任务上下文；⑤ 安全验收脚本 scripts/acceptance/security_audit.py。
 - 结果：go vet/build/gofmt 全绿；db/c2/guard/server 测试通过；轮换单测（含 dry-run/错误 key 回滚）与哈希链篡改/并发测试通过；真实 artex_accept 上 CLI dry-run+正式轮换（2 条代理）成功，重启后代理 URL 可解密、迁移 12；security_audit.py 在轮换前后均 EXIT=0（凭据/代理/C2 token gcm1、无明文、非回环拒绝/开关恢复、审计 ok）；真实 LLM E2E EXIT=0（任务 done、标记命中 plan+intent、207041 tokens；worker 治理 denied executed=false；planner 治理 new_denied=1 agent_name=planner executed=false）。
 - 下一步：P2-14 可观测性（/metrics、结构化日志、清理/同步任务监控），随后 P3。
+
+
+## 轮次 35 · 2026-11-22（P2-14 可观测性）
+- 动作：新增 server/obs.go（手写 Prometheus 文本指标、HTTP 指标中间件含 SSE Flush 透传、回环/Token 抓取控制、JSON 结构化日志与访问日志、observability status handler）；Server 接入 metrics/startedAt 与 /metrics 路由；Manager.TaskStatusCounts、Engine.SumActiveLLMCalls；维护调度器接入结构化日志；新增 scripts/acceptance/observability_check.py。
+- 结果：go build/vet/gofmt 全绿、server 包测试通过（指标 handler/远程拒绝/Token 放行/中间件计数/JSON 日志/status 单测）；真实服务以 ARTEX_LOG_FORMAT=json 启动，验收脚本 EXIT=0：/metrics 基础/构建信息/Go runtime/计数增长（3→8）/任务总数/3 个调度任务指标/DB 连接池，observability-status 全字段，结构化 http_request 日志命中；/metrics 远程抓取含 Token 通过、无 Token 403。
+- 下一步：P3-15 LLM 配置文档 → P3-16 前端打磨 → P3-17 Docker 镜像与 demo seed，最终补丁 tag。
