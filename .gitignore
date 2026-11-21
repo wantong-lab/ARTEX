@@ -58,3 +58,6 @@ Thumbs.db
 /bench/
 /Dockerfile.bench
 /Dockerfile.bench.v2
+
+# 运行日志（本地产物，不提交）
+*.log
