@@ -688,6 +688,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerC2Routes(mux)
 	s.registerWebshellRoutes(mux)
 	s.registerProxyPoolRoutes(mux)
+	s.registerRetentionRoutes(mux)
 
 	// Auth routes — exempt from JWT check (handled in requireAuth)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
