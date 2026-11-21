@@ -94,3 +94,9 @@
 - 结果：空查询与无关查询严格返回空、命中可检索、条目/洞察/backfill 用例、入库幂等（同 finding 两次仍 1 条）与脱敏用例共 6 个全绿；干净库全量 **22 包全绿**（EXIT=0）。提交 `e1114d5`。
 - 偏差：planner 无 extras 注入通道，kb_search/kb_add 目前只给 worker/pentest；kb-insights 用前 500 条本地聚合（数据量大后需 SQL 聚合）。
 - 下一步：M3-03 CVE 与 Sploitus。
+
+## 轮次 16 · 2026-11-21
+- 动作：M3-03。重写 `kb/cve_sync.go`（替换二开 reconstructed 胶水）：NVD API 2.0 分页同步、每页落库后写 `cve.sync.json` 断点、ctx 取消返回可续跑状态、兼容 cve/cves 两种库；`server/cve_api.go` 新增 status/search/sploitus/sync/autosync；`cve_search` 工具进 BuiltinToolSeeds 并注入 worker/pentest（描述里明确「指纹匹配≠可利用」）。
+- 结果：中断→续跑→幂等、只读挂载检索、fixture 命中、sploitus/sync/autosync 共 5 个用例全绿；干净库全量 **22 包全绿**（EXIT=0）。提交 `7b6d0d3`。
+- 偏差：autosync 仅持久化开关，实际调度留给 M5 定时任务；Sploitus 线上网络路径用 stub 验证（离线环境不触网）；cve_search 只给 worker/pentest（planner 无 extras 通道）。
+- 下一步：M3-04 情报页。

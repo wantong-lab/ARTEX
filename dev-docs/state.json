@@ -2,14 +2,14 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "M3",
-  "round": 15,
-  "current_pr": "M3-03",
-  "current_branch": "feat/m3-03-cve",
-  "development_branch": "feat/m3-02-kb-api",
+  "round": 16,
+  "current_pr": "M3-04",
+  "current_branch": "feat/m3-04-ui-intel",
+  "development_branch": "feat/m3-03-cve",
   "status_counts": {
-    "completed": 16,
+    "completed": 17,
     "in_progress": 0,
-    "pending": 8,
+    "pending": 7,
     "blocked": 0
   },
   "prs": {
@@ -108,6 +108,12 @@
       "branch": "feat/m3-02-kb-api",
       "status": "completed",
       "commit": "e1114d5"
+    },
+    "M3-03": {
+      "milestone": "M3",
+      "branch": "feat/m3-03-cve",
+      "status": "completed",
+      "commit": "7b6d0d3"
     }
   },
   "known_issues": [
@@ -143,12 +149,13 @@
     "m2_04": "guard 三态/提取/模式/loopback 7 单测；PG 审批写 task_scope（10.1.2.0/24）、重复审批拒绝、拒绝路径；全量 21 包全绿",
     "m2_05": "next build 通过且 /function/intranet 在路由表；Go 全量 21 包全绿；凭据解密降级 PG 用例（错误密钥列表可用、单行 SecretOK=false）",
     "m3_01": "memory 4 用例（embedder 不可达关键词召回降级、recallBlock 空、vecLit、env 默认）+ reflector 3 用例（脱敏、摘要、无记忆 no-op）；干净库全量 22 包全绿",
-    "m3_02": "空查询/无关查询返回空、命中可检索；entry/insights/backfill 用例；入库幂等（finding-77 两次仍 1 条）且内容脱敏；干净库 22 包全绿"
+    "m3_02": "空查询/无关查询返回空、命中可检索；entry/insights/backfill 用例；入库幂等（finding-77 两次仍 1 条）且内容脱敏；干净库 22 包全绿",
+    "m3_03": "中断后断点 start_index=2/processed=2 并成功续跑到 done；重复同步行数不变；只读目录 immutable 回退可检索；fixture Log4j 命中；sploitus/sync/autosync handler 用例；干净库 22 包全绿"
   },
   "next_actions": [
-    "M3-03: CVE 指纹与 Sploitus 知识源（cve_search 工具 + 按指纹关联）",
-    "M3-04: 知识库前端页与 CVE UI"
+    "M3-04: 情报页（KB/CVE/Sploitus 前端）",
+    "M4-01: C2 与 WebShell 生成接入"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T14:12:00+08:00"
+  "updated_at": "2026-11-21T14:30:00+08:00"
 }
