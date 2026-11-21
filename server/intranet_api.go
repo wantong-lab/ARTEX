@@ -6,6 +6,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -18,6 +19,9 @@ func (s *Server) registerIntranetRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/intranet/sessions", s.intranetSessions)
 	mux.HandleFunc("GET /api/intranet/tunnels", s.intranetTunnels)
 	mux.HandleFunc("GET /api/intranet/credentials", s.intranetCredentials)
+	mux.HandleFunc("POST /api/intranet/credentials", s.intranetCreateCredential)
+	mux.HandleFunc("GET /api/intranet/credentials/{id}/secret", s.intranetRevealCredential)
+	mux.HandleFunc("DELETE /api/intranet/credentials/{id}", s.intranetDeleteCredential)
 	mux.HandleFunc("GET /api/intranet/host-ledger", s.intranetHostLedger)
 	mux.HandleFunc("GET /api/intranet/pending-scope", s.intranetPendingScope)
 	mux.HandleFunc("POST /api/intranet/pending-scope/{id}/approve", s.intranetApproveScope)
@@ -281,3 +285,89 @@ func taskIDOf(t *Task) int64 {
 }
 
 var _ = context.Background
+
+// intranetCreateCredential 手动登记凭据（agent 之外的人工录入/复用入口）。
+func (s *Server) intranetCreateCredential(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		TaskID      int64  `json:"task_id"`
+		HostAssetID int64  `json:"host_asset_id"`
+		Username    string `json:"username"`
+		CredType    string `json:"cred_type"`
+		Secret      string `json:"secret"`
+		Domain      string `json:"domain"`
+		Source      string `json:"source"`
+		Verified    bool   `json:"verified"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
+		return
+	}
+	body.Username = strings.TrimSpace(body.Username)
+	body.CredType = strings.TrimSpace(body.CredType)
+	body.Secret = strings.TrimSpace(body.Secret)
+	if body.Username == "" || body.Secret == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "username 与 secret 必填"})
+		return
+	}
+	if body.TaskID <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "task_id 必填（凭据按任务归属）"})
+		return
+	}
+	if !pgdb.ValidCredType(body.CredType) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "cred_type 非法"})
+		return
+	}
+	source := strings.TrimSpace(body.Source)
+	if source == "" {
+		source = "web"
+	}
+	store := pgdb.NewCredentialStore(s.m.pg, s.jwtKey)
+	id, err := store.Create(r.Context(), &pgdb.CredentialRecord{
+		TaskID: body.TaskID, HostAssetID: body.HostAssetID, Username: body.Username,
+		CredType: body.CredType, Secret: body.Secret, Domain: strings.TrimSpace(body.Domain),
+		Source: source, Verified: body.Verified,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"ok": true, "id": id})
+}
+
+// intranetRevealCredential 按需返回明文凭据（用于复用）；每次读取写服务端日志。
+func (s *Server) intranetRevealCredential(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(strings.TrimSpace(r.PathValue("id")), 10, 64)
+	if err != nil || id <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "id 非法"})
+		return
+	}
+	store := pgdb.NewCredentialStore(s.m.pg, s.jwtKey)
+	rec, err := store.Get(r.Context(), id)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "凭据解密失败：" + err.Error()})
+		return
+	}
+	if rec == nil {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "凭据不存在"})
+		return
+	}
+	log.Printf("[credential] 明文读取 id=%d username=%s source=%s", rec.ID, rec.Username, rec.Source)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id": rec.ID, "username": rec.Username, "cred_type": rec.CredType,
+		"secret": rec.Secret, "domain": rec.Domain, "verified": rec.Verified,
+	})
+}
+
+func (s *Server) intranetDeleteCredential(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(strings.TrimSpace(r.PathValue("id")), 10, 64)
+	if err != nil || id <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "id 非法"})
+		return
+	}
+	store := pgdb.NewCredentialStore(s.m.pg, s.jwtKey)
+	if err := store.Delete(r.Context(), id); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}

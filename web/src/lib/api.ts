@@ -127,6 +127,7 @@ import type {
   C2Listener,
   C2Session,
   C2Task,
+  WebshellCleanupResult,
 } from "@/lib/types";
 
 function getToken(): string | null {
@@ -1387,6 +1388,20 @@ export const api = {
     if (taskID) sp.set("task_id", String(taskID));
     return get<{ credentials: IntranetCredential[] }>(`/intranet/credentials?${sp}`);
   },
+  intranetCreateCredential: (body: {
+    task_id: number;
+    username: string;
+    cred_type: string;
+    secret: string;
+    domain?: string;
+    host_asset_id?: number;
+    verified?: boolean;
+  }) => post<{ ok: boolean; id: number }>("/intranet/credentials", { ...body, source: "web" }),
+  intranetRevealCredential: (id: number) =>
+    get<{ id: number; username: string; cred_type: string; secret: string; domain?: string; verified: boolean }>(
+      "/intranet/credentials/" + id + "/secret",
+    ),
+  intranetDeleteCredential: (id: number) => del<{ ok: boolean }>("/intranet/credentials/" + id),
   intranetHostLedger: (params?: { session?: number; host?: string; artifacts?: boolean; limit?: number }) => {
     const sp = new URLSearchParams();
     if (params?.session) sp.set("session_id", String(params.session));
@@ -1422,13 +1437,13 @@ export const api = {
   webshellShells: () => get<{ shells: WebshellShell[] }>(`/webshell/shells`),
   webshellGenerate: (body: { lang: string; obfuscate?: boolean; note?: string }) =>
     post<GeneratedWebshell>(`/webshell/generate`, body),
-  webshellRegister: (body: { url: string; password?: string; lang?: string; secret?: string; asset_id?: number }) =>
+  webshellRegister: (body: { url: string; password?: string; lang?: string; secret?: string; asset_id?: number; path?: string }) =>
     post<{ session_id: number; kind: string; lang: string }>(`/webshell/register`, body),
   webshellExec: (body: { session_id: number; command: string; timeout_seconds?: number }) =>
     post<{ stdout: string; stderr: string; truncated: boolean; ms: number }>(`/webshell/exec`, body),
   webshellRead: (body: { session_id: number; path: string; max_bytes?: number }) =>
     post<{ size: number; truncated: boolean; text?: string }>(`/webshell/read`, body),
-  webshellCleanup: (id: number) => del<{ ok: boolean; cleanup: string }>(`/webshell/shells/${id}`),
+  webshellCleanup: (id: number) => del<WebshellCleanupResult>(`/webshell/shells/${id}`),
 
   // ---- 情报：知识库（M3-04）----
   kbStatus: () => get<{ ok: boolean; dir: string; entries: number }>(`/kb/status`),

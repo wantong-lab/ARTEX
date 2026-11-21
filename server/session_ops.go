@@ -17,13 +17,22 @@ import (
 )
 
 // registerCore 探测并登记一个 WebShell 会话。
-func (h *sessionHub) registerCore(ctx context.Context, rawURL, password, lang, secret string, assetID int64) (map[string]any, error) {
+func (h *sessionHub) registerCore(ctx context.Context, rawURL, password, lang, secret string, assetID int64, artifactPath string) (map[string]any, error) {
 	rawURL = strings.TrimSpace(rawURL)
 	if rawURL == "" {
 		return nil, fmt.Errorf("url 为必填参数")
 	}
 	if strings.EqualFold(lang, "ssh") || strings.HasPrefix(rawURL, "ssh://") {
 		return nil, fmt.Errorf("ssh 会话登记在后续里程碑提供；当前仅支持 HTTP webshell")
+	}
+	artifactPath = strings.TrimSpace(artifactPath)
+	if artifactPath != "" {
+		if strings.ContainsAny(artifactPath, "'\n\r\x00") {
+			return nil, fmt.Errorf("目标路径含非法字符（引号/换行/NUL）")
+		}
+		if !strings.HasPrefix(artifactPath, "/") && !(len(artifactPath) > 2 && artifactPath[1] == ':' && (artifactPath[2] == '\\' || artifactPath[2] == '/')) {
+			return nil, fmt.Errorf("目标路径需为绝对路径")
+		}
 	}
 	if h.gate != nil {
 		if err := h.gate(ctx, rawURL); err != nil {
@@ -44,7 +53,7 @@ func (h *sessionHub) registerCore(ctx context.Context, rawURL, password, lang, s
 	}
 	ri := agent.RunInfoFrom(ctx)
 	rec := &db.SessionRecord{
-		Kind: hs.Kind(), HostAssetID: assetID, URL: rawURL,
+		Kind: hs.Kind(), HostAssetID: assetID, URL: rawURL, ArtifactPath: artifactPath,
 		Secret: sec, Lang: hs.Lang(), Status: db.SessionAlive,
 		CreatedByTask: ri.TaskID, CreatedByIntent: ri.IntentID,
 	}
@@ -135,32 +144,91 @@ func (h *sessionHub) listShells(ctx context.Context) ([]*db.SessionRecord, error
 	return out, nil
 }
 
-// cleanupShell 下线并清理一个 WebShell：先登记 host_ledger 清理项，再删除会话记录。
-func (h *sessionHub) cleanupShell(ctx context.Context, id int64) (string, error) {
+// cleanupShell 下线并清理 WebShell：配置了目标路径时先物理删除并校验，再删会话记录。
+func (h *sessionHub) cleanupShell(ctx context.Context, id int64) (map[string]any, error) {
 	rec, err := h.store.Get(ctx, id)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if rec == nil {
-		return "", fmt.Errorf("会话 %d 不存在（可能已清理）", id)
+		return nil, fmt.Errorf("会话 %d 不存在（可能已清理）", id)
 	}
 	host := h.hostOf(id, rec.URL)
-	cleanup := "删除已上传 WebShell: " + host
+	path := strings.TrimSpace(rec.ArtifactPath)
+	res := map[string]any{"session_id": id, "host": host, "artifact_path": path, "physical": false, "verified": false}
+	msg := "删除已上传 WebShell: " + host
+	cleanupCmd := "cleanup webshell"
+	cleanupOK := true
+	note := "WebShell 管理页清理"
+
+	if path != "" {
+		sh, lerr := h.load(ctx, id)
+		if lerr != nil {
+			if h.ledger != nil {
+				_ = h.ledger.AddHostOp(&db.HostOp{SessionID: id, Host: host, Channel: "webshell",
+					Cmd: "rm " + path, OK: false, Artifact: true, AtType: "file",
+					Cleanup: "物理清理失败: " + path, Note: lerr.Error()})
+			}
+			return nil, fmt.Errorf("物理清理失败：无法加载会话：%w", lerr)
+		}
+		rmCmd := "rm -f -- '" + path + "'"
+		start := time.Now()
+		stdout, stderr, xerr := sh.Exec(ctx, rmCmd, 30*time.Second)
+		out := strings.TrimSpace(stdout + " " + stderr)
+		ms := int(time.Since(start).Milliseconds())
+		res["delete_command"] = rmCmd
+		res["delete_output"] = truncateForNote(out, 300)
+		cleanupCmd = rmCmd
+		if xerr != nil {
+			if h.ledger != nil {
+				_ = h.ledger.AddHostOp(&db.HostOp{SessionID: id, Host: host, Channel: "webshell",
+					Cmd: rmCmd, OK: false, Ms: ms, Artifact: true, AtType: "file",
+					Cleanup: "物理删除失败: " + path, Note: truncateForNote(out, 200)})
+			}
+			return nil, fmt.Errorf("物理删除失败：%v（输出 %s）", xerr, truncateForNote(out, 200))
+		}
+		verifyCmd := "test ! -e '" + path + "' && echo ARGEX-GONE || echo ARGEX-PRESENT"
+		vout, _, verr := sh.Exec(ctx, verifyCmd, 15*time.Second)
+		verified := verr == nil && strings.Contains(vout, "ARGEX-GONE")
+		res["physical"] = true
+		res["verified"] = verified
+		res["verify_output"] = truncateForNote(strings.TrimSpace(vout), 200)
+		if !verified {
+			if h.ledger != nil {
+				_ = h.ledger.AddHostOp(&db.HostOp{SessionID: id, Host: host, Channel: "webshell",
+					Cmd: rmCmd, OK: false, Ms: ms, Artifact: true, AtType: "file",
+					Cleanup: "物理删除后校验失败: " + path, Note: truncateForNote(strings.TrimSpace(vout), 200)})
+			}
+			return nil, fmt.Errorf("删除后校验失败：目标路径仍存在（输出 %s）", truncateForNote(strings.TrimSpace(vout), 200))
+		}
+		msg = "已物理删除并校验: " + path + "（" + host + "）"
+		note = "WebShell 管理页物理清理"
+	}
+
 	if h.ledger != nil {
 		_ = h.ledger.AddHostOp(&db.HostOp{
 			SessionID: id, Host: host, Channel: "webshell",
-			Cmd: "cleanup webshell", OK: true, Artifact: true, AtType: "file",
-			Cleanup: cleanup, Note: "WebShell 管理页清理",
+			Cmd: cleanupCmd, OK: cleanupOK, Artifact: true, AtType: "file",
+			Cleanup: msg, Note: note,
 		})
 	}
 	if err := h.store.Delete(ctx, id); err != nil {
-		return "", err
+		return nil, err
 	}
-	h.reg.Remove(id) // 内存注册表同步移除，清理后不可再执行
+	h.reg.Remove(id)
 	h.mu.Lock()
 	delete(h.host, id)
 	h.mu.Unlock()
-	return cleanup, nil
+	res["cleanup"] = msg
+	return res, nil
+}
+
+// truncateForNote 截断台账备注，避免 shell 输出过长。
+func truncateForNote(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "…"
 }
 
 // shellHost 从会话 URL 取 host（用于展示）。

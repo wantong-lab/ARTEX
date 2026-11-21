@@ -7,6 +7,7 @@
 ## [0.4.1] - 2026-11-21
 
 ### 新增的功能
+- WebShell/凭据闭环（P1-7）：登记可填目标侧绝对路径（迁移 0011 sessions.artifact_path），清理时先 rm 再校验文件不存在，失败保留会话并记 host_ledger；内网中枢「凭据」页支持手动新增、按需读取明文（服务端日志）、删除与复制复用。
 - C2 完善（P1-6）：新增 HTTP beacon 监听器（迁移 0010，kind 字段；POST /c2/beacon/<token> 心跳/领取任务/回传结果）与 Python/Bash/PowerShell 植入端模板（GET /api/c2/implant）；新增 DELETE /api/c2/listeners/{id} 与 POST /api/c2/sessions/{id}/tasks；前端新增 C2 管理页（启用开关、监听器/会话/任务、植入端生成），侧栏 C2 由 Soon 转为可用。
 - 数据保留前端页（P1-5，`/system/retention`）：策略编辑、到期预览、试运行（dry-run）、带确认的真实清理、审计与目标侧清理清单、定时调度状态与手动执行；侧栏「系统」新增「数据保留」入口。
 - 维护性定时调度器（P1-4）：统一调度保留自动清理（默认关，可配 1–168 小时）、CVE 自动同步（复用既有 cve_autosync 开关，默认关）、代理池健康巡检（默认开、30 分钟、空池跳过）；新增 `GET /api/scheduler/status` 与 `POST /api/scheduler/run/{name}`（运维手动触发），支持 `ARTEX_SCHEDULER_TICK_SECONDS` 环境变量调整 tick。

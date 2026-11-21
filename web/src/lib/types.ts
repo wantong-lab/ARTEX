@@ -1637,6 +1637,7 @@ export interface WebshellShell {
   created_by_task?: number;
   last_beat?: string;
   created_at?: string;
+  artifact_path?: string;
 }
 
 export interface GeneratedWebshell {
@@ -1908,4 +1909,13 @@ export interface C2Task {
   source: string;
   created_at: string;
   duration_ms: number;
+}
+
+
+export interface WebshellCleanupResult {
+  ok: boolean;
+  cleanup: string;
+  physical: boolean;
+  verified: boolean;
+  artifact_path?: string;
 }

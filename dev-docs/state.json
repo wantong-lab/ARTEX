@@ -2,10 +2,10 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "p1",
-  "round": 27,
-  "current_pr": "P1-07",
-  "current_branch": "feat/p1-07-webshell-creds",
-  "development_branch": "feat/p1-07-webshell-creds",
+  "round": 28,
+  "current_pr": "P1-08",
+  "current_branch": "feat/p1-08-kb-complete",
+  "development_branch": "feat/p1-08-kb-complete",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -204,13 +204,14 @@
     "p0_completion": "88c485a (smoke+CI+UI a11y/404/h1), 237a26f (v0.4.1); CI 44909962033 success; release 44910352144 success",
     "p1_04_scheduler": "server/maintenance.go; unit tests pass; integration: retention auto/manual run + audit, proxy empty skip, status/run API",
     "p1_05_retention_ui": "web/src/app/(main)/system/retention/page.tsx; Playwright 7/7 pass 0 console error",
-    "p1_06_c2": "migration 0010 http beacon; integration 13 checks; Playwright 11/11; db fresh tests ok"
+    "p1_06_c2": "migration 0010 http beacon; integration 13 checks; Playwright 11/11; db fresh tests ok",
+    "p1_07_webshell_creds": "migration 0011; physical cleanup verified; Go tests + Playwright 6/6; full db/server/c2 green"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T22:30:00+08:00",
+  "updated_at": "2026-11-21T22:45:00+08:00",
   "release": {
     "tag": "v0.4.1",
     "commit": "237a26f",
@@ -224,7 +225,7 @@
       "total": 3
     },
     "p1": {
-      "done": 3,
+      "done": 4,
       "total": 7
     },
     "p2": {

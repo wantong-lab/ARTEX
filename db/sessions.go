@@ -32,6 +32,7 @@ type SessionRecord struct {
 	CreatedByIntent int64           `json:"created_by_intent,omitempty"`
 	LastBeat        time.Time       `json:"last_beat"`
 	CreatedAt       time.Time       `json:"created_at"`
+	ArtifactPath    string          `json:"artifact_path,omitempty"`
 	// SecretCorrupt 标记 secret 解密失败的行（密钥不符,如跨实例迁移）:
 	// 元数据可读,执行通道不可用。仅 List 容错路径会置位。
 	SecretCorrupt bool `json:"secret_corrupt,omitempty"`
@@ -149,16 +150,16 @@ func (s *SessionStore) Create(ctx context.Context, rec *SessionRecord) (int64, e
 	}
 	var id int64
 	err = s.d.QueryRowContext(ctx, `
-INSERT INTO sessions(kind, host_asset_id, url, secret, lang, status, created_by_task, created_by_intent)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO sessions(kind, host_asset_id, url, secret, lang, status, created_by_task, created_by_intent, artifact_path)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id`,
 		rec.Kind, nilIfZero(rec.HostAssetID), rec.URL, enc, rec.Lang, status,
-		nilIfZero(rec.CreatedByTask), nilIfZero(rec.CreatedByIntent)).Scan(&id)
+		nilIfZero(rec.CreatedByTask), nilIfZero(rec.CreatedByIntent), rec.ArtifactPath).Scan(&id)
 	return id, err
 }
 
 const sessionCols = `id, kind, COALESCE(host_asset_id,0), url, secret, lang, status,
-	COALESCE(created_by_task,0), COALESCE(created_by_intent,0), last_beat, created_at`
+	COALESCE(created_by_task,0), COALESCE(created_by_intent,0), last_beat, created_at, COALESCE(artifact_path,'')`
 
 func (s *SessionStore) scan(row interface{ Scan(...any) error }) (*SessionRecord, error) {
 	r, enc, err := s.scanRaw(row)
@@ -178,7 +179,7 @@ func (s *SessionStore) scanRaw(row interface{ Scan(...any) error }) (*SessionRec
 	var r SessionRecord
 	var enc string
 	if err := row.Scan(&r.ID, &r.Kind, &r.HostAssetID, &r.URL, &enc, &r.Lang, &r.Status,
-		&r.CreatedByTask, &r.CreatedByIntent, &r.LastBeat, &r.CreatedAt); err != nil {
+		&r.CreatedByTask, &r.CreatedByIntent, &r.LastBeat, &r.CreatedAt, &r.ArtifactPath); err != nil {
 		return nil, "", err
 	}
 	return &r, enc, nil

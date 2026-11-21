@@ -171,3 +171,10 @@
 - 动作：迁移 0010（c2_listeners.kind tcp/http + 任务索引）；c2/payload.go 新增 HTTP Python/Bash/PowerShell 模板；server/c2_http.go 实现 HTTP beacon 服务（token 路径、会话 upsert、queued 任务原子领取、结果回写、事件）、DELETE listener、会话下发任务、植入端生成；c2_server.go 运行时/启停/路由/kind 接入；前端 /function/c2 管理页与侧栏解禁。
 - 结果：后端集成 13 项全过（非法 kind、创建/启动/端口、beacon 上线、错误 token 404、下发→领取→回传 success、植入端内容、tcp 生成 400、删除停端口、会话/任务）；go test ./c2 ./server 通过；fresh DB 后 go test ./db 全绿；Playwright 11/11，0 console error；截图 /tmp/artex-ui-p16-shots/c2-page.png。
 - 下一步：P1-7 WebShell 物理清理 + 凭据 UI。
+
+
+## 轮次 28 · 2026-11-21（P1-7 WebShell/凭据闭环）
+- 动作：迁移 0011 sessions.artifact_path；registerCore 接收目标路径并校验绝对路径/非法字符；cleanupShell 改为返回结构化结果：有路径时 rm -f 后 test ! -e 校验，失败保留会话并写 host_ledger（OK=false），成功删除会话；凭据新增 POST /api/intranet/credentials、GET /{id}/secret（明文读取写日志）、DELETE /{id}；前端内网中枢「WebShell」加路径登记/路径列/清理提示，「凭据」改为可新增/显示/复制/删除。
+- 结果：Go 测试（物理删除真实 temp 文件、相对路径拒绝）+ fresh DB 全量 db/server/c2 均 ok；Playwright 6/6：凭据创建→显示明文→删除、WebShell 路径登记→清理提示「已物理删除并校验…（已校验文件不存在）」且文件消失，0 console error；截图 /tmp/artex-ui-p17-shots/{credentials,webshell-cleanup}.png。
+- 偏差：明文读取仅记服务端日志，未落审计表（P2-13 安全审计统一补）。
+- 下一步：P1-8 知识库补全（服务端分页、编辑/删除、planner extras、SQL insights）。

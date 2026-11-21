@@ -205,7 +205,7 @@ export default function IntranetPage() {
         ) : tab === "tunnels" ? (
           <TunnelsTable rows={tunnels} />
         ) : tab === "credentials" ? (
-          <CredentialsTable rows={credentials} />
+          <CredentialsBlock rows={credentials} taskID={taskID} onChanged={load} />
         ) : tab === "proxypool" ? (
           <ProxyPoolBlock />
         ) : tab === "webshell" ? (
@@ -339,39 +339,176 @@ function TunnelsTable({ rows }: { rows: IntranetTunnel[] }) {
   );
 }
 
-function CredentialsTable({ rows }: { rows: IntranetCredential[] }) {
-  if (rows.length === 0) return <EmptyState text="暂无凭据。agent 登记密码/哈希/密钥后会出现在这里。" />;
+function CredentialsBlock({
+  rows,
+  taskID,
+  onChanged,
+}: {
+  rows: IntranetCredential[];
+  taskID?: number;
+  onChanged: () => Promise<void> | void;
+}) {
+  const [form, setForm] = React.useState({
+    username: "",
+    cred_type: "password",
+    secret: "",
+    domain: "",
+    task_id: taskID ? String(taskID) : "",
+  });
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [notice, setNotice] = React.useState("");
+  const [revealed, setRevealed] = React.useState<{ id: number; username: string; secret: string } | null>(null);
+
+  const create = async () => {
+    const tid = Number.parseInt(form.task_id, 10);
+    if (!Number.isFinite(tid) || tid <= 0) {
+      setError("任务 ID 必填（凭据按任务归属）");
+      return;
+    }
+    if (!form.username.trim() || !form.secret.trim()) {
+      setError("用户名与密码/机密必填");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const r = await api.intranetCreateCredential({
+        task_id: tid,
+        username: form.username.trim(),
+        cred_type: form.cred_type,
+        secret: form.secret,
+        domain: form.domain.trim(),
+      });
+      setNotice("已登记凭据 #" + r.id);
+      setForm({ ...form, username: "", secret: "", domain: "" });
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reveal = async (id: number) => {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await api.intranetRevealCredential(id);
+      setRevealed({ id: r.id, username: r.username, secret: r.secret });
+      setNotice("已读取凭据 #" + id + " 明文（本次读取已写服务端日志）");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: number) => {
+    if (!window.confirm("删除凭据 #" + id + "？删除后无法恢复。")) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.intranetDeleteCredential(id);
+      setNotice("已删除凭据 #" + id);
+      setRevealed(null);
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-14">ID</TableHead>
-          <TableHead className="w-28">任务</TableHead>
-          <TableHead>用户名</TableHead>
-          <TableHead className="w-24">类型</TableHead>
-          <TableHead className="w-28">域</TableHead>
-          <TableHead>密码/机密</TableHead>
-          <TableHead className="w-20">已验证</TableHead>
-          <TableHead>来源</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((r) => (
-          <TableRow key={r.id}>
-            <TableCell>{r.id}</TableCell>
-            <TableCell>{r.task_id}</TableCell>
-            <TableCell className="font-mono text-xs">{r.username || "-"}</TableCell>
-            <TableCell>{r.cred_type}</TableCell>
-            <TableCell>{r.domain || "-"}</TableCell>
-            <TableCell className="font-mono text-xs">
-              {r.secret_ok ? (r.secret_masked || "******") : <span className="text-destructive">解密失败</span>}
-            </TableCell>
-            <TableCell>{r.verified ? <Badge>已验</Badge> : <Badge variant="secondary">未验</Badge>}</TableCell>
-            <TableCell className="max-w-xs truncate text-xs">{r.source || "-"}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <div className="flex flex-col gap-3 p-3">
+      {error ? <Card className="border-destructive/40 bg-destructive/5 p-2 text-destructive text-sm">{error}</Card> : null}
+      {notice ? <Card className="border-emerald-500/40 bg-emerald-500/5 p-2 text-emerald-600 text-sm">{notice}</Card> : null}
+      <div className="flex flex-wrap items-end gap-2">
+        <Input className="w-24" placeholder="任务 ID" value={form.task_id} onChange={(e) => setForm({ ...form, task_id: e.target.value })} />
+        <Input className="w-36" placeholder="用户名" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+        <select
+          className="rounded-md border bg-transparent px-2 py-2 text-sm"
+          value={form.cred_type}
+          onChange={(e) => setForm({ ...form, cred_type: e.target.value })}
+        >
+          <option value="password">password</option>
+          <option value="hash_nt">hash_nt</option>
+          <option value="hash_lm">hash_lm</option>
+          <option value="hash_sha1">hash_sha1</option>
+          <option value="hash_unix">hash_unix</option>
+          <option value="ssh_key">ssh_key</option>
+          <option value="ticket">ticket</option>
+          <option value="token">token</option>
+        </select>
+        <Input className="w-48" placeholder="密码 / 机密" value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} />
+        <Input className="w-28" placeholder="域（可选）" value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} />
+        <Button size="sm" disabled={busy} onClick={() => void create()}>
+          新增凭据
+        </Button>
+      </div>
+      {revealed ? (
+        <Card className="flex flex-wrap items-center gap-2 border-amber-500/40 bg-amber-500/5 p-2 text-sm">
+          <span className="font-medium">#{revealed.id} {revealed.username} 明文：</span>
+          <code className="max-w-full break-all font-mono text-xs">{revealed.secret}</code>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              navigator.clipboard.writeText(revealed.secret).then(
+                () => setNotice("已复制到剪贴板"),
+                () => setError("复制失败"),
+              );
+            }}
+          >
+            复制
+          </Button>
+        </Card>
+      ) : null}
+      {rows.length === 0 ? (
+        <p className="p-4 text-center text-muted-foreground text-sm">暂无凭据。agent 登记或手动新增后会出现在这里。</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-14">ID</TableHead>
+              <TableHead className="w-20">任务</TableHead>
+              <TableHead>用户名</TableHead>
+              <TableHead className="w-24">类型</TableHead>
+              <TableHead className="w-24">域</TableHead>
+              <TableHead>密码/机密</TableHead>
+              <TableHead className="w-20">已验证</TableHead>
+              <TableHead>来源</TableHead>
+              <TableHead className="w-44">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={r.id}>
+                <TableCell>{r.id}</TableCell>
+                <TableCell>{r.task_id}</TableCell>
+                <TableCell className="font-mono text-xs">{r.username || "-"}</TableCell>
+                <TableCell>{r.cred_type}</TableCell>
+                <TableCell>{r.domain || "-"}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  {r.secret_ok ? r.secret_masked || "******" : <span className="text-destructive">解密失败</span>}
+                </TableCell>
+                <TableCell>{r.verified ? <Badge>已验</Badge> : <Badge variant="secondary">未验</Badge>}</TableCell>
+                <TableCell className="max-w-xs truncate text-xs">{r.source || "-"}</TableCell>
+                <TableCell className="flex gap-1">
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => void reveal(r.id)}>
+                    显示
+                  </Button>
+                  <Button size="sm" variant="destructive" disabled={busy} onClick={() => void remove(r.id)}>
+                    删除
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
   );
 }
 
@@ -471,7 +608,7 @@ function WebshellBlock() {
   const [gen, setGen] = React.useState<GeneratedWebshell | null>(null);
   const [genLang, setGenLang] = React.useState("php");
   const [obfuscate, setObfuscate] = React.useState(false);
-  const [regForm, setRegForm] = React.useState({ url: "", password: "cmd", lang: "auto", secret: "" });
+  const [regForm, setRegForm] = React.useState({ url: "", password: "cmd", lang: "auto", secret: "", path: "" });
   const [selected, setSelected] = React.useState<number | null>(null);
   const [command, setCommand] = React.useState("id");
   const [execOut, setExecOut] = React.useState("");
@@ -514,6 +651,7 @@ function WebshellBlock() {
       const r = await api.webshellRegister({
         url: regForm.url, password: regForm.password || undefined,
         lang: regForm.lang, secret: regForm.secret || undefined,
+        path: regForm.path.trim() || undefined,
       });
       setNotice(`已登记会话 #${r.session_id}（${r.kind}）`);
       setError("");
@@ -559,7 +697,7 @@ function WebshellBlock() {
     setBusy(true);
     try {
       const r = await api.webshellCleanup(id);
-      setNotice(r.cleanup);
+      setNotice(r.physical ? r.cleanup + (r.verified ? "（已校验文件不存在）" : "") : r.cleanup);
       setSelected(null);
       await refresh();
     } catch (e) {
@@ -611,6 +749,7 @@ function WebshellBlock() {
             <Input placeholder="lang: auto/php/phpcmd/jsp/aspx/phpenc..." value={regForm.lang} onChange={(e) => setRegForm({ ...regForm, lang: e.target.value })} />
             <Input placeholder="加密马 secret" value={regForm.secret} onChange={(e) => setRegForm({ ...regForm, secret: e.target.value })} />
           </div>
+          <Input placeholder="目标侧绝对路径（可选，用于物理删除+校验，如 /var/www/html/x.php）" value={regForm.path} onChange={(e) => setRegForm({ ...regForm, path: e.target.value })} />
           <Button size="sm" disabled={busy || !regForm.url.trim()} onClick={() => void register()}>
             登记（先探测再落库）
           </Button>
@@ -636,6 +775,7 @@ function WebshellBlock() {
               <TableRow>
                 <TableHead className="w-16">ID</TableHead>
                 <TableHead>host</TableHead>
+                <TableHead>目标路径</TableHead>
                 <TableHead className="w-24">kind</TableHead>
                 <TableHead className="w-20">状态</TableHead>
                 <TableHead className="w-32">操作</TableHead>
@@ -646,6 +786,7 @@ function WebshellBlock() {
                 <TableRow key={sh.id} className={selected === sh.id ? "bg-muted/50" : ""}>
                   <TableCell>{sh.id}</TableCell>
                   <TableCell className="max-w-md truncate">{sh.host}</TableCell>
+                  <TableCell className="max-w-xs truncate font-mono text-xs">{sh.artifact_path || "-"}</TableCell>
                   <TableCell className="text-xs">{sh.kind}</TableCell>
                   <TableCell>
                     <Badge variant={sh.status === "alive" ? "default" : "secondary"}>{sh.status}</Badge>

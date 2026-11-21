@@ -36,6 +36,7 @@ func (s *Server) webshellList(w http.ResponseWriter, r *http.Request) {
 			"id": rec.ID, "kind": rec.Kind, "lang": rec.Lang, "status": rec.Status,
 			"host": shellHost(rec.URL), "url": rec.URL, "host_asset_id": rec.HostAssetID,
 			"created_by_task": rec.CreatedByTask, "last_beat": rec.LastBeat, "created_at": rec.CreatedAt,
+			"artifact_path": rec.ArtifactPath,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"shells": out})
@@ -66,12 +67,13 @@ func (s *Server) webshellRegister(w http.ResponseWriter, r *http.Request) {
 		Lang     string `json:"lang"`
 		Secret   string `json:"secret"`
 		AssetID  int64  `json:"asset_id"`
+		Path     string `json:"path"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
 		return
 	}
-	res, err := s.sessions().registerCore(r.Context(), body.URL, body.Password, body.Lang, body.Secret, body.AssetID)
+	res, err := s.sessions().registerCore(r.Context(), body.URL, body.Password, body.Lang, body.Secret, body.AssetID, body.Path)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return
@@ -121,12 +123,15 @@ func (s *Server) webshellCleanup(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "id 非法"})
 		return
 	}
-	cleanup, err := s.sessions().cleanupShell(r.Context(), id)
+	res, err := s.sessions().cleanupShell(r.Context(), id)
 	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
+		writeJSON(w, http.StatusConflict, map[string]any{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "cleanup": cleanup})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok": true, "cleanup": res["cleanup"], "physical": res["physical"],
+		"verified": res["verified"], "artifact_path": res["artifact_path"],
+	})
 }
 
 var _ = fmt.Sprintf

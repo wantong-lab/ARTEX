@@ -14,7 +14,7 @@
 - [x] P1-4 统一定时调度器：retention 自动清理、CVE autosync 实际调度、代理池健康巡检（settings 可控）。
 - [x] P1-5 保留/清理前端页：策略编辑、预览、dry-run、审计、目标侧清理清单。
 - [x] P1-6 C2 完善：前端页（监听器/会话/任务）、listener 删除 API、HTTP beacon、多语言 implant（DNS 可拆）。
-- [ ] P1-7 WebShell/凭据闭环：目标侧马体物理删除+校验；凭据注入/复用 UI。
+- [x] P1-7 WebShell/凭据闭环：目标侧马体物理删除+校验；凭据注入/复用 UI。
 - [ ] P1-8 知识库补全：服务端分页、条目编辑/删除、planner extras 注入 kb/cve、insights SQL 聚合。
 - [ ] P1-9 代理池增强：mihomo 适配器、其余出站统一接入、UI 认证延迟/健康度。
 - [ ] P1-10 SSH/SMB 会话登记 + 隧道真机验证（chisel/suo5）。
@@ -43,3 +43,5 @@
 - 2026-11-21：P1-5 完成（/system/retention：策略/预览/dry-run/真删确认/审计/清理清单/调度状态+手动执行）。Playwright 7 项交互全过、0 console error。
 
 - 2026-11-21：P1-6 完成（迁移 0010 kind；HTTP beacon + token 路径；c2_http.go 会话/任务复用；DELETE listener；POST session task；GET implant 三语言；/function/c2 前端页）。后端集成 13 项全过；Playwright 11 项 E2E 全过（含真实 beacon 领取/回传、端口关闭），0 console error；db 全量测试 fresh DB 全绿。
+
+- 2026-11-21：P1-7 完成（迁移 0011 artifact_path；清理先 rm 后 test ! -e 校验，失败保留会话；凭据 POST/GET secret/DELETE + UI 新增/显示/复制/删除）。Go 测试（物理删除删文件、相对路径拒绝）+ 全量 db/server/c2 全绿；Playwright 6/6（凭据增显删、WebShell 路径登记、物理清理校验）、0 console error。
