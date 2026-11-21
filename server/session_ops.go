@@ -6,6 +6,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -15,6 +16,9 @@ import (
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/session"
 )
+
+// errShellNotFound 标记「会话不存在/已清理」，供 API 映射 404。
+var errShellNotFound = errors.New("会话不存在")
 
 // registerCore 探测并登记一个 WebShell 会话。
 func (h *sessionHub) registerCore(ctx context.Context, rawURL, password, lang, secret string, assetID int64, artifactPath string) (map[string]any, error) {
@@ -151,7 +155,7 @@ func (h *sessionHub) cleanupShell(ctx context.Context, id int64) (map[string]any
 		return nil, err
 	}
 	if rec == nil {
-		return nil, fmt.Errorf("会话 %d 不存在（可能已清理）", id)
+		return nil, fmt.Errorf("%w：会话 %d（可能已清理）", errShellNotFound, id)
 	}
 	host := h.hostOf(id, rec.URL)
 	path := strings.TrimSpace(rec.ArtifactPath)

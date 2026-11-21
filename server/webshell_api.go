@@ -5,6 +5,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -125,7 +126,11 @@ func (s *Server) webshellCleanup(w http.ResponseWriter, r *http.Request) {
 	}
 	res, err := s.sessions().cleanupShell(r.Context(), id)
 	if err != nil {
-		writeJSON(w, http.StatusConflict, map[string]any{"error": err.Error()})
+		status := http.StatusConflict
+		if errors.Is(err, errShellNotFound) {
+			status = http.StatusNotFound
+		}
+		writeJSON(w, status, map[string]any{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
