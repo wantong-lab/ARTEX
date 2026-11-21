@@ -561,14 +561,23 @@ func (s *Server) agentsForTask(t *Task) *taskAgentBundle {
 	mainRuntime := &taskLLMRuntime{s: s, taskID: t.ID, agentKey: "mainagent"}
 	tx := transcript.NewStore(filepath.Join(s.m.dir, "transcripts"))
 	window := workerRuntime.CompactionWindow()
-	wk := agent.NewWorker(workerRuntime, "task-router", s.m.dir, tx, window, s.agentMaxTurns("worker"), s.sessions().tools()...)
+	extra := append(s.sessions().tools(), s.tunnels().tools()...)
+	wk := agent.NewWorker(workerRuntime, "task-router", s.m.dir, tx, window, s.agentMaxTurns("worker"), extra...)
 	wk.SetFindingRecorder(s.evidenceStore())
 	wk.SetCompactionWindowResolver(workerRuntime.CompactionWindow)
 	wk.SetNonStreaming(workerRuntime.nonStreaming) // 按任务当前激活 profile 的流式开关(每轮读)
 	wk.SetMaxTokens(workerRuntime.maxTokens)       // 同上,输出上限也跟随当前激活 profile
 	wk.SetNoaEnabled(s.m.NoaCompactionEnabled)     // 实验功能:noa 上下文压缩(平台级开关,每 run 读)
 	wk.SetRunTimeout(time.Duration(s.agentRunSeconds("worker")) * time.Second)
-	wk.SetProxy(s.m.ProxyAddr(), s.m.ProxyCACert())
+	proxyAddr, proxyCA := s.m.ProxyAddr(), s.m.ProxyCACert()
+	if tid, perr := strconv.ParseInt(t.ID, 10, 64); perr == nil && tid > 0 {
+		if s.taskProxy().HasTunnels(context.Background(), tid) {
+			if a, ca := s.taskProxy().ForTask(context.Background(), tid); a != "" {
+				proxyAddr, proxyCA = a, ca
+			}
+		}
+	}
+	wk.SetProxy(proxyAddr, proxyCA)
 	wk.SetUAPoolFn(func() []string {
 		if s.m == nil || s.m.pg == nil {
 			return nil

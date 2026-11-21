@@ -50,6 +50,11 @@ type Server struct {
 	sessionMu sync.Mutex
 	sessHub   *sessionHub
 
+	// tunnelMu 保护隧道运行时与任务级 MITM 管理器（二者互相依赖：状态变化回调刷新上游）。
+	tunnelMu    sync.Mutex
+	tunnelRT    *tunnelRuntime
+	taskProxyRT *taskProxyManager
+
 	// concMu serializes concurrency-cap decisions (admission + reconcile) so a
 	// scheduler tick and an HTTP settings change / task creation can't both count
 	// free slots off the same snapshot and over-promote past the limit.
