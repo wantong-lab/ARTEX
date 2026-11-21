@@ -2,14 +2,14 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "M5",
-  "round": 20,
-  "current_pr": "M5-01",
-  "current_branch": "feat/m5-01-agent-routing",
-  "development_branch": "feat/m4-03-proxypool",
+  "round": 21,
+  "current_pr": "M5-02",
+  "current_branch": "feat/m5-02-cleanup",
+  "development_branch": "feat/m5-01-agent-routing",
   "status_counts": {
-    "completed": 21,
+    "completed": 22,
     "in_progress": 0,
-    "pending": 3,
+    "pending": 2,
     "blocked": 0
   },
   "prs": {
@@ -138,6 +138,12 @@
       "branch": "feat/m4-03-proxypool",
       "status": "completed",
       "commit": "4d47718"
+    },
+    "M5-01": {
+      "milestone": "M5",
+      "branch": "feat/m5-01-agent-routing",
+      "status": "completed",
+      "commit": "84b8e78"
     }
   },
   "known_issues": [
@@ -178,13 +184,13 @@
     "m3_04": "next build 通过且 .next 生成 function/intel；KB 手工入库可检索、CVE 同步可中断 2 个新用例通过；干净库全量 22 包全绿",
     "m4_01": "帧编解码/超长帧拒绝、信封密封+篡改失败、监听器启动→握手→派发→停止（停止后端口不可连）、坏 token 拒绝、token 密文落库与解密、无主密钥 fail-closed、任务状态机、默认关闭门禁；干净库 23 包全绿",
     "m4_02": "登记→执行→读取→列表→清理全链路用例通过；清理写 host_ledger（channel=webshell/artifact=true/cleanup 文案）并删会话、注册表同步移除后再执行必失败；secret 不外泄；gate 拒绝登记；next build 通过；全新库 23 包全绿",
-    "m4_03": "探测可用性判断（坏代理 failed）、切换后出口 IP 改变、活动代理坏死回退全局/直连且累计 fail_count、URL 密文+去重、next build 通过、全新库 24 包全绿"
+    "m4_03": "探测可用性判断（坏代理 failed）、切换后出口 IP 改变、活动代理坏死回退全局/直连且累计 fail_count、URL 密文+去重、next build 通过、全新库 24 包全绿",
+    "m5_01": "分类五档与 chain_tags 优先、空 payload 落 general；frontier 默认 8 第 9 个拒派、释放后可再取；接力表与同键重复拒绝；广播多订阅者收发/退订/跨任务隔离；全新库 24 包全绿"
   },
   "next_actions": [
-    "M5-01: Agent 分级路由（主/子 agent 模型与预算分级）",
-    "M5-02: 链路骨架/编排与清理",
-    "M5-03: 收口、文档与 v0.4.0"
+    "M5-02: 清理与保留（activity 30d / logs 14d / c2 30d，dry-run，host_ledger 清理清单）",
+    "M5-03: 发布（CHANGELOG/README/部署文档、v0.4.0 tag、release workflow）"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T16:40:00+08:00"
+  "updated_at": "2026-11-21T17:20:00+08:00"
 }

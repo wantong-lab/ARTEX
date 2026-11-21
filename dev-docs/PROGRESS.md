@@ -125,3 +125,9 @@
 - 结果：探测可用性、切换改变出口 IP、坏死自动回退全局/直连、URL 密文+去重共 4 组用例全绿；`npm run build` 通过；全新库全量 **24 包全绿**（EXIT=0）。提交 `4d47718`。**M4 后渗透面里程碑全部完成。**
 - 偏差：mihomo 适配器按规格后置；目前仅 Sploitus 出站接入代理池 client，其余出站路径（CVE 同步等）后续统一接入。
 - 下一步：M5-01 Agent 分级路由。
+
+## 轮次 21 · 2026-11-21
+- 动作：M5-01。新增 `agent/intentbudget.go`（五档分类 recon 900/enum 1800/brute 2400/exploit 2400/general 1800 + 纪律提示）、`agent/frontier.go`（默认上限 8 的并发限制）、`agent/relay.go`（角色接力表 + 幂等账本）、`agent/taskbus.go`（同任务广播总线）；worker system 注入预算纪律；engine 在 `runWorkerStep` 满额拒派、`runIntent` 用预算 ctx 作为硬上限（耗尽按 exhausted 收尾）、终态广播并做幂等接力事件。
+- 结果：分类/边界、frontier 满拒派、接力幂等、广播收发 4 组用例全绿；全新库全量 **24 包全绿**（EXIT=0）。提交 `84b8e78`。
+- 偏差：接力只发事件（planner 决策派发，不自动建意图）；frontier 上限固定 8（settings 动态化留待后续）；预算五档通过 ctx 超时+提示双约束实现，未引入独立 watchdog。
+- 下一步：M5-02 清理与保留。
