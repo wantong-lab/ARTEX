@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "objective": "artex-product-parity",
-  "phase": "M4",
-  "round": 19,
-  "current_pr": "M4-03",
-  "current_branch": "feat/m4-03-proxypool",
-  "development_branch": "feat/m4-02-webshell",
+  "phase": "M5",
+  "round": 20,
+  "current_pr": "M5-01",
+  "current_branch": "feat/m5-01-agent-routing",
+  "development_branch": "feat/m4-03-proxypool",
   "status_counts": {
-    "completed": 20,
+    "completed": 21,
     "in_progress": 0,
-    "pending": 4,
+    "pending": 3,
     "blocked": 0
   },
   "prs": {
@@ -132,6 +132,12 @@
       "branch": "feat/m4-02-webshell",
       "status": "completed",
       "commit": "85836c1"
+    },
+    "M4-03": {
+      "milestone": "M4",
+      "branch": "feat/m4-03-proxypool",
+      "status": "completed",
+      "commit": "4d47718"
     }
   },
   "known_issues": [
@@ -171,12 +177,14 @@
     "m3_03": "中断后断点 start_index=2/processed=2 并成功续跑到 done；重复同步行数不变；只读目录 immutable 回退可检索；fixture Log4j 命中；sploitus/sync/autosync handler 用例；干净库 22 包全绿",
     "m3_04": "next build 通过且 .next 生成 function/intel；KB 手工入库可检索、CVE 同步可中断 2 个新用例通过；干净库全量 22 包全绿",
     "m4_01": "帧编解码/超长帧拒绝、信封密封+篡改失败、监听器启动→握手→派发→停止（停止后端口不可连）、坏 token 拒绝、token 密文落库与解密、无主密钥 fail-closed、任务状态机、默认关闭门禁；干净库 23 包全绿",
-    "m4_02": "登记→执行→读取→列表→清理全链路用例通过；清理写 host_ledger（channel=webshell/artifact=true/cleanup 文案）并删会话、注册表同步移除后再执行必失败；secret 不外泄；gate 拒绝登记；next build 通过；全新库 23 包全绿"
+    "m4_02": "登记→执行→读取→列表→清理全链路用例通过；清理写 host_ledger（channel=webshell/artifact=true/cleanup 文案）并删会话、注册表同步移除后再执行必失败；secret 不外泄；gate 拒绝登记；next build 通过；全新库 23 包全绿",
+    "m4_03": "探测可用性判断（坏代理 failed）、切换后出口 IP 改变、活动代理坏死回退全局/直连且累计 fail_count、URL 密文+去重、next build 通过、全新库 24 包全绿"
   },
   "next_actions": [
-    "M4-03: 代理池最小闭环（proxy pool 导入/健康检查/分配/回收）",
-    "M5-01: 链路骨架与分级路由"
+    "M5-01: Agent 分级路由（主/子 agent 模型与预算分级）",
+    "M5-02: 链路骨架/编排与清理",
+    "M5-03: 收口、文档与 v0.4.0"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T16:00:00+08:00"
+  "updated_at": "2026-11-21T16:40:00+08:00"
 }
