@@ -1871,3 +1871,41 @@ export interface SchedulerStatus {
   now_unix: number;
   jobs: SchedulerJob[];
 }
+
+
+// ---- C2（P1-6）----
+export interface C2Listener {
+  id: number;
+  name: string;
+  kind: string;
+  bind_host: string;
+  bind_port: number;
+  status: string;
+  last_error?: string;
+  has_token?: boolean;
+  started_at?: string;
+}
+export interface C2Session {
+  id: number;
+  listener_id: number;
+  implant_uuid: string;
+  remote_addr: string;
+  os: string;
+  arch: string;
+  username: string;
+  status: string;
+  first_seen_at: string;
+  last_check_in: string;
+}
+export interface C2Task {
+  id: number;
+  session_id: number;
+  task_type: string;
+  args: string;
+  status: string;
+  output?: string;
+  error?: string;
+  source: string;
+  created_at: string;
+  duration_ms: number;
+}

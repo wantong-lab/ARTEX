@@ -124,6 +124,9 @@ import type {
   RetentionCleanupResult,
   RetentionCleanupList,
   SchedulerStatus,
+  C2Listener,
+  C2Session,
+  C2Task,
 } from "@/lib/types";
 
 function getToken(): string | null {
@@ -258,6 +261,25 @@ function interceptPageQuery(page: number, size: number, filter: InterceptApprova
 }
 
 export const api = {
+  // ---- C2（P1-6）----
+  c2Status: () => get<{ enabled: boolean; listeners: C2Listener[]; sessions: number }>("/c2/status"),
+  c2Enable: (enabled: boolean) => post<{ ok: boolean; enabled: string }>("/c2/enable", { enabled }),
+  c2Listeners: () => get<{ listeners: C2Listener[] }>("/c2/listeners"),
+  c2CreateListener: (input: { name: string; kind: string; bind_host: string; bind_port: number }) =>
+    post<{ ok: boolean; id: number; token?: string }>("/c2/listeners", input),
+  c2StartListener: (id: number) => post<{ ok: boolean }>("/c2/listeners/" + id + "/start", {}),
+  c2StopListener: (id: number) => post<{ ok: boolean }>("/c2/listeners/" + id + "/stop", {}),
+  c2DeleteListener: (id: number) => del<{ ok: boolean }>("/c2/listeners/" + id),
+  c2Sessions: () => get<{ sessions: C2Session[] }>("/c2/sessions"),
+  c2Tasks: (sessionId?: number) =>
+    get<{ tasks: C2Task[] }>("/c2/tasks" + (sessionId ? "?session_id=" + sessionId : "")),
+  c2QueueTask: (sessionId: number, command: string) =>
+    post<{ ok: boolean; id: number; status: string }>("/c2/sessions/" + sessionId + "/tasks", { command }),
+  c2Implant: (listenerId: number, lang: string) =>
+    get<{ ok: boolean; lang: string; base_url: string; content: string }>(
+      "/c2/implant?listener_id=" + listenerId + "&lang=" + encodeURIComponent(lang),
+    ),
+
   // ---- retention / scheduler（P1-4 / P1-5）----
   retentionStatus: () => get<RetentionStatus>("/retention/status"),
   retentionSavePolicy: (policy: RetentionPolicy) => put<{ ok: boolean; policy: RetentionPolicy }>("/retention/policy", policy),

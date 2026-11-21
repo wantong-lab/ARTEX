@@ -30,6 +30,10 @@ type c2Runtime struct {
 	dbToMgr map[int64]int64 // DB listener id → manager listener id
 	mgrToDB map[int64]int64 // manager listener id → DB listener id
 
+	// HTTP beacon 监听器（P1-6）：独立 http.Server，按 DB listener id 管理。
+	httpMu      sync.Mutex
+	httpServers map[int64]*http.Server
+
 	// execMu 串行化任务下发（同一植入端并发下发会串台输出）。
 	execMu sync.Mutex
 }
@@ -44,7 +48,7 @@ func (s *Server) c2rt() *c2Runtime {
 	if s.m == nil || s.m.pg == nil {
 		return nil
 	}
-	rt := &c2Runtime{srv: s, dbToMgr: map[int64]int64{}, mgrToDB: map[int64]int64{}}
+	rt := &c2Runtime{srv: s, dbToMgr: map[int64]int64{}, mgrToDB: map[int64]int64{}, httpServers: map[int64]*http.Server{}}
 	rt.store = db.NewC2Store(s.m.pg, s.jwtKey)
 	token := ""
 	if v, ok, err := s.m.pg.GetSetting("c2_token"); err == nil && ok {
@@ -119,6 +123,13 @@ func (r *c2Runtime) Start(ctx context.Context) error {
 		return err
 	}
 	for _, l := range listeners {
+		if l.Kind == db.C2ListenerKindHTTP {
+			if err := r.startHTTPOne(ctx, l); err != nil {
+				_ = r.store.SetListenerStatus(ctx, l.ID, db.C2ListenerError, err.Error())
+				log.Printf("[c2] HTTP 监听器 %d 启动失败（%s:%d）：%v", l.ID, l.BindHost, l.BindPort, err)
+			}
+			continue
+		}
 		r.mu.Lock()
 		_, running := r.dbToMgr[l.ID]
 		r.mu.Unlock()
@@ -154,6 +165,7 @@ func (r *c2Runtime) stopAll() {
 	r.dbToMgr = map[int64]int64{}
 	r.mgrToDB = map[int64]int64{}
 	r.mu.Unlock()
+	r.stopAllHTTP()
 	r.mgr.StopAll()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -166,6 +178,9 @@ func (r *c2Runtime) startOne(ctx context.Context, dbID int64) error {
 	l, err := r.store.GetListener(ctx, dbID)
 	if err != nil || l == nil {
 		return fmt.Errorf("监听器 %d 不存在", dbID)
+	}
+	if l.Kind == db.C2ListenerKindHTTP {
+		return r.startHTTPOne(ctx, l)
 	}
 	addr := net.JoinHostPort(l.BindHost, strconv.Itoa(l.BindPort))
 	mgrID, _, err := r.mgr.Start(ctx, addr)
@@ -181,6 +196,7 @@ func (r *c2Runtime) startOne(ctx context.Context, dbID int64) error {
 }
 
 func (r *c2Runtime) stopOne(ctx context.Context, dbID int64) error {
+	r.stopHTTPOne(ctx, dbID)
 	r.mu.Lock()
 	mgrID, ok := r.dbToMgr[dbID]
 	if ok {
@@ -203,6 +219,9 @@ func (s *Server) registerC2Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/c2/listeners/{id}/stop", s.c2StopListener)
 	mux.HandleFunc("GET /api/c2/sessions", s.c2ListSessions)
 	mux.HandleFunc("GET /api/c2/tasks", s.c2ListTasks)
+	mux.HandleFunc("DELETE /api/c2/listeners/{id}", s.c2DeleteListener)
+	mux.HandleFunc("POST /api/c2/sessions/{id}/tasks", s.c2QueueTask)
+	mux.HandleFunc("GET /api/c2/implant", s.c2GenerateImplant)
 }
 
 func (s *Server) c2Status(w http.ResponseWriter, r *http.Request) {
@@ -217,7 +236,7 @@ func (s *Server) c2Status(w http.ResponseWriter, r *http.Request) {
 	plain := make([]map[string]any, 0, len(listeners))
 	for _, l := range listeners {
 		plain = append(plain, map[string]any{
-			"id": l.ID, "name": l.Name, "bind_host": l.BindHost, "bind_port": l.BindPort,
+			"id": l.ID, "name": l.Name, "kind": l.Kind, "bind_host": l.BindHost, "bind_port": l.BindPort,
 			"status": l.Status, "last_error": l.LastError, "started_at": l.StartedAt,
 			"has_token": l.Token != "",
 		})
@@ -277,7 +296,7 @@ func (s *Server) c2ListListeners(w http.ResponseWriter, r *http.Request) {
 	out := make([]map[string]any, 0, len(listeners))
 	for _, l := range listeners {
 		out = append(out, map[string]any{
-			"id": l.ID, "name": l.Name, "bind_host": l.BindHost, "bind_port": l.BindPort,
+			"id": l.ID, "name": l.Name, "kind": l.Kind, "bind_host": l.BindHost, "bind_port": l.BindPort,
 			"status": l.Status, "last_error": l.LastError, "has_token": l.Token != "",
 		})
 	}
@@ -292,6 +311,7 @@ func (s *Server) c2CreateListener(w http.ResponseWriter, r *http.Request) {
 	}
 	var body struct {
 		Name     string `json:"name"`
+		Kind     string `json:"kind"`
 		BindHost string `json:"bind_host"`
 		BindPort int    `json:"bind_port"`
 	}
@@ -306,6 +326,14 @@ func (s *Server) c2CreateListener(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(body.BindHost) == "" {
 		body.BindHost = "127.0.0.1"
 	}
+	body.Kind = strings.ToLower(strings.TrimSpace(body.Kind))
+	if body.Kind == "" {
+		body.Kind = db.C2ListenerKindTCP
+	}
+	if body.Kind != db.C2ListenerKindTCP && body.Kind != db.C2ListenerKindHTTP {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "kind 仅支持 tcp 或 http"})
+		return
+	}
 	tokBuf := make([]byte, 24)
 	if _, err := rand.Read(tokBuf); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
@@ -313,7 +341,7 @@ func (s *Server) c2CreateListener(w http.ResponseWriter, r *http.Request) {
 	}
 	token := base64.RawURLEncoding.EncodeToString(tokBuf)
 	id, err := rt.store.CreateListener(r.Context(), &db.C2Listener{
-		Name: body.Name, BindHost: body.BindHost, BindPort: body.BindPort, Token: token,
+		Name: body.Name, Kind: body.Kind, BindHost: body.BindHost, BindPort: body.BindPort, Token: token,
 	})
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})

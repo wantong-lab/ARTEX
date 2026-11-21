@@ -22,6 +22,9 @@ const (
 	C2SessionActive = "active"
 	C2SessionDead   = "dead"
 
+	C2ListenerKindTCP  = "tcp"
+	C2ListenerKindHTTP = "http"
+
 	C2TaskQueued  = "queued"
 	C2TaskSuccess = "success"
 	C2TaskFailed  = "failed"
@@ -32,6 +35,7 @@ type C2Listener struct {
 	Name      string    `json:"name"`
 	BindHost  string    `json:"bind_host"`
 	BindPort  int       `json:"bind_port"`
+	Kind      string    `json:"kind"`
 	Token     string    `json:"-"`
 	Status    string    `json:"status"`
 	LastError string    `json:"last_error,omitempty"`
@@ -122,23 +126,26 @@ func (s *C2Store) openSealed(blob string) (string, error) {
 
 // CreateListener 新建监听器（token 加密落库）。
 func (s *C2Store) CreateListener(ctx context.Context, l *C2Listener) (int64, error) {
+	if l.Kind == "" {
+		l.Kind = C2ListenerKindTCP
+	}
 	enc, err := s.seal(l.Token)
 	if err != nil {
 		return 0, err
 	}
 	var id int64
-	err = s.d.QueryRowContext(ctx, `INSERT INTO c2_listeners(name,bind_host,bind_port,token_enc)
-		VALUES($1,$2,$3,$4) RETURNING id`, l.Name, l.BindHost, l.BindPort, enc).Scan(&id)
+	err = s.d.QueryRowContext(ctx, `INSERT INTO c2_listeners(name,kind,bind_host,bind_port,token_enc)
+		VALUES($1,$2,$3,$4,$5) RETURNING id`, l.Name, l.Kind, l.BindHost, l.BindPort, enc).Scan(&id)
 	return id, err
 }
 
-const c2ListenerCols = `id,name,bind_host,bind_port,token_enc,status,last_error,created_at,started_at`
+const c2ListenerCols = `id,name,kind,bind_host,bind_port,token_enc,status,last_error,created_at,started_at`
 
 func scanC2Listener(row interface{ Scan(...any) error }, s *C2Store) (*C2Listener, error) {
 	var l C2Listener
 	var enc string
 	var started sql.NullTime
-	if err := row.Scan(&l.ID, &l.Name, &l.BindHost, &l.BindPort, &enc, &l.Status, &l.LastError, &l.CreatedAt, &started); err != nil {
+	if err := row.Scan(&l.ID, &l.Name, &l.Kind, &l.BindHost, &l.BindPort, &enc, &l.Status, &l.LastError, &l.CreatedAt, &started); err != nil {
 		return nil, err
 	}
 	if started.Valid {
@@ -279,4 +286,28 @@ func (s *C2Store) FinishTask(ctx context.Context, id int64, status, output, errM
 func (s *C2Store) AddEvent(ctx context.Context, category, message, level string, listenerID, sessionID, taskID int64) {
 	_, _ = s.d.ExecContext(ctx, `INSERT INTO c2_events(category,message,level,listener_id,session_id,task_id)
 		VALUES($1,$2,$3,NULLIF($4,0),NULLIF($5,0),NULLIF($6,0))`, category, message, level, listenerID, sessionID, taskID)
+}
+
+// GetSession 按 id 取会话（HTTP beacon 用）。
+func (s *C2Store) GetSession(ctx context.Context, id int64) (*C2Session, error) {
+	var c C2Session
+	err := s.d.QueryRowContext(ctx, `SELECT id,listener_id,implant_uuid,remote_addr,os,arch,username,status,first_seen_at,last_check_in
+		FROM c2_sessions WHERE id=$1`, id).Scan(&c.ID, &c.ListenerID, &c.ImplantUUID, &c.RemoteAddr, &c.OS, &c.Arch, &c.Username, &c.Status, &c.FirstSeenAt, &c.LastCheckIn)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &c, err
+}
+
+// NextQueuedTask 原子领取该会话最早的一条 queued 任务（置 sent）；无任务返回 (nil,nil)。
+func (s *C2Store) NextQueuedTask(ctx context.Context, sessionID int64) (*C2Task, error) {
+	var t C2Task
+	err := s.d.QueryRowContext(ctx, `UPDATE c2_tasks SET status='sent' WHERE id=(
+			SELECT id FROM c2_tasks WHERE session_id=$1 AND status='queued' ORDER BY id LIMIT 1)
+		RETURNING id,session_id,task_type,args,status,output,error,source,created_at,duration_ms`, sessionID).
+		Scan(&t.ID, &t.SessionID, &t.TaskType, &t.Args, &t.Status, &t.Output, &t.Error, &t.Source, &t.CreatedAt, &t.DurationMs)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &t, err
 }

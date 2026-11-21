@@ -165,3 +165,9 @@
 - 动作：新增 web/src/app/(main)/system/retention/page.tsx（策略编辑、到期预览、dry-run、真实清理确认、审计、目标侧清理清单、调度状态与手动执行）；api.ts/types.ts 增加 retention/scheduler 接口与类型；侧栏系统组新增「数据保留」。
 - 结果：tsc/build:static 通过；Playwright 实测 7 项全过（页面加载、策略值 30/14/30、调度 3 任务且 retention/proxy 启用、dry-run、真删确认、手动执行调度任务、侧栏入口），0 console error；截图 /tmp/artex-ui-p15-shots/retention*.png。
 - 下一步：P1-6 C2 完善（前端页 + listener 删除 API + HTTP beacon）。
+
+
+## 轮次 27 · 2026-11-21（P1-6 C2 完善）
+- 动作：迁移 0010（c2_listeners.kind tcp/http + 任务索引）；c2/payload.go 新增 HTTP Python/Bash/PowerShell 模板；server/c2_http.go 实现 HTTP beacon 服务（token 路径、会话 upsert、queued 任务原子领取、结果回写、事件）、DELETE listener、会话下发任务、植入端生成；c2_server.go 运行时/启停/路由/kind 接入；前端 /function/c2 管理页与侧栏解禁。
+- 结果：后端集成 13 项全过（非法 kind、创建/启动/端口、beacon 上线、错误 token 404、下发→领取→回传 success、植入端内容、tcp 生成 400、删除停端口、会话/任务）；go test ./c2 ./server 通过；fresh DB 后 go test ./db 全绿；Playwright 11/11，0 console error；截图 /tmp/artex-ui-p16-shots/c2-page.png。
+- 下一步：P1-7 WebShell 物理清理 + 凭据 UI。
