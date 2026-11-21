@@ -138,12 +138,17 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   if (r.status === 401) {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("artex_token");
-      document.cookie = "artex_token=; path=/; max-age=0";
-      window.location.href = "/login";
+    // 登录/初始化接口的 401 是「凭据错误」的业务反馈，必须交给页面展示内联错误；
+    // 若在这里统一清 token + 硬跳 /login，页面会被刷新、错误提示随之丢失。
+    const authAttempt = path === "/auth/login" || path === "/auth/init";
+    if (!authAttempt) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("artex_token");
+        document.cookie = "artex_token=; path=/; max-age=0";
+        window.location.href = "/login";
+      }
+      throw new Error("未授权");
     }
-    throw new Error("未授权");
   }
   if (!r.ok) {
     const fallback = `${init?.method ?? "GET"} ${path}: ${r.status}`;
