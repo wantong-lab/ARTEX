@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -45,8 +46,8 @@ type Store struct {
 	backend  string // ollama|openai
 	mu       sync.Once
 	enabled  bool
-	degraded bool
-	vecOK    bool
+	degraded atomic.Bool
+	vecOK    atomic.Bool
 	dim      int
 	cli      *http.Client
 	queue    chan pendingItem // 实时路径(Add):非阻塞,队列满丢新——保护主流程
@@ -81,7 +82,7 @@ func New(d *db.DB) *Store {
 	s.enabled = s.d != nil
 	if s.enabled {
 		s.ensure()
-		s.degraded = !s.probe()
+		s.degraded.Store(!s.probe())
 		for i := 0; i < 2; i++ {
 			s.wg.Add(1)
 			go s.worker()
@@ -126,8 +127,8 @@ func (s *Store) ensure() {
 	_, _ = s.d.Exec(`CREATE EXTENSION IF NOT EXISTS vector`)
 	var has int
 	_ = s.d.QueryRow(`SELECT 1 FROM pg_extension WHERE extname='vector'`).Scan(&has)
-	s.vecOK = has == 1
-	if !s.vecOK {
+	s.vecOK.Store(has == 1)
+	if !s.vecOK.Load() {
 		// 无 pgvector：退化为关键词记忆（embedding 存文本，不参与向量检索）。
 		_, _ = s.d.Exec(`CREATE TABLE IF NOT EXISTS mem_entries(
 			id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, ref_id TEXT NOT NULL DEFAULT '',
@@ -263,10 +264,10 @@ func (s *Store) AddSync(ctx context.Context, kind, refID string, taskID int64, c
 	}
 	vec, err := s.embed(ctx, content)
 	if err != nil {
-		s.degraded = true
+		s.degraded.Store(true)
 		return s.upsert(kind, refID, taskID, content, nil)
 	}
-	s.degraded = false
+	s.degraded.Store(false)
 	return s.upsert(kind, refID, taskID, content, vec)
 }
 
@@ -303,18 +304,18 @@ func (s *Store) embedUpsert(it pendingItem) {
 	vec, err := s.embed(ctx, it.content)
 	cancel()
 	if err != nil {
-		s.degraded = true
+		s.degraded.Store(true)
 		_ = s.upsert(it.kind, it.refID, it.taskID, it.content, nil)
 		return
 	}
-	s.degraded = false
+	s.degraded.Store(false)
 	_ = s.upsert(it.kind, it.refID, it.taskID, it.content, vec)
 	s.backfillNulls(8)
 }
 
 // backfillNulls embedder 恢复后把存量 NULL 向量行补成真向量,自愈降级期数据。
 func (s *Store) backfillNulls(n int) {
-	if !s.vecOK {
+	if !s.vecOK.Load() {
 		return
 	}
 	rows, err := s.d.Query(`SELECT id,content FROM mem_entries WHERE embedding IS NULL ORDER BY id LIMIT ` + fmt.Sprint(n))
@@ -340,7 +341,7 @@ func (s *Store) backfillNulls(n int) {
 		vec, err := s.embed(ctx, it.c)
 		cancel()
 		if err != nil {
-			s.degraded = true
+			s.degraded.Store(true)
 			return
 		}
 		_, _ = s.d.Exec(`UPDATE mem_entries SET embedding=$2::vector WHERE id=$1`, it.id, vecLit(vec))
@@ -369,7 +370,7 @@ func (s *Store) upsert(kind, refID string, taskID int64, content string, vec []f
 		content = strings.ReplaceAll(content, "\x00", "")
 	}
 	content = strings.ToValidUTF8(content, "�")
-	if s.vecOK {
+	if s.vecOK.Load() {
 		_, err := s.d.Exec(`INSERT INTO mem_entries(kind,ref_id,task_id,content,embedding)
 			VALUES($1,$2,$3,$4,$5::vector)
 			ON CONFLICT(kind,ref_id) DO UPDATE SET content=EXCLUDED.content,
@@ -402,15 +403,15 @@ func (s *Store) recallKinds(ctx context.Context, query string, kinds []string, k
 	if k <= 0 {
 		k = recallTopK
 	}
-	if !s.vecOK {
+	if !s.vecOK.Load() {
 		return s.recallKeyword(ctx, query, kinds, k)
 	}
 	vec, err := s.embed(ctx, query)
 	if err != nil {
-		s.degraded = true
+		s.degraded.Store(true)
 		return s.recallKeyword(ctx, query, kinds, k)
 	}
-	s.degraded = false
+	s.degraded.Store(false)
 	q := `SELECT id,kind,ref_id,task_id,content,(embedding <=> $1::vector) AS dist,created_at
 		FROM mem_entries`
 	args := []any{vecLit(vec)}
@@ -586,4 +587,4 @@ func keywordTerms(q string) []string {
 }
 
 // Degraded 报告 embedder 当前处于降级态(召回走关键词,新增条目无向量待回填)。
-func (s *Store) Degraded() bool { return s != nil && s.enabled && s.degraded }
+func (s *Store) Degraded() bool { return s != nil && s.enabled && s.degraded.Load() }

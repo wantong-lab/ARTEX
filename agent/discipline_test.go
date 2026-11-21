@@ -9,8 +9,8 @@ import (
 
 func withPromptOverride(t *testing.T, body string) {
 	t.Helper()
-	t.Cleanup(func() { PromptOverride = nil })
-	PromptOverride = func(string) (string, bool) { return body, true }
+	t.Cleanup(func() { SetPromptOverride(nil) })
+	SetPromptOverride(func(string) (string, bool) { return body, true })
 }
 
 // 固定尾必须由代码拥有：DB 正文改成任意内容后仍然存在。

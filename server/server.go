@@ -208,7 +208,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	// Wire DB-stored prompt templates into the agents (新版方案 §3.3 / §5a). With no
 	// override row, agents keep their built-in defaults — behavior is unchanged.
 	if m.pg != nil {
-		agent.PromptOverride = func(key string) (string, bool) {
+		agent.SetPromptOverride(func(key string) (string, bool) {
 			a, err := m.pg.GetAgentByKey(key)
 			if err != nil || a == nil {
 				return "", false
@@ -218,23 +218,23 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 				return "", false
 			}
 			return t, true
-		}
+		})
 		// Wire DB-stored wrap-up (settlement) prompts. Empty column → built-in default.
-		agent.WrapupOverride = func(key string) (string, bool) {
+		agent.SetWrapupOverride(func(key string) (string, bool) {
 			a, err := m.pg.GetAgentByKey(key)
 			if err != nil || a == nil || a.WrapupPrompt == "" {
 				return "", false
 			}
 			return a.WrapupPrompt, true
-		}
+		})
 		// Wire DB-stored wrap-up turn budgets. 0 / missing → built-in per-agent default.
-		agent.WrapupMaxTurnsOverride = func(key string) (int, bool) {
+		agent.SetWrapupMaxTurnsOverride(func(key string) (int, bool) {
 			a, err := m.pg.GetAgentByKey(key)
 			if err != nil || a == nil || a.WrapupMaxTurns <= 0 {
 				return 0, false
 			}
 			return a.WrapupMaxTurns, true
-		}
+		})
 		// Wire DB-stored TASK-TIMEOUT wrap-up prompt/turns (worker/planner). Empty/0 → default.
 		agent.WrapupTaskTimeoutOverride = func(key string) (string, bool) {
 			a, err := m.pg.GetAgentByKey(key)

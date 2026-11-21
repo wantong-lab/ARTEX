@@ -13,10 +13,10 @@ const findingIDGuidance = "\n\n**漏洞编号约定**：finding_id 是独立漏�
 // The server supplies the persisted setting. A missing setting/host is off.
 // Consulted at assembly and again on writes so an already-running session
 // cannot keep binding after the user switches the feature off.
-var FindingTrafficBindingEnabled func() bool
 
 func findingTrafficBindingEnabled() bool {
-	return FindingTrafficBindingEnabled != nil && FindingTrafficBindingEnabled()
+	fn := getFindingTrafficBindingEnabled()
+	return fn != nil && fn()
 }
 
 // Applied after ToolResolve: user descriptions and prompts remain intact, while

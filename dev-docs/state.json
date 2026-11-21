@@ -2,10 +2,10 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "p2",
-  "round": 32,
-  "current_pr": "P2-12",
-  "current_branch": "test/p2-12-race-soak",
-  "development_branch": "test/p2-12-race-soak",
+  "round": 33,
+  "current_pr": "P2-13",
+  "current_branch": "fix/p2-13-security-audit",
+  "development_branch": "fix/p2-13-security-audit",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -209,13 +209,14 @@
     "p1_08_kb": "kb/manage.go pagination/update/delete/SQL insights; planner extras; API 13 checks + Playwright 5/5; tests green",
     "p1_09_proxypool": "mihomo import adapter; unified outbound sploitus+cve; UI auth/health/latency; API 8 checks + Playwright 4/4",
     "p1_10_ssh_smb_tunnel": "SSH/SMB registration+UI; SSH protocol test; real chisel loopback e2e PASS; real VPS SSH exec/read/write PASS; suo5/SMB real target not available",
-    "p2_11_llm_e2e": "scripts/acceptance/llm_e2e.py full run EXIT=0: task done, marker in plan+intent, 202535 tokens, intercept denied executed=false; planner guard gap filed to P2-13"
+    "p2_11_llm_e2e": "scripts/acceptance/llm_e2e.py full run EXIT=0: task done, marker in plan+intent, 202535 tokens, intercept denied executed=false; planner guard gap filed to P2-13",
+    "p2_12_race_soak_upgrade": "go vet + go test -race ./... PASS after fixing agent hook + memory races; upgrade_rollback.sh RESULT PASS 25 steps (v0.4.1 -> HEAD migrations 9->11, soak 13425 req 0 err, rollback+re-upgrade task visible)"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-22T00:15:00+08:00",
+  "updated_at": "2026-11-22T00:28:00+08:00",
   "release": {
     "tag": "v0.4.1",
     "commit": "237a26f",
@@ -233,7 +234,7 @@
       "total": 7
     },
     "p2": {
-      "done": 1,
+      "done": 2,
       "total": 4
     },
     "p3": {

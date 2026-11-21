@@ -22,7 +22,7 @@
 ## P2 验证与安全加固
 
 - [x] P2-11 LLM 全链路 E2E + 治理强制场景（真实 LLM 全链路 + 全局拦截规则 worker 强制；预算/拒派/接力由 agent M5 单测覆盖）。
-- [ ] P2-12 全量 race / soak / 升级回滚演练 / 备份恢复。
+- [x] P2-12 全量 race / soak / 升级回滚演练 / 备份恢复。
 - [ ] P2-13 安全审计：C2/proxy/会话密钥静置加密与轮换、C2 非回环校验、审计完整性、RoE/Scope 边界。
 - [ ] P2-14 可观测性：/metrics、结构化日志、清理/同步任务监控。
 
@@ -53,3 +53,5 @@
 - 2026-11-21：P1-10 完成（SSH/SMB 登记 + 恢复 + UI；SSH 协议级测试；真实 chisel 二进制 loopback e2e；真实 VPS SSH 会话执行/读写）。偏差：suo5 二进制/payload 未提供未真机；SMB 无 Windows 目标仅验证登记/错误路径；VPS 反向回连隧道受 NAT/ssh -R 实验性验证未闭环，chisel 真机以本机 loopback 验证。
 
 - 2026-11-22：P2-11 完成。新增 scripts/acceptance/llm_e2e.py（登录→激活真实 LLM→连接测试→创建任务→planner/worker Bash 执行标记→活动历史/token 用量核对→治理拦截规则下发 worker 工具调用并确认未执行）。真实运行：任务 done，标记命中 plan+intent 会话，usage 202535 tokens；拦截规则命令 status=denied、executed=false。发现待办：planner 的直接工具调用未经过 Guard（全局拦截规则不覆盖 planner），已记入 P2-13 安全审计项。
+
+- 2026-11-22：P2-12 完成。全量 go vet ./... + go test -race ./...（fresh DB）全绿；修复 agent 钩子与 memory 状态真实数据竞争（RWMutex / atomic.Bool）。新增 scripts/acceptance/upgrade_rollback.sh：真实 v0.4.1 旧版→建任务→pg_dump+data 备份→新版升级（schema 9→11、任务持久、6 个核心 API 200）→soak 45s×8 workers 13425 请求 0 错误（RSS 49952→50288KB）→恢复备份+旧版回滚（任务可见、schema 9）→旧数据再升级（schema 11、任务可见），RESULT PASS 25 步。

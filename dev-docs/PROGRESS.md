@@ -204,3 +204,9 @@
 - 结果（三轮真实运行，最终全绿）：LLM 连通回复 OK；任务 #13 status=done；标记命中 plan 与 intent:40；usage 202535 tokens；拦截规则 #23 命中 worker Bash 调用 status=denied（matched 2、denied 2、executed=false），脚本 EXIT=0。
 - 发现（转 P2-13）：planner 自己的直接工具调用未挂 Guard（全局拦截规则对 planner 不生效）；当前验收用 seed_first_intent 把治理场景固定到 worker 路径。
 - 下一步：P2-12 全量 race / soak / 升级回滚演练 / 备份恢复。
+
+
+## 轮次 33 · 2026-11-22（P2-12 全量 race / soak / 升级回滚 / 备份恢复）
+- 动作：新增 acceptance 脚本与 README。全量 go vet ./... 通过；go test -race ./... 首轮暴露 14 处数据竞争（agent 运行时钩子被测试/热更新并发写、memory.Store degraded/vecOK 并发读写），改为 agent hooks RWMutex + Set/Get，memory 状态 atomic.Bool；修复后全量 race 全绿（server 67s）。
+- 升级回滚演练（scripts/acceptance/upgrade_rollback.sh，真实进程 + PG）：v0.4.1 旧版建任务 → pg_dump(262KB)+data tar 备份 → 新版启动（migrations 9→11、任务持久、/api/tasks 等 6 个核心 API 全 200）→ soak 45s×8 workers 13425 请求 0 错误 health 200（RSS 49952→50288KB）→ 恢复备份 + 旧版回滚（任务可见、schema 9）→ 旧数据再次升级（schema 11、任务可见）。RESULT PASS 25 步。
+- 下一步：P2-13 安全审计（含上轮记录的 planner 工具调用未过 Guard 缺口、C2/proxy/会话密钥静置加密与轮换、非回环校验、审计完整性、RoE/Scope 边界）。

@@ -16,12 +16,10 @@ import (
 // WrapupOverride, if set, returns the stored wrap-up prompt for an agent key and
 // whether a non-empty one exists. Wired by the server to the agents table (like
 // PromptOverride for system prompts). nil / empty → the built-in default is used.
-var WrapupOverride func(agentKey string) (string, bool)
 
 // WrapupMaxTurnsOverride, if set, returns the admin-configured turn budget for the
 // wrap-up phase of an agent and whether a positive one exists. Wired to the agents
 // table. nil / ≤0 → the built-in per-agent default (wrapupTurnDefaults) is used.
-var WrapupMaxTurnsOverride func(agentKey string) (int, bool)
 
 // 内置默认收尾提示词,按 agent key 索引。worker 复用历史上硬编码的 settleWrapUpPrompt
 // (定义在 worker.go),planner/mainagent 各有一版;未命中的(自定义 agent)走通用兜底。
@@ -68,8 +66,8 @@ func WrapupTurnsDefault(agentKey string) int {
 // resolveWrapup returns the effective wrap-up prompt: the DB override (if set and
 // non-empty) over the built-in default.
 func resolveWrapup(agentKey string) string {
-	if WrapupOverride != nil {
-		if t, ok := WrapupOverride(agentKey); ok && strings.TrimSpace(t) != "" {
+	if fn := getWrapupOverride(); fn != nil {
+		if t, ok := fn(agentKey); ok && strings.TrimSpace(t) != "" {
 			return t
 		}
 	}
@@ -79,8 +77,8 @@ func resolveWrapup(agentKey string) string {
 // resolveWrapupTurns returns the effective wrap-up turn budget: a positive DB
 // override over the built-in per-agent default.
 func resolveWrapupTurns(agentKey string) int {
-	if WrapupMaxTurnsOverride != nil {
-		if v, ok := WrapupMaxTurnsOverride(agentKey); ok && v > 0 {
+	if fn := getWrapupMaxTurnsOverride(); fn != nil {
+		if v, ok := fn(agentKey); ok && v > 0 {
 			return v
 		}
 	}

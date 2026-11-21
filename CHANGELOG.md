@@ -11,6 +11,9 @@
 - SSH/SMB 会话与真机验证（P1-10）：register_session 支持 kind=ssh（密码/私钥，可选 SOCKS5）、kind=smbexec（密码/NT hash，可选 proxychains），会话按 kind 解密恢复并复用执行/读写/清理；内网中枢「会话」页新增登记表单；POST /api/intranet/sessions 支持三类会话；新增 SSH 协议级测试（内置 sshd）与真实 chisel 二进制隧道 e2e（需 ARTEX_CHISEL_PATH），并在用户提供的真实 VPS 上验证 SSH 会话执行/读写。
 
 ### 修复
+- 数据竞争（P2-12）：agent 运行时钩子（ToolAugment/ToolResolve/PromptOverride/WrapupOverride/WrapupMaxTurnsOverride/FindingTrafficBindingEnabled）改为 RWMutex 保护的 Set/Get 访问，避免热更新提示词/工具可见性时与在跑任务并发读写；memory.Store 的 degraded/vecOK 状态改 atomic.Bool，worker 回填与召回并发不再竞争。
+- P2-12 验收脚本：新增 scripts/acceptance/upgrade_rollback.sh（真实旧版二进制→备份→升级→soak→恢复回滚→再升级）与 scripts/acceptance/README.md。
+
 - SSH 会话写文件 base64 -d 重定向语义错误（实际写入名为 -- 的文件），改为直接重定向；读文件 base64 兜底去除换行后再解码。
 
 - 代理池增强（P1-9）：mihomo/Clash 配置适配器（`POST /api/proxy-pool/import-mihomo`，解析 proxies 列表导入 http/socks5、ss/vmess 如实跳过）；统一出站（Sploitus + CVE 同步共用代理池回退链）；代理池 UI 增加认证标识、健康/失败统计、最近探测时间、mihomo 导入与跳过原因展示。

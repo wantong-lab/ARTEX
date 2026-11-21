@@ -10,7 +10,6 @@ import (
 // key and whether one exists. The server wires it to the PG agent_prompts table.
 // When nil or no override exists, agents use their built-in default prompt — so
 // behavior is identical until a user edits a prompt in the UI.
-var PromptOverride func(agentKey string) (string, bool)
 
 // Prompt-variable structs — fields mirror each agent's catalog (docs §5a) so a
 // user template referencing a catalog variable renders; referencing anything else
@@ -37,8 +36,8 @@ func nowStr() string { return time.Now().Format("2006-01-02 15:04:05 MST") }
 // 输出规约) AFTER this, so those can't be edited away via the DB body.
 func renderSystem(agentKey, def string, vars any) string {
 	tmpl := def
-	if PromptOverride != nil {
-		if t, ok := PromptOverride(agentKey); ok && t != "" {
+	if fn := getPromptOverride(); fn != nil {
+		if t, ok := fn(agentKey); ok && t != "" {
 			tmpl = t
 		}
 	}
