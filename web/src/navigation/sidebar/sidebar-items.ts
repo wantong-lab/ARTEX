@@ -79,6 +79,14 @@ export const sidebarItems: NavGroup[] = [
     ],
   },
   {
+    id: 5,
+    label: "立足点与后渗透",
+    items: [
+      { id: "intranet", title: "内网中枢", url: "/function/intranet", icon: Network },
+      { id: "c2", title: "C2", url: "/function/c2", icon: Radio, disabled: true, badge: "soon" },
+    ],
+  },
+  {
     id: 2,
     label: "系统",
     items: [

@@ -52,6 +52,11 @@ import type {
   InterceptDetail,
   InterceptPending,
   InterceptRule,
+  IntranetCredential,
+  IntranetHostOp,
+  IntranetPendingScope,
+  IntranetSession,
+  IntranetTunnel,
   JudgeConfig,
   JudgeUsage,
   LLMPoolStatus,
@@ -1313,4 +1318,41 @@ export const api = {
   // 202 即返回，实际下载在后台跑，进度走 /api/update/stream。
   applyUpdate: () => post<{ ok: boolean; target: string }>(`/update/apply`),
   rollbackUpdate: () => post<{ ok: boolean }>(`/update/rollback`),
+
+  // ---- 内网中枢（M2-05）----
+  intranetSessions: (taskID?: number, status?: string) => {
+    const sp = new URLSearchParams();
+    if (taskID) sp.set("task_id", String(taskID));
+    if (status) sp.set("status", status);
+    return get<{ sessions: IntranetSession[] }>(`/intranet/sessions?${sp}`);
+  },
+  intranetTunnels: (taskID?: number) => {
+    const sp = new URLSearchParams();
+    if (taskID) sp.set("task_id", String(taskID));
+    return get<{ tunnels: IntranetTunnel[] }>(`/intranet/tunnels?${sp}`);
+  },
+  intranetCredentials: (taskID?: number) => {
+    const sp = new URLSearchParams();
+    if (taskID) sp.set("task_id", String(taskID));
+    return get<{ credentials: IntranetCredential[] }>(`/intranet/credentials?${sp}`);
+  },
+  intranetHostLedger: (params?: { session?: number; host?: string; artifacts?: boolean; limit?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.session) sp.set("session_id", String(params.session));
+    if (params?.host) sp.set("host", params.host);
+    if (params?.artifacts) sp.set("artifacts", "1");
+    if (params?.limit) sp.set("limit", String(params.limit));
+    return get<{ ops: IntranetHostOp[] }>(`/intranet/host-ledger?${sp}`);
+  },
+  intranetPendingScope: (taskID?: number, status = "pending") => {
+    const sp = new URLSearchParams();
+    if (taskID) sp.set("task_id", String(taskID));
+    sp.set("status", status);
+    return get<{ requests: IntranetPendingScope[] }>(`/intranet/pending-scope?${sp}`);
+  },
+  intranetApproveScope: (id: number) =>
+    post<{ ok: boolean }>(`/intranet/pending-scope/${id}/approve`, { reviewer: "web" }),
+  intranetRejectScope: (id: number) => post<{ ok: boolean }>(`/intranet/pending-scope/${id}/reject`, {}),
+  intranetHandoff: (body: { task_id?: number; session_id: number; goal?: string; description?: string }) =>
+    post<{ task_id: string; session_id: number; scope_error?: string }>(`/intranet/handoff`, body),
 };

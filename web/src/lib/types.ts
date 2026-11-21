@@ -1602,6 +1602,78 @@ export interface UpdateProgress {
   error?: string;
 }
 
+// ---- 内网中枢（M2-05）----
+
+export interface IntranetSession {
+  id: number;
+  kind: string;
+  url: string;
+  lang: string;
+  status: string;
+  host_asset_id?: number;
+  created_by_task?: number;
+  created_by_intent?: number;
+  last_beat: string;
+  created_at: string;
+}
+
+export interface IntranetTunnel {
+  id: number;
+  task_id: number;
+  kind: string;
+  adapter: string;
+  state: string;
+  listen_host?: string;
+  listen_port: number;
+  target_host?: string;
+  target_port?: number;
+  via_session_id?: number;
+  error?: string;
+  last_check: string;
+  created_at: string;
+}
+
+export interface IntranetCredential {
+  id: number;
+  task_id: number;
+  username: string;
+  cred_type: string;
+  domain?: string;
+  source?: string;
+  verified: boolean;
+  secret_ok: boolean;
+  secret_masked?: string;
+  secret_error?: string;
+  created_at: string;
+}
+
+export interface IntranetHostOp {
+  id: number;
+  session_id: number;
+  host: string;
+  channel: string;
+  cmd: string;
+  stdout?: string;
+  ok: boolean;
+  ms: number;
+  artifact: boolean;
+  artifact_type?: string;
+  cleanup_cmd?: string;
+  note?: string;
+  created_at: string;
+}
+
+export interface IntranetPendingScope {
+  id: number;
+  task_id: number;
+  kind: string;
+  value: string;
+  reason?: string;
+  status: string;
+  requested_by?: string;
+  reviewed_by?: string;
+}
+
 // Original execution selected from an approval, never submitted to the reviewer.
 export interface InterceptExecution {
   conversation_id: number | null;
