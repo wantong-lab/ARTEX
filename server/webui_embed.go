@@ -4,6 +4,7 @@ package server
 
 import (
 	"embed"
+	"io"
 	"io/fs"
 	"net/http"
 	"path"
@@ -34,13 +35,23 @@ func (s *Server) webuiHandler() http.Handler {
 		// 1) exact file (assets: _next/*, favicon.ico, ...)
 		// 2) route dir → <p>/index.html (trailingSlash export)
 		// 3) <p>.html
-		// 4) SPA 兜底 → index.html（交给客户端路由）
+		// 4) 未知路由 → 导出时的 404.html（HTTP 404）。
+		// 每个路由都有独立导出文件，未知路径不应静默回退成首页/任务页（验收发现）。
 		for _, cand := range []string{p, p + "/index.html", p + ".html"} {
 			if serveFileIfExists(w, r, root, cand) {
 				return
 			}
 		}
-		http.ServeFileFS(w, r, root, "index.html")
+		if f, err := root.Open("404.html"); err == nil {
+			defer f.Close()
+			if st, stErr := f.Stat(); stErr == nil && !st.IsDir() {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = io.Copy(w, f)
+				return
+			}
+		}
+		http.NotFound(w, r)
 	})
 }
 

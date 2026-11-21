@@ -778,7 +778,10 @@ export default function TasksPage() {
   );
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-4">
+    <>
+      {/* 页面标题：视觉上由 Tabs 呈现，这里补 h1 保持标题层级与读屏语义。 */}
+      <h1 className="sr-only">任务</h1>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-4">
       <TabsList className="mx-4 lg:mx-6">
         <TabsTrigger value="current">当前任务</TabsTrigger>
         <TabsTrigger value="archived">已归档</TabsTrigger>
@@ -1013,6 +1016,7 @@ export default function TasksPage() {
         <TaskArchivesPanel onChanged={load} />
       </TabsContent>
     </Tabs>
+    </>
   );
 }
 

@@ -288,6 +288,7 @@ export default function SystemSettingsPage() {
             </Label>
             <Switch
               id="traffic-capture"
+              aria-label="流量捕获开关"
               checked={trafficCapture}
               disabled={!loaded || saving}
               onCheckedChange={toggleTraffic}
@@ -315,6 +316,7 @@ export default function SystemSettingsPage() {
             </Label>
             <Switch
               id="agent-traffic-binding"
+              aria-label="Agent 自动绑定流量开关"
               aria-describedby="agent-traffic-binding-description"
               checked={agentTrafficBinding}
               disabled={!loaded || saving}
@@ -385,6 +387,7 @@ export default function SystemSettingsPage() {
               </Label>
               <Switch
                 id="inject-planner"
+                aria-label="操作约束注入规划者开关"
                 checked={injectPlanner}
                 disabled={!loaded}
                 onCheckedChange={toggleInjectPlanner}
@@ -396,6 +399,7 @@ export default function SystemSettingsPage() {
               </Label>
               <Switch
                 id="inject-worker"
+                aria-label="操作约束注入执行者开关"
                 checked={injectWorker}
                 disabled={!loaded}
                 onCheckedChange={toggleInjectWorker}
@@ -425,6 +429,7 @@ export default function SystemSettingsPage() {
             </Label>
             <Switch
               id="noa-compaction"
+              aria-label="noa 上下文压缩开关"
               checked={noaCompaction}
               disabled={!loaded}
               onCheckedChange={toggleNoaCompaction}
@@ -455,6 +460,7 @@ export default function SystemSettingsPage() {
               </Label>
               <Switch
                 id="web-search"
+                aria-label="网络搜索总开关"
                 checked={webSearch}
                 disabled={!loaded || saving}
                 onCheckedChange={(v) => {

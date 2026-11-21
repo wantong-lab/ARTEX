@@ -19,6 +19,7 @@ web/next-env.d.ts
 # development tools
 .playwright-mcp/
 .playwright-cli/
+__pycache__/
 .idea/
 .vscode/
 *.swp

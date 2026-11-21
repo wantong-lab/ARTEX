@@ -38,6 +38,8 @@ jobs:
         run: go build ./...
       - name: vet
         run: go vet ./...
+      - name: gofmt
+        run: test -z "$(gofmt -l $(git ls-files '*.go'))"
       - name: migrate test database
         run: |
           sudo apt-get update -qq
@@ -45,6 +47,12 @@ jobs:
           for f in db/migrations/*.sql; do psql "$ARTEX_PG_DSN" -f "$f"; done
       - name: test
         run: go test -p 1 ./... -count=1
+      - name: api smoke
+        run: |
+          go build -o /tmp/artex ./cmd/artex
+          /tmp/artex -addr 127.0.0.1:18899 -data /tmp/artex-smoke -proxy "" > /tmp/artex-smoke.log 2>&1 &
+          for i in $(seq 1 40); do curl -sf http://127.0.0.1:18899/api/health >/dev/null && break; sleep 1; done
+          SMOKE_BASE=http://127.0.0.1:18899 python3 scripts/smoke/api_smoke.py
 
   web:
     runs-on: ubuntu-latest

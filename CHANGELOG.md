@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### 变更
+- CI 增加 `gofmt` 检查与 API 冒烟门禁（14 个无 LLM/无外网用例）；新增 `scripts/smoke/api_smoke.py`、`scripts/smoke/ui_smoke.mjs` 与使用说明。
+- 未知路由改为返回 404（自定义中文 404 页 + Go 静态服务 404 语义），不再静默回退到首页/任务页。
+- 系统配置页 6 个开关补充 `aria-label`；任务页补充 `h1`（读屏与标题层级）。
+
 ### 修复
 - 会话执行/清理接口对不存在的 `session_id` 曾因 store 返回 `(nil,nil)` 触发 nil 解引用 panic（HTTP 连接被中断）；现返回明确错误（执行 502 / 清理 404），并新增回归测试。
 - 验收测试发现的 API 健壮性问题：`/api/c2/enable`、`/api/cve/autosync` 对畸形 JSON 曾忽略解码错误（`*bool` 被部分解码为 false，可能静默关闭能力），现统一返回 400；`/api/retention/cleanup` 同样严格拒绝畸形 JSON，且**空 body 默认 dry-run**，真实清理必须显式传 `dry_run:false`；`webshell/generate` 错误提示补充 aspx。新增 `server/acceptance_robustness_test.go` 锁定回归。
