@@ -131,3 +131,9 @@
 - 结果：分类/边界、frontier 满拒派、接力幂等、广播收发 4 组用例全绿；全新库全量 **24 包全绿**（EXIT=0）。提交 `84b8e78`。
 - 偏差：接力只发事件（planner 决策派发，不自动建意图）；frontier 上限固定 8（settings 动态化留待后续）；预算五档通过 ctx 超时+提示双约束实现，未引入独立 watchdog。
 - 下一步：M5-02 清理与保留。
+
+## 轮次 22 · 2026-11-21
+- 动作：M5-02。新增 `db/retention.go` + `0009_retention.sql`（retention_audit + 索引）：策略默认 activity 30d / server_logs 14d / C2 30d，可经 settings 覆盖并夹到 1..3650；`RetentionPreview` 只算到期条数；`RunRetentionCleanup` 单事务删到期 activity/server_logs/c2_tasks/c2_events/dead c2_sessions 并写审计，dry-run 只回 counts。API：status/policy/cleanup(dry_run)/cleanup-list（按 host_ledger artifact 行生成目标侧清理清单）。
+- 结果：dry-run 前后数据不变且无审计、真实清理只删到期行（新行存活）、审计字段正确、非法策略回落 2 组用例全绿；全新库全量 **24 包全绿**（EXIT=0）。提交 `b5f4329`。
+- 偏差：清理为手动 API（未加定时调度）；清理清单暂无前端页（接口已就绪）。
+- 下一步：M5-03 发布收口（CHANGELOG/README/部署文档、v0.4.0 tag、release workflow）。

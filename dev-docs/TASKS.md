@@ -28,7 +28,7 @@
 | M4-02 | M4 | `feat/m4-02-webshell` | 已完成 | `85836c1` | 生成/登记/执行/读取/清理闭环 + 内网中枢 WebShell 页签；全链路用例；next build 与 23 包全绿。偏差：清理走 host_ledger 记录并删会话，目标侧落地清除仍需人工/后续 agent 执行 |
 | M4-03 | M4 | `feat/m4-03-proxypool` | 已完成 | `4d47718` | 代理池录入/探测/切换/回退 + 出站联动 Sploitus + 中枢页签；4 组用例；next build 与 24 包全绿。偏差：mihomo 适配器后置；仅 Sploitus 出站接入代理 client |
 | M5-01 | M5 | `feat/m5-01-agent-routing` | 已完成 | `84b8e78` | 五档预算分类+超时、frontier=8 拒派、接力幂等、任务广播；4 组用例；24 包全绿。偏差：接力只发事件由 planner 决定派发，不自动建意图 |
-| M5-02 | M5 | `feat/m5-02-cleanup` | 待开始 | — | 见 ROADMAP 第 10 节 |
+| M5-02 | M5 | `feat/m5-02-cleanup` | 已完成 | `b5f4329` | 保留策略+预览+dry-run 清理+审计+host_ledger 清理清单；2 组用例；24 包全绿。偏差：清理为手动 API（未加定时调度），无前端页 |
 | M5-03 | M5 | `docs/m5-03-release` | 待开始 | — | 见 ROADMAP 第 10 节 |
 
 ## 已知问题（基线测试债）
