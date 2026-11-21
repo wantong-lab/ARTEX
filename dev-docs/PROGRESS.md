@@ -100,3 +100,9 @@
 - 结果：中断→续跑→幂等、只读挂载检索、fixture 命中、sploitus/sync/autosync 共 5 个用例全绿；干净库全量 **22 包全绿**（EXIT=0）。提交 `7b6d0d3`。
 - 偏差：autosync 仅持久化开关，实际调度留给 M5 定时任务；Sploitus 线上网络路径用 stub 验证（离线环境不触网）；cve_search 只给 worker/pentest（planner 无 extras 通道）。
 - 下一步：M3-04 情报页。
+
+## 轮次 17 · 2026-11-21
+- 动作：M3-04。新增 `/function/intel`：知识库（检索+详情+入库+分页）、CVE 情报（检索+同步进度条+开始/中断）、Sploitus 在线检索三块，空/加载/错误态齐全，CVE 结果标注「线索，非确证」；侧栏新增「情报」。后端补 `POST /api/kb/add`（手工入库，幂等）与 `POST /api/cve/sync/stop`（取消 ctx、断点保留可续跑）。
+- 结果：`npm run build` 通过并生成 `/function/intel`；手工入库可检索、同步可中断 2 个新用例通过；干净库全量 **22 包全绿**（EXIT=0）。提交 `a536548`。**M3 情报面里程碑全部完成。**
+- 偏差：知识库检索分页为客户端分页（后端 search 尚无 offset）；Sploitus 需外网，离线时展示错误态。
+- 下一步：M4-01 C2。
