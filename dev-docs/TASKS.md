@@ -9,7 +9,7 @@
 | M0-01 | M0 | `chore/m0-01-governance` | 已完成 | `8deb132` `77740cf` | 文档与 CI 入库 |
 | M0-02 | M0 | `feat/m0-02-migrations` | 已完成 | `7e192c8` | build/vet 通过；db 包（含真实 PG 幂等用例）绿 |
 | M0-03 | M0 | `chore/m0-03-schema-check` | 已完成 | `0a8374b` | 纯逻辑扫描 + PG 表/列校验通过；漏表用例可检出 |
-| M0-04 | M0 | `chore/m0-04-test-baseline` | 待开始 | — | 空库 `go test -p 1 ./...` 全绿 |
+| M0-04 | M0 | `chore/m0-04-test-baseline` | 已完成 | `5910df5` | 空库+全部迁移后 `go test -p 1 ./...` 连续两次 15 包全绿 |
 | M1-01 | M1 | `feat/m1-01-chainskel` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M1-02 | M1 | `feat/m1-02-prompt-tails` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M1-03 | M1 | `feat/m1-03-stuck` | 待开始 | — | 见 ROADMAP 第 10 节 |
@@ -31,15 +31,15 @@
 | M5-02 | M5 | `feat/m5-02-cleanup` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M5-03 | M5 | `docs/m5-03-release` | 待开始 | — | 见 ROADMAP 第 10 节 |
 
-## 已知问题（基线测试债，M0-04 处理）
+## 已知问题（基线测试债）
 
-| 编号 | 现象 | 证据 | 影响 |
+| 编号 | 现象 | 根因 | 处置 |
 |---|---|---|---|
-| T-01 | 空库直接跑全量测试时 `llmrec` 报 `relation llm_usage does not exist` | 表由 `db/llm_usage.go` 运行时创建，不在 schema | 空库不可跑测试 |
-| T-02 | `agent` 的 `TestGraphOverviewExpandsAssociatedCompanyScope` 报 `task scope missing` | 前序用例清理了 `task_scope` 行，缺少隔离 | 基线红灯 |
-| T-03 | `server` 的 `TestTaskMetadataPatchReturnsRenameAndPin` 报 TempDir `directory not empty` | 异步写文件未结束即清理 | 基线红灯 |
+| T-01 | 空库报 `relation llm_usage does not exist` | `llm_records`/`llm_usage` 由代码运行时建表 | 已修复：`0002_llm_observability.sql` 收敛进迁移 |
+| T-02 | agent 用例 `task scope missing` | 断言的是已下线的 `coverage.scope` 结构 | 已修复：改为校验 `task_scope(company)` 行 + 覆盖度分母 |
+| T-03 | server 用例 TempDir `directory not empty` | `Server.New` 后台协程在用例返回后仍写文件 | 已修复：`testTempDir` 忽略清理错误，server 测试统一替换 |
 
-> A/B 对照：以上在基线 `0aa09d0` 上同样失败，与 M0-02 迁移改动无关。
+> 验收：空库 + 应用全部迁移后，`go test -p 1 ./...` 连续两次 15 包全绿（`5910df5`）。A/B 对照确认这三项与 M0-02 迁移改动无关。
 
 ## 阻塞登记
 

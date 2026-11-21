@@ -21,3 +21,8 @@
 - 动作：M0-03 schema 覆盖检查。新增 `db/schema_coverage_test.go`：用 `go/parser` 只扫描字符串字面量里的 SQL（剔除注释、EXTRACT 等函数噪声、CTE 与非表 token），与迁移 DDL 求差；另加核心表清单校验与真实 PG 上的表/列校验。
 - 结果：扫描 78 个表引用 / 迁移 49 张表，差集 0；fixture 漏表用例可检出；PG 列校验通过；db 包全量绿。提交 `0a8374b`。
 - 下一步：M0-04 测试基线（0002 收敛运行时建表 + 修 T-02/T-03 + CI 预置 schema）。
+
+## 轮次 3 · 2026-11-21
+- 动作：M0-04 测试基线。新增 `db/migrations/0002_llm_observability.sql` 收敛 `llm_records`/`llm_usage`；T-02 改为校验当前契约（company scope 行 + 覆盖度分母）；T-03 新增 `testTempDir` 并在 server 测试中统一替换；CI 改为按序应用全部迁移。
+- 结果：空库 + 应用全部迁移后，`go test -p 1 ./...` 连续两次 15 包全绿（0 失败）；`go build`/`go vet` 通过。提交 `5910df5`。
+- 下一步：M1-01 chainskel 链路骨架包。
