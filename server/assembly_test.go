@@ -38,7 +38,7 @@ func TestAssembleVisibleSkill(t *testing.T) {
 
 	// Filesystem skill fixture: <skillDir>/t-assemble/SKILL.md. The directory name
 	// (t-assemble) is the visibility key matched against AgentSkillNames.
-	skillDir := t.TempDir()
+	skillDir := testTempDir(t)
 	const skillName = "t-assemble"
 	if err := os.MkdirAll(filepath.Join(skillDir, skillName), 0o755); err != nil {
 		t.Fatal(err)

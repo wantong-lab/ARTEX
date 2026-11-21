@@ -77,31 +77,23 @@ func TestGraphOverviewExpandsAssociatedCompanyScope(t *testing.T) {
 	if linkedAssets[0].TaskSource != "company" || !strings.Contains(linkedAssets[0].TaskSourceSummary, companiesName(t, companies, companyID)) {
 		t.Fatalf("company asset provenance missing: %+v", linkedAssets[0])
 	}
+	// 任务创建时把关联企业落成一条 task_scope(company) 行；覆盖度分母据此把
+	// 企业范围内的资产算进来。graph_overview 不再内联 company_scope 展开，
+	// 这里改为校验当前契约：company scope 行存在 + 覆盖度分母非零。
+	scopeRows, err := assets.ListTaskScopeWithSources(task.ID)
+	if err != nil {
+		t.Fatalf("list task scope: %v", err)
+	}
+	if len(scopeRows) != 1 || scopeRows[0].Kind != "company" || scopeRows[0].CompanyID == nil || *scopeRows[0].CompanyID != companyID {
+		t.Fatalf("task scope missing company row: %+v", scopeRows)
+	}
 	overview := tools.graphOverviewData()
 	coverage, ok := overview["coverage"].(map[string]any)
 	if !ok {
 		t.Fatalf("coverage missing: %#v", overview["coverage"])
 	}
-	scopeRows, ok := coverage["scope"].([]map[string]any)
-	if !ok || len(scopeRows) != 1 {
-		t.Fatalf("task scope missing: %#v", coverage["scope"])
-	}
-	companyScope, ok := scopeRows[0]["company_scope"].([]map[string]any)
-	if !ok || len(companyScope) != len(inputs) {
-		t.Fatalf("company scope not expanded: %#v", scopeRows[0])
-	}
-	kinds := make(map[string]string, len(companyScope))
-	for _, rule := range companyScope {
-		kinds[fmt.Sprint(rule["kind"])] = fmt.Sprint(rule["value"])
-	}
-	for _, input := range inputs {
-		if kinds[input.Kind] != input.Value {
-			t.Errorf("scope %s=%q want %q", input.Kind, kinds[input.Kind], input.Value)
-		}
-	}
-	keywords, ok := scopeRows[0]["company_keywords"].([]string)
-	if !ok || len(keywords) != 1 || keywords[0] != keyword {
-		t.Fatalf("company keywords missing: %#v", scopeRows[0]["company_keywords"])
+	if denominator, _ := coverage["denominator"].(int); denominator < 1 {
+		t.Fatalf("coverage denominator=%v, company scope did not contribute assets: %#v", coverage["denominator"], coverage)
 	}
 	if hc, _ := coverage["host_count"].(int); hc < 1 {
 		t.Fatalf("company asset host not counted in agent context: %#v", coverage["host_count"])

@@ -15,12 +15,12 @@ import (
 )
 
 func TestTaskTemplateHTTPCRUD(t *testing.T) {
-	m, err := NewManager(t.TempDir(), "")
+	m, err := NewManager(testTempDir(t), "")
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) — skipping", err)
 	}
 	defer m.Close()
-	s := New(context.Background(), m, t.TempDir(), t.TempDir(), t.TempDir())
+	s := New(context.Background(), m, testTempDir(t), testTempDir(t), testTempDir(t))
 	h := s.Handler()
 	token, err := signJWT(s.jwtKey)
 	if err != nil {
@@ -85,12 +85,12 @@ func TestTaskTemplateHTTPCRUD(t *testing.T) {
 }
 
 func TestConversationPatchReturnsPinState(t *testing.T) {
-	m, err := NewManager(t.TempDir(), "")
+	m, err := NewManager(testTempDir(t), "")
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) — skipping", err)
 	}
 	defer m.Close()
-	s := New(context.Background(), m, t.TempDir(), t.TempDir(), t.TempDir())
+	s := New(context.Background(), m, testTempDir(t), testTempDir(t), testTempDir(t))
 	conversation, err := m.pg.CreateConversation("mainagent", "pin through http", nil)
 	if err != nil {
 		t.Fatal(err)

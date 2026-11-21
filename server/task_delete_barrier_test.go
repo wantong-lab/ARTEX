@@ -145,7 +145,7 @@ func TestTaskLifecycleRechecksDeleteBarrierAfterConcLock(t *testing.T) {
 }
 
 func TestAbortTaskDeleteUsesPersistedPauseAndQueueState(t *testing.T) {
-	m, err := NewManager(t.TempDir(), "")
+	m, err := NewManager(testTempDir(t), "")
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) - skipping", err)
 	}
@@ -327,7 +327,7 @@ func TestTaskChatStatusUsesAuthoritativeBusyState(t *testing.T) {
 }
 
 func TestTaskChatUploadRejectsDeleteBarrierBeforeCreatingDirectory(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	m := &Manager{dir: dataDir, tasks: map[string]*Task{"7": {ID: "7"}}}
 	s := &Server{m: m, engine: NewEngine(m)}
 	if !s.engine.BeginDelete("7") {

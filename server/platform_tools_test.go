@@ -12,7 +12,7 @@ import (
 // TestSkillTools functionally exercises create_skill + update_skill_file against a
 // temp skill dir (no DB needed — these tools only touch the filesystem).
 func TestSkillTools(t *testing.T) {
-	dir := t.TempDir()
+	dir := testTempDir(t)
 	s := &Server{skillDir: dir}
 
 	// create_skill writes a spec-compliant SKILL.md.

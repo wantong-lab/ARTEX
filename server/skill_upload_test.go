@@ -131,7 +131,7 @@ const zhSkillMD = "---\nname: 中文技能\ndescription: 测试\n---\n正文\n"
 // A zstd-compressed archive (WinZip 的可选压缩方式) used to blow up with
 // "zip: unsupported compression"; it now installs like any Deflate archive.
 func TestUploadSkillZstdAndChineseNames(t *testing.T) {
-	dir := t.TempDir()
+	dir := testTempDir(t)
 	data := buildZip(t,
 		zipFile{name: "中文技能/SKILL.md", body: zhSkillMD, method: zipMethodZstd},
 		zipFile{name: "中文技能/参考/说明 文档.md", body: "参考", method: zipMethodZstd},
@@ -161,7 +161,7 @@ func TestUploadSkillGBKNames(t *testing.T) {
 		}
 		return b
 	}
-	dir := t.TempDir()
+	dir := testTempDir(t)
 	data := buildZip(t,
 		zipFile{name: gbk("中文技能/SKILL.md"), body: zhSkillMD, method: zip.Deflate, nonUTF8: true},
 		zipFile{name: gbk("中文技能/参考资料.md"), body: "内容", method: zip.Deflate, nonUTF8: true},
@@ -184,7 +184,7 @@ func TestUploadSkillUnsupportedMethod(t *testing.T) {
 	data := buildZip(t,
 		zipFile{name: "demo/SKILL.md", body: "---\nname: demo\n---\n", method: zipMethodDeflate64},
 	)
-	rr, out := uploadZip(t, t.TempDir(), "demo.zip", data)
+	rr, out := uploadZip(t, testTempDir(t), "demo.zip", data)
 	if rr.Code != 400 {
 		t.Fatalf("status = %d, want 400 (body %s)", rr.Code, rr.Body)
 	}
@@ -206,7 +206,7 @@ func TestUploadSkillEncrypted(t *testing.T) {
 	data[local+6] |= 1
 	data[central+8] |= 1
 
-	rr, out := uploadZip(t, t.TempDir(), "demo.zip", data)
+	rr, out := uploadZip(t, testTempDir(t), "demo.zip", data)
 	if rr.Code != 400 {
 		t.Fatalf("status = %d, want 400 (body %s)", rr.Code, rr.Body)
 	}
@@ -221,7 +221,7 @@ func TestUploadSkillRejectsTraversal(t *testing.T) {
 		zipFile{name: "demo/SKILL.md", body: "---\nname: demo\n---\n", method: zip.Deflate},
 		zipFile{name: "demo/../../evil.sh", body: "rm -rf /", method: zip.Deflate},
 	)
-	dir := t.TempDir()
+	dir := testTempDir(t)
 	rr, out := uploadZip(t, dir, "demo.zip", data)
 	if rr.Code != 400 {
 		t.Fatalf("status = %d, want 400 (body %s)", rr.Code, rr.Body)

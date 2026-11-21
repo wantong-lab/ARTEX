@@ -13,7 +13,7 @@ import (
 )
 
 func TestTaskMetadataPatchReturnsRenameAndPin(t *testing.T) {
-	m, err := NewManager(t.TempDir(), "")
+	m, err := NewManager(testTempDir(t), "")
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) — skipping", err)
 	}
@@ -24,7 +24,7 @@ func TestTaskMetadataPatchReturnsRenameAndPin(t *testing.T) {
 	}
 	taskID, _ := strconv.ParseInt(task.ID, 10, 64)
 	defer func() { _ = m.pg.DeleteTask(taskID) }()
-	s := New(context.Background(), m, t.TempDir(), t.TempDir(), t.TempDir())
+	s := New(context.Background(), m, testTempDir(t), testTempDir(t), testTempDir(t))
 	token, err := signJWT(s.jwtKey)
 	if err != nil {
 		t.Fatal(err)
@@ -61,12 +61,12 @@ func TestTaskMetadataPatchReturnsRenameAndPin(t *testing.T) {
 }
 
 func TestConversationBatchDeleteReportsMissing(t *testing.T) {
-	m, err := NewManager(t.TempDir(), "")
+	m, err := NewManager(testTempDir(t), "")
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) — skipping", err)
 	}
 	defer m.Close()
-	s := New(context.Background(), m, t.TempDir(), t.TempDir(), t.TempDir())
+	s := New(context.Background(), m, testTempDir(t), testTempDir(t), testTempDir(t))
 	first, err := m.pg.CreateConversation("mainagent", "batch-http-first", nil)
 	if err != nil {
 		t.Fatal(err)

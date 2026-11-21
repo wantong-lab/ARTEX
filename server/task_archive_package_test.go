@@ -13,7 +13,7 @@ import (
 )
 
 func TestTaskArchivePackageFilesRoundTrip(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	taskID := "42"
 	explorationID := int64(73)
 	taskFile := filepath.Join(dataDir, "tasks", taskID, "uploads", "evidence.txt")
@@ -95,7 +95,7 @@ func TestTaskArchivePackageFilesRoundTrip(t *testing.T) {
 }
 
 func TestTaskArchivePackageSkipsSymlink(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	payload := filepath.Join(dataDir, "payload")
 	if err := os.MkdirAll(payload, archiveDirMode); err != nil {
 		t.Fatal(err)
@@ -128,7 +128,7 @@ func TestTaskArchivePackageSkipsSymlink(t *testing.T) {
 }
 
 func TestTaskArchiveStageJournalRollsBackInterruptedMoves(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	taskFile := filepath.Join(dataDir, "tasks", "42", "evidence.txt")
 	transcriptFile := filepath.Join(dataDir, "transcripts", "exp73-worker.jsonl")
 	for _, path := range []string{taskFile, transcriptFile} {
@@ -166,7 +166,7 @@ func TestTaskArchiveStageJournalRollsBackInterruptedMoves(t *testing.T) {
 }
 
 func TestTaskArchiveRestoreJournalRollsBackInterruptedInstall(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	extracted := filepath.Join(dataDir, "archives", "tasks", ".restore", "11-test")
 	source := filepath.Join(extracted, "files", "tasks", "42", "evidence.txt")
 	if err := os.MkdirAll(filepath.Dir(source), 0o700); err != nil {
@@ -207,7 +207,7 @@ func TestTaskArchiveRestoreJournalRollsBackInterruptedInstall(t *testing.T) {
 }
 
 func TestTaskArchiveDeletePackageCanResumeFromStagedPath(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	archivePath := taskArchivePath(dataDir, 21, "42")
 	if err := os.MkdirAll(filepath.Dir(archivePath), archiveDirMode); err != nil {
 		t.Fatal(err)
@@ -242,11 +242,11 @@ func TestTaskArchivePackageRejectsTraversal(t *testing.T) {
 	if err := encoder.Close(); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(t.TempDir(), "malicious.tar.zst")
+	path := filepath.Join(testTempDir(t), "malicious.tar.zst")
 	if err := os.WriteFile(path, compressed.Bytes(), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	root := t.TempDir()
+	root := testTempDir(t)
 	if err := extractTaskArchivePackage(path, "", root); err == nil {
 		t.Fatal("path traversal archive was accepted")
 	}

@@ -13,7 +13,7 @@ import (
 )
 
 func TestSeedAssociatesTargetAssetWithTask(t *testing.T) {
-	m, err := NewManager(t.TempDir(), "")
+	m, err := NewManager(testTempDir(t), "")
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) - skipping", err)
 	}
@@ -47,7 +47,7 @@ func TestSeedAssociatesTargetAssetWithTask(t *testing.T) {
 }
 
 func TestDeleteTaskFilesRemovesOnlyOwnedWorkspaceAndTranscripts(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 
 	removed := []struct {
 		path  string
@@ -95,7 +95,7 @@ func TestDeleteTaskFilesRemovesOnlyOwnedWorkspaceAndTranscripts(t *testing.T) {
 }
 
 func TestDeleteTaskFilesReportsTranscriptOnlyDeletion(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	path := filepath.Join("transcripts", "exp44-main.jsonl")
 	createDeleteFixture(t, dataDir, path, false)
 
@@ -110,7 +110,7 @@ func TestDeleteTaskFilesReportsTranscriptOnlyDeletion(t *testing.T) {
 }
 
 func TestDeleteTaskFilesMissingTargetsIsIdempotent(t *testing.T) {
-	deleted, err := deleteTaskFiles(t.TempDir(), "77", 12)
+	deleted, err := deleteTaskFiles(testTempDir(t), "77", 12)
 	if err != nil {
 		t.Fatalf("delete missing task files: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestDeleteTaskFilesMissingTargetsIsIdempotent(t *testing.T) {
 }
 
 func TestStageTaskFilesRollbackRestoresWorkspaceAndTranscripts(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	paths := []string{
 		filepath.Join("tasks", "77", "notes.txt"),
 		filepath.Join("transcripts", "exp12-main.jsonl"),
@@ -149,7 +149,7 @@ func TestStageTaskFilesRollbackRestoresWorkspaceAndTranscripts(t *testing.T) {
 }
 
 func TestStageTaskFilesRollbackReportsRestoreFailure(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	workspace := filepath.Join(dataDir, "tasks", "77")
 	createDeleteFixture(t, dataDir, filepath.Join("tasks", "77"), true)
 
@@ -171,7 +171,7 @@ func TestStageTaskFilesRollbackReportsRestoreFailure(t *testing.T) {
 }
 
 func TestManagerDeleteTaskRestoresFilesAndTrafficWhenPostgresDeleteFails(t *testing.T) {
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	m, err := NewManager(dataDir, "")
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) - skipping", err)

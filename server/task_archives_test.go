@@ -12,7 +12,7 @@ import (
 )
 
 func TestTaskArchiveAPIQueueListAndLimits(t *testing.T) {
-	m, err := NewManager(t.TempDir(), "")
+	m, err := NewManager(testTempDir(t), "")
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) - skipping", err)
 	}
@@ -34,7 +34,7 @@ func TestTaskArchiveAPIQueueListAndLimits(t *testing.T) {
 	// exits before these route-contract assertions enqueue work.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	dataDir := t.TempDir()
+	dataDir := testTempDir(t)
 	s := New(ctx, m, dataDir, dataDir, dataDir)
 	s.archiveWG.Wait()
 	token, err := signJWT(s.jwtKey)

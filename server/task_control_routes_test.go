@@ -9,13 +9,13 @@ import (
 )
 
 func TestWorkerControlRoutes(t *testing.T) {
-	m, err := NewManager(t.TempDir(), "")
+	m, err := NewManager(testTempDir(t), "")
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) - skipping", err)
 	}
 	defer m.Close()
 
-	td := t.TempDir()
+	td := testTempDir(t)
 	s := New(context.Background(), m, td, td, td)
 	h := s.Handler()
 	token, err := signJWT(s.jwtKey)

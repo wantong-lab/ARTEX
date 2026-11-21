@@ -44,7 +44,7 @@ func newRetestServer(t *testing.T) (*Server, int64) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	td := t.TempDir()
+	td := testTempDir(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{ctx: ctx, m: &Manager{pg: pg, dir: td, tasks: map[string]*Task{}},
 		chatBusy: map[string]bool{}, chatCancel: map[string]context.CancelCauseFunc{}}
