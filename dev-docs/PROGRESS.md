@@ -210,3 +210,9 @@
 - 动作：新增 acceptance 脚本与 README。全量 go vet ./... 通过；go test -race ./... 首轮暴露 14 处数据竞争（agent 运行时钩子被测试/热更新并发写、memory.Store degraded/vecOK 并发读写），改为 agent hooks RWMutex + Set/Get，memory 状态 atomic.Bool；修复后全量 race 全绿（server 67s）。
 - 升级回滚演练（scripts/acceptance/upgrade_rollback.sh，真实进程 + PG）：v0.4.1 旧版建任务 → pg_dump(262KB)+data tar 备份 → 新版启动（migrations 9→11、任务持久、/api/tasks 等 6 个核心 API 全 200）→ soak 45s×8 workers 13425 请求 0 错误 health 200（RSS 49952→50288KB）→ 恢复备份 + 旧版回滚（任务可见、schema 9）→ 旧数据再次升级（schema 11、任务可见）。RESULT PASS 25 步。
 - 下一步：P2-13 安全审计（含上轮记录的 planner 工具调用未过 Guard 缺口、C2/proxy/会话密钥静置加密与轮换、非回环校验、审计完整性、RoE/Scope 边界）。
+
+
+## 轮次 34 · 2026-11-22（P2-13 安全审计）
+- 动作：① C2 非回环校验（c2.ValidateBindHost + 创建/启动双重复核 + settings.c2_allow_non_loopback）；② master key 轮换：db.RotateSecretKeys 事务内重加密四类密文 + cmd/artex-rotate-key CLI（dry-run/原子替换 key）；③ host_ledger 审计哈希链（迁移 0012、写路径锁表串行、VerifyHostLedger + GET /api/security/audit/verify）；④ planner Guard 缺口修复：agent.Planner.SetHooks + 任务 Guard hooks 接线 + 拦截任务上下文；⑤ 安全验收脚本 scripts/acceptance/security_audit.py。
+- 结果：go vet/build/gofmt 全绿；db/c2/guard/server 测试通过；轮换单测（含 dry-run/错误 key 回滚）与哈希链篡改/并发测试通过；真实 artex_accept 上 CLI dry-run+正式轮换（2 条代理）成功，重启后代理 URL 可解密、迁移 12；security_audit.py 在轮换前后均 EXIT=0（凭据/代理/C2 token gcm1、无明文、非回环拒绝/开关恢复、审计 ok）；真实 LLM E2E EXIT=0（任务 done、标记命中 plan+intent、207041 tokens；worker 治理 denied executed=false；planner 治理 new_denied=1 agent_name=planner executed=false）。
+- 下一步：P2-14 可观测性（/metrics、结构化日志、清理/同步任务监控），随后 P3。

@@ -55,3 +55,14 @@ CGO_ENABLED=1 ARTEX_PG_DSN='postgres://artex:artex@127.0.0.1:55432/artex_race?ss
 ```
 
 要求 `go vet ./...` 与 race 全绿；数据竞争修复见 CHANGELOG（agent hook 同步、memory 状态原子化）。
+
+
+## 安全审计（P2-13）
+
+`security_audit.py`
+
+对运行中的服务校验：凭据/代理池/C2 token 落库为 gcm1 密文且无明文、C2 非回环默认拒绝与显式开关、settings 关闭恢复、会话 secret 密文格式、审计哈希链校验端点。轮换本身由 `go test ./db -run TestRotateSecretKeys` 与 `cmd/artex-rotate-key` 覆盖（需停服务执行）。
+
+```bash
+python3 scripts/acceptance/security_audit.py --base http://127.0.0.1:18905 --db artex_p213
+```

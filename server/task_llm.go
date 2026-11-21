@@ -604,6 +604,10 @@ func (s *Server) agentsForTask(t *Task) *taskAgentBundle {
 	wk.SetWebSearch(s.webSearchFor("worker"))
 	wk.SetConstraintInject(s.constraintInjectWorker) // 操作约束注入 worker(可配置,默认开)
 	pl := agent.NewPlanner(plannerRuntime, "task-router", s.m.dir, tx, plannerRuntime.CompactionWindow(), s.agentMaxTurns("planner"))
+	// planner 的工具调用也要经过任务 Guard（全局拦截规则/RoE/审计与 worker 同路径）。
+	if t.Guard != nil {
+		pl.SetHooks(t.Guard.Hooks())
+	}
 	pl.SetExtraContextProvider(s.plannerContextExtras)
 	pl.SetFindingRecorder(s.findingRecorder())
 	pl.SetCompactionWindowResolver(plannerRuntime.CompactionWindow)

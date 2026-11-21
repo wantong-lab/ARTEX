@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/intercept"
 	"github.com/Autumn-27/norma/agentcore"
+	"github.com/Autumn-27/norma/hook"
 	"github.com/Autumn-27/norma/llm"
 	"github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
@@ -20,8 +22,11 @@ import (
 // exploration graph changes (debounced), it reads the exploration route, queries
 // assets, judges whether the task goal is met, and emits 0..N exploration intents
 // into the frontier. It is the sole intent generator.
+// hooks 是 planner 工具调用的运行钩子（与 worker/chat 共用 Guard：拦截规则、
+// RoE 范围、审计都走同一条 PreToolUse 路径）。nil = 不挂钩子。
 type Planner struct {
 	findingRecorder   FindingRecorder
+	hooks             *hook.Registry
 	prov              llm.Provider
 	model             string
 	tx                *transcript.Store                      // raw LLM conversation persistence (nil = off)
@@ -51,6 +56,12 @@ type Planner struct {
 
 // SetExtraContextProvider 注入动态上下文（KB/CVE 统计等），每轮规划实时调用。
 func (p *Planner) SetExtraContextProvider(fn func() string) { p.extraContext = fn }
+
+// SetHooks installs the run hooks used for the planner's own tool calls. Engine
+// wires the task Guard here so global intercept rules and RoE scope apply to
+// planner tool use exactly like worker tool use (previously planner calls bypassed
+// the guard entirely).
+func (p *Planner) SetHooks(h *hook.Registry) { p.hooks = h }
 
 func NewPlanner(prov llm.Provider, model, workDir string, tx *transcript.Store, window, maxTurns int) *Planner {
 	return &Planner{prov: prov, model: model, workDir: workDir, tx: tx, window: window, maxTurns: maxTurns, todos: map[int64]*actool.TodoStore{}}
@@ -378,6 +389,8 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	// 资产覆盖度功能关闭时剔除 add_task_scope/list_untested_assets（不入 prompt）。
 	base := append(tsx.DropCoverageTools(tsx.PlannerTools()), actool.DefaultTools()...)
 	ctx = WithRunInfo(ctx, RunInfo{TaskID: taskID, ExplorationID: explorationID(ts)})
+	// 让守卫/拦截落库带上任务归属（agent_name=planner），planner 的工具调用不再绕过 Guard。
+	ctx = intercept.WithTaskContext(ctx, strconv.FormatInt(taskID, 10), "planner", emit)
 	tools, def, cleanup := AugmentTools(ctx, "planner", base)
 	defer cleanup()
 	// 关键态势（刚完成的意图 + 预取的完整图）改放【本轮 user 输入】(见下方 input)，system
@@ -409,6 +422,7 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	}
 	opts := agentcore.Options{
 		Provider:        p.prov,
+		Hooks:           p.hooks,
 		SystemPrompt:    system,
 		DynamicBoundary: boundary,
 		Tools:           tools,

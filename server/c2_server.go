@@ -326,6 +326,15 @@ func (s *Server) c2CreateListener(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(body.BindHost) == "" {
 		body.BindHost = "127.0.0.1"
 	}
+	// P2-13：默认只允许回环绑定；对外监听需显式开启 c2_allow_non_loopback。
+	allowNonLoopback := false
+	if s.m != nil && s.m.pg != nil {
+		allowNonLoopback = s.m.pg.GetBool("c2_allow_non_loopback", false)
+	}
+	if err := c2.ValidateBindHost(body.BindHost, allowNonLoopback); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error(), "setting": "c2_allow_non_loopback"})
+		return
+	}
 	body.Kind = strings.ToLower(strings.TrimSpace(body.Kind))
 	if body.Kind == "" {
 		body.Kind = db.C2ListenerKindTCP
@@ -358,6 +367,23 @@ func (s *Server) c2StartListener(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	// 兜底：历史监听器/设置被关掉后再次启动时也要复核回环约束。
+	if l, err := rt.store.GetListener(r.Context(), id); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	} else if l == nil {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "监听器不存在"})
+		return
+	} else {
+		allowNonLoopback := false
+		if s.m != nil && s.m.pg != nil {
+			allowNonLoopback = s.m.pg.GetBool("c2_allow_non_loopback", false)
+		}
+		if err := c2.ValidateBindHost(l.BindHost, allowNonLoopback); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error(), "setting": "c2_allow_non_loopback"})
+			return
+		}
+	}
 	if err := rt.startOne(r.Context(), id); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return

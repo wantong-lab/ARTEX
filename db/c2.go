@@ -75,11 +75,16 @@ type C2Store struct {
 }
 
 // NewC2Store 构造访问层；masterKey 为 jwt.key 内容（空则加解密失败，诚实报错）。
+// C2ListenerSecretKey 由 master key 派生 C2 监听器 token 加密密钥（SHA-256 域分离）。
+func C2ListenerSecretKey(master []byte) []byte {
+	sum := sha256.Sum256(append([]byte("artex/c2/listener/v1\x00"), master...))
+	return sum[:]
+}
+
 func NewC2Store(d *DB, masterKey []byte) *C2Store {
 	var key []byte
 	if len(masterKey) > 0 {
-		sum := sha256.Sum256(append([]byte("artex/c2/listener/v1\x00"), masterKey...))
-		key = sum[:]
+		key = C2ListenerSecretKey(masterKey)
 	}
 	return &C2Store{d: d, key: key}
 }

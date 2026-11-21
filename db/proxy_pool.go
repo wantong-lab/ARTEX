@@ -52,11 +52,16 @@ type ProxyStore struct {
 	key []byte
 }
 
+// ProxySecretKey 由 master key 派生代理池加密密钥（SHA-256 域分离）。
+func ProxySecretKey(master []byte) []byte {
+	sum := sha256.Sum256(append([]byte("artex/proxypool/v1\x00"), master...))
+	return sum[:]
+}
+
 func NewProxyStore(d *DB, masterKey []byte) *ProxyStore {
 	var key []byte
 	if len(masterKey) > 0 {
-		sum := sha256.Sum256(append([]byte("artex/proxypool/v1\x00"), masterKey...))
-		key = sum[:]
+		key = ProxySecretKey(masterKey)
 	}
 	return &ProxyStore{d: d, key: key}
 }

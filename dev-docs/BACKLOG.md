@@ -23,7 +23,7 @@
 
 - [x] P2-11 LLM 全链路 E2E + 治理强制场景（真实 LLM 全链路 + 全局拦截规则 worker 强制；预算/拒派/接力由 agent M5 单测覆盖）。
 - [x] P2-12 全量 race / soak / 升级回滚演练 / 备份恢复。
-- [ ] P2-13 安全审计：C2/proxy/会话密钥静置加密与轮换、C2 非回环校验、审计完整性、RoE/Scope 边界。
+- [x] P2-13 安全审计：C2/proxy/会话密钥静置加密与轮换、C2 非回环校验、审计完整性、RoE/Scope 边界。
 - [ ] P2-14 可观测性：/metrics、结构化日志、清理/同步任务监控。
 
 ## P3 体验与文档
@@ -55,3 +55,5 @@
 - 2026-11-22：P2-11 完成。新增 scripts/acceptance/llm_e2e.py（登录→激活真实 LLM→连接测试→创建任务→planner/worker Bash 执行标记→活动历史/token 用量核对→治理拦截规则下发 worker 工具调用并确认未执行）。真实运行：任务 done，标记命中 plan+intent 会话，usage 202535 tokens；拦截规则命令 status=denied、executed=false。发现待办：planner 的直接工具调用未经过 Guard（全局拦截规则不覆盖 planner），已记入 P2-13 安全审计项。
 
 - 2026-11-22：P2-12 完成。全量 go vet ./... + go test -race ./...（fresh DB）全绿；修复 agent 钩子与 memory 状态真实数据竞争（RWMutex / atomic.Bool）。新增 scripts/acceptance/upgrade_rollback.sh：真实 v0.4.1 旧版→建任务→pg_dump+data 备份→新版升级（schema 9→11、任务持久、6 个核心 API 200）→soak 45s×8 workers 13425 请求 0 错误（RSS 49952→50288KB）→恢复备份+旧版回滚（任务可见、schema 9）→旧数据再升级（schema 11、任务可见），RESULT PASS 25 步。
+
+- 2026-11-22：P2-13 完成。① 静置加密复核 + master key 轮换 CLI（dry-run/正式在 artex_accept 上轮换 2 条代理 URL；重启后代理 URL 正常解密，迁移 12）；② C2 非回环默认 400 拒绝、开启 c2_allow_non_loopback 后放行并恢复默认；③ host_ledger 哈希链（0012 迁移）+ /api/security/audit/verify，篡改/并发单测通过；④ planner 工具调用接入 Guard：修复前 planner 直接执行 Bash 绕过拦截，修复后真实 LLM 治理任务由 planner 发起的 Bash 调用被打上 agent_name=planner 的 denied 记录且未执行；⑤ RoE/Scope 由 guard 既有三态单测覆盖（strict 拦截越界、loopback 放行）。安全验收脚本 security_audit.py 在轮换前后两次 EXIT=0。

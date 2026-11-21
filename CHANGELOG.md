@@ -7,6 +7,8 @@
 ## [0.4.1] - 2026-11-21
 
 ### 新增的功能
+- 安全审计与加固（P2-13）：C2 监听器默认只允许回环绑定（非回环需显式 settings.c2_allow_non_loopback）；新增 master key 轮换 CLI artex-rotate-key（事务内重加密 sessions/credentials/proxy_pool/c2_listeners，失败回滚，成功后原子替换 key）；host_ledger 增加 prev_hash/entry_hash 审计哈希链与 GET /api/security/audit/verify；planner 的工具调用接入任务 Guard（全局拦截规则/RoE/审计与 worker 同路径）；新增安全验收脚本 scripts/acceptance/security_audit.py；迁移 0012_audit_chain。
+
 - LLM 全链路与治理拦截验收脚本（P2-11）：scripts/acceptance/llm_e2e.py 对运行中的服务完成真实 LLM 激活/连通测试、任务全链路（planner→worker→Bash 标记执行→活动历史/token 用量）、全局拦截规则对 worker 工具调用的强制拦截与「未执行」校验。
 - SSH/SMB 会话与真机验证（P1-10）：register_session 支持 kind=ssh（密码/私钥，可选 SOCKS5）、kind=smbexec（密码/NT hash，可选 proxychains），会话按 kind 解密恢复并复用执行/读写/清理；内网中枢「会话」页新增登记表单；POST /api/intranet/sessions 支持三类会话；新增 SSH 协议级测试（内置 sshd）与真实 chisel 二进制隧道 e2e（需 ARTEX_CHISEL_PATH），并在用户提供的真实 VPS 上验证 SSH 会话执行/读写。
 

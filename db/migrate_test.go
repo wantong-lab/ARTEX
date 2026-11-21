@@ -123,7 +123,7 @@ func TestApplyMigrationsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first apply: %v", err)
 	}
-	if first != 11 {
+	if first != 12 {
 		t.Fatalf("first apply=%d, want 11 (+ c2 + proxy pool + retention + artifact)", first)
 	}
 	for _, table := range []string{"assets", "settings", "tasks"} {
@@ -139,7 +139,7 @@ func TestApplyMigrationsIdempotent(t *testing.T) {
 	if err := conn.QueryRowContext(ctx, `SELECT count(*) FROM schema_migrations`).Scan(&recorded); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	if recorded != 11 {
+	if recorded != 12 {
 		t.Fatalf("schema_migrations rows=%d, want 10", recorded)
 	}
 

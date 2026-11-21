@@ -2,10 +2,10 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "p2",
-  "round": 33,
-  "current_pr": "P2-13",
-  "current_branch": "fix/p2-13-security-audit",
-  "development_branch": "fix/p2-13-security-audit",
+  "round": 34,
+  "current_pr": "P2-14",
+  "current_branch": "feat/p2-14-observability",
+  "development_branch": "feat/p2-14-observability",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -210,13 +210,14 @@
     "p1_09_proxypool": "mihomo import adapter; unified outbound sploitus+cve; UI auth/health/latency; API 8 checks + Playwright 4/4",
     "p1_10_ssh_smb_tunnel": "SSH/SMB registration+UI; SSH protocol test; real chisel loopback e2e PASS; real VPS SSH exec/read/write PASS; suo5/SMB real target not available",
     "p2_11_llm_e2e": "scripts/acceptance/llm_e2e.py full run EXIT=0: task done, marker in plan+intent, 202535 tokens, intercept denied executed=false; planner guard gap filed to P2-13",
-    "p2_12_race_soak_upgrade": "go vet + go test -race ./... PASS after fixing agent hook + memory races; upgrade_rollback.sh RESULT PASS 25 steps (v0.4.1 -> HEAD migrations 9->11, soak 13425 req 0 err, rollback+re-upgrade task visible)"
+    "p2_12_race_soak_upgrade": "go vet + go test -race ./... PASS after fixing agent hook + memory races; upgrade_rollback.sh RESULT PASS 25 steps (v0.4.1 -> HEAD migrations 9->11, soak 13425 req 0 err, rollback+re-upgrade task visible)",
+    "p2_13_security_audit": "C2 loopback reject + opt-in; master key rotation CLI rotated 2 proxy urls (server restart decrypts, migrations 12); host_ledger hash chain + /api/security/audit/verify; planner Guard wired (real LLM planner Bash denied executed=false); security_audit.py EXIT=0 before/after rotation"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-22T00:28:00+08:00",
+  "updated_at": "2026-11-22T00:50:00+08:00",
   "release": {
     "tag": "v0.4.1",
     "commit": "237a26f",
@@ -234,7 +235,7 @@
       "total": 7
     },
     "p2": {
-      "done": 2,
+      "done": 3,
       "total": 4
     },
     "p3": {
