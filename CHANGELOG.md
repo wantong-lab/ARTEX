@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### 修复
+- 会话执行/清理接口对不存在的 `session_id` 曾因 store 返回 `(nil,nil)` 触发 nil 解引用 panic（HTTP 连接被中断）；现返回明确错误（执行 502 / 清理 404），并新增回归测试。
 - 验收测试发现的 API 健壮性问题：`/api/c2/enable`、`/api/cve/autosync` 对畸形 JSON 曾忽略解码错误（`*bool` 被部分解码为 false，可能静默关闭能力），现统一返回 400；`/api/retention/cleanup` 同样严格拒绝畸形 JSON，且**空 body 默认 dry-run**，真实清理必须显式传 `dry_run:false`；`webshell/generate` 错误提示补充 aspx。新增 `server/acceptance_robustness_test.go` 锁定回归。
 - 登录页：密码错误时不再被全局 401 处理器清 token 并强制跳回 `/login`（导致提示丢失），改为在页面内显示「用户名或密码错误」。
 - 前端：`<html lang>` 由 `en` 修正为 `zh-CN`，修正中文界面的读屏/无障碍语言标记。

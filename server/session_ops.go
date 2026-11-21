@@ -141,6 +141,9 @@ func (h *sessionHub) cleanupShell(ctx context.Context, id int64) (string, error)
 	if err != nil {
 		return "", err
 	}
+	if rec == nil {
+		return "", fmt.Errorf("会话 %d 不存在（可能已清理）", id)
+	}
 	host := h.hostOf(id, rec.URL)
 	cleanup := "删除已上传 WebShell: " + host
 	if h.ledger != nil {

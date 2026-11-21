@@ -113,6 +113,11 @@ func (h *sessionHub) load(ctx context.Context, id int64) (session.Session, error
 	if err != nil {
 		return nil, fmt.Errorf("会话 %d 读取失败: %w", id, err)
 	}
+	// 会话不存在时 store.Get 返回 (nil, nil)，这里必须显式判空：
+	// 否则对已清理/不存在的 session_id 执行或清理会 nil 解引用 panic（验收测试实测）。
+	if rec == nil {
+		return nil, fmt.Errorf("会话 %d 不存在（可能已清理）", id)
+	}
 	if rec.Status != db.SessionAlive {
 		return nil, fmt.Errorf("会话 %d 状态为 %s，不可执行；请重新登记", id, rec.Status)
 	}
