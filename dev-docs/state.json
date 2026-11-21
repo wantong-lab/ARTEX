@@ -2,13 +2,13 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "M0",
-  "round": 1,
-  "current_pr": "M0-03",
-  "current_branch": "chore/m0-03-schema-check",
+  "round": 2,
+  "current_pr": "M0-04",
+  "current_branch": "chore/m0-04-test-baseline",
   "status_counts": {
-    "completed": 2,
+    "completed": 3,
     "in_progress": 0,
-    "pending": 22,
+    "pending": 21,
     "blocked": 0
   },
   "prs": {
@@ -23,6 +23,12 @@
       "branch": "feat/m0-02-migrations",
       "status": "completed",
       "commit": "7e192c8"
+    },
+    "M0-03": {
+      "milestone": "M0",
+      "branch": "chore/m0-03-schema-check",
+      "status": "completed",
+      "commit": "0a8374b"
     }
   },
   "known_issues": [
@@ -43,12 +49,13 @@
     }
   ],
   "evidence": {
-    "m0_02": "go build/vet 通过；真实 PG15+pgvector 首次应用 1、二次 0；db 包全量绿；A/B 对照确认全量套件失败为基线既有"
+    "m0_02": "build/vet 通过；真实 PG 首次迁移=1、二次=0；db 包全量绿",
+    "m0_03": "表引用扫描 78 项、迁移建表 49 项、差集 0（白名单：llm_records/llm_usage/schema_migrations）；fixture 漏表用例可检出；PG 表/列校验通过"
   },
   "next_actions": [
-    "M0-03: requiredTables 清单 + 临时 schema 校验测试 + CI 生效",
-    "M0-04: 0002 迁移收敛代码内建表 + 修 T-02/T-03 + CI 预置 schema"
+    "M0-04: 0002 迁移收敛 llm_records/llm_usage；修 T-02/T-03；空库 go test -p 1 ./... 全绿",
+    "M1-01: 复制 chainskel 包并适配"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T10:26:00+08:00"
+  "updated_at": "2026-11-21T10:33:00+08:00"
 }
