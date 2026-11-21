@@ -153,3 +153,9 @@
 - 结果：tsc/build:static 通过；API 冒烟本地 14/14；404/开关/h1 用 Playwright 实测通过；CI run 44909962033 success（go+web 含新门禁）。
 - P0-1：CHANGELOG 定版 [0.4.1]，tag v0.4.1 → commit 237a26f；release run 44910352144 success（linux/darwin amd64+arm64、windows amd64、frontend、GitHub Release；产物含 SHA256SUMS）。提交 88c485a、237a26f。
 - 下一步：P1-4 统一定时调度器（retention 自动清理 / CVE autosync 调度 / 代理池健康巡检）。
+
+
+## 轮次 25 · 2026-11-21（P1-4 统一定时调度器）
+- 动作：新增 server/maintenance.go（maintainer）：后台单循环每分钟 tick，热读 settings；任务=保留自动清理、CVE 自动同步（复用 cveSyncStart 抽出的 launchCVESync）、代理池健康巡检；新增 GET /api/scheduler/status、POST /api/scheduler/run/{name}；支持 ARTEX_SCHEDULER_TICK_SECONDS；默认 retention/CVE 关、代理池巡检开（空池跳过）。
+- 结果：单元测试 4 个（settings 默认/到期调度/禁用跳过/RunNow）通过；集成实测 status 默认值+next_run、retention 手动执行删除 40 天前日志并写审计 actor=scheduler、空池巡检跳过、未知任务 400、运行后 last_result/last_run/next_run 回填。
+- 下一步：P1-5 保留/清理前端页（复用 scheduler/retention API）。

@@ -129,20 +129,22 @@ func (s *Server) cveSploitus(w http.ResponseWriter, r *http.Request) {
 
 // cveSyncStart 启动后台分页同步（可中断）；重复启动返回当前状态。
 func (s *Server) cveSyncStart(w http.ResponseWriter, r *http.Request) {
+	feedURL := strings.TrimSpace(r.URL.Query().Get("feed_url"))
+	started := s.launchCVESync(feedURL)
+	state := kb.LoadCVESyncState(filepath.Join(s.m.dir, "cve"))
+	writeJSON(w, http.StatusAccepted, map[string]any{"running": true, "started": started, "sync": state})
+}
+
+// launchCVESync 启动后台分页同步；已在运行返回 false。供 API 与维护调度器共用。
+func (s *Server) launchCVESync(feedURL string) bool {
 	s.cveMu.Lock()
 	if s.cveRunning {
-		st := kb.LoadCVESyncState(filepath.Join(s.m.dir, "cve"))
 		s.cveMu.Unlock()
-		writeJSON(w, http.StatusAccepted, map[string]any{"running": true, "sync": st})
-		return
+		return false
 	}
 	s.cveRunning = true
 	dir := filepath.Join(s.m.dir, "cve")
 	_ = os.MkdirAll(dir, 0o755)
-	feedURL := strings.TrimSpace(r.URL.Query().Get("feed_url"))
-	s.cveMu.Unlock()
-	s.cveMu.Lock()
-	s.cveSyncCancel = nil
 	s.cveMu.Unlock()
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cveMu.Lock()
@@ -163,8 +165,7 @@ func (s *Server) cveSyncStart(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[cve] 同步完成: processed=%d total=%d", st.Processed, st.Total)
 		}
 	}()
-	state := kb.LoadCVESyncState(dir)
-	writeJSON(w, http.StatusAccepted, map[string]any{"running": true, "sync": state})
+	return true
 }
 
 // cveSyncStop 中断正在跑的同步：取消 ctx，已落库的页与断点保留（下次可续跑）。

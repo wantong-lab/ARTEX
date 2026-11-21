@@ -69,6 +69,9 @@ type Server struct {
 	proxyMu sync.Mutex
 	proxyRT *proxyPoolRuntime
 
+	// 维护性定时调度（P1-4）：保留自动清理/CVE 自动同步/代理池健康巡检。
+	maintenance *maintainer
+
 	// CVE 语料库与同步状态（M3-03）。
 	cveMu         sync.Mutex
 	cveOnce       bool
@@ -288,6 +291,10 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	s.wireInterceptReviewer() // LLM 兜底审批:未命中拦截规则的命令交给模型判定
 	s.startC2IfEnabled(ctx)   // C2 默认关闭；仅 c2_enabled=on 时按台账拉起监听器
 	s.proxyPool()             // 代理池：加载全局/活动配置并注入出站 client
+	if s.m != nil && s.m.pg != nil {
+		s.maintenance = newMaintenanceScheduler(s)
+		go s.maintenance.Run(s.ctx) // P1-4 维护调度：默认保留清理/CVE 关闭、代理池巡检开启（空池跳过）
+	}
 	return s
 }
 
@@ -689,6 +696,8 @@ func (s *Server) Handler() http.Handler {
 	s.registerWebshellRoutes(mux)
 	s.registerProxyPoolRoutes(mux)
 	s.registerRetentionRoutes(mux)
+	mux.HandleFunc("GET /api/scheduler/status", s.schedulerStatus)
+	mux.HandleFunc("POST /api/scheduler/run/{name}", s.schedulerRun)
 
 	// Auth routes — exempt from JWT check (handled in requireAuth)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
