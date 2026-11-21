@@ -42,3 +42,8 @@
 - 动作：M1-03。新增 `agent/stuck.go`（输出归一化+签名，同签名 12 次或同工具失败 15 次且相似度 ≥0.8）、`agent/deadsurface.go`（按 host 传输失败 5/5xx 8/出口代理 3）、`agent/repeating.go`（同参数连续 3 次拦截并回放上次结果）、`agent/detectors.go`（组合 + settings 开关）。经 `steerHooks` 挂在 PreToolUse/PostToolUse：命中拦下一次调用、把转向指令交回模型，并写 system 活动。
 - 结果：10 个单测全绿；`go build/vet` 通过；全量 16 包全绿（EXIT=0）。提交 `e5db440`。
 - 下一步：M1-04 蜜罐识别 + planner 蜜罐处置纪律（补齐 M1-02 延期项）。
+
+## 轮次 7 · 2026-11-21
+- 动作：M1-04。逐字节复制 honeydetect 包（sha256 一致）；迁移 0003 给 assets 加 `honeypot_score`/`honeypot_evidence` 与部分索引；服务资产落库后 best-effort 评分、回写并写 fact 锚定；planner 固定尾补「蜜罐处置纪律」，M1-02 延期项关闭。
+- 结果：honeydetect 6 个用例、db 评分读写（取最高分、低分不覆盖）与 planner 固定尾用例全绿；`go build` 通过；全量 17 包全绿（EXIT=0）。提交 `e972c91`。
+- 下一步：M1-05 侦察/军火库软提醒 + UA 池，随后进入 M2 内网中枢。
