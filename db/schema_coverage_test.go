@@ -23,14 +23,14 @@ import (
 )
 
 var (
-	createTableRe    = regexp.MustCompile(`(?i)CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+([a-z_][a-z0-9_]*)`)
-	sqlStmtStartRe   = regexp.MustCompile(`(?s)^\s*(?:SELECT|INSERT|UPDATE|DELETE|WITH|MERGE)\b`)
-	sqlStmtLineRe    = regexp.MustCompile(`(?s)(?:^|\n)\s*(?:SELECT|INSERT|UPDATE|DELETE|WITH)\b`)
-	tableRefRe       = regexp.MustCompile(`(?i)\b(?:FROM|JOIN|INTO|UPDATE|DELETE\s+FROM)\s+(?:"?[a-z_][a-z0-9_]*"?\.)?"?([a-z_][a-z0-9_]*)"?`)
-	cteRe            = regexp.MustCompile(`(?i)\b([a-z_][a-z0-9_]*)\s*(?:\([^()]*\))?\s+AS\s*(?:MATERIALIZED\s*)?\(`)
-	sqlCommentLineRe = regexp.MustCompile(`(?m)--[^\n]*`)
+	createTableRe     = regexp.MustCompile(`(?i)CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+([a-z_][a-z0-9_]*)`)
+	sqlStmtStartRe    = regexp.MustCompile(`(?s)^\s*(?:SELECT|INSERT|UPDATE|DELETE|WITH|MERGE)\b`)
+	sqlStmtLineRe     = regexp.MustCompile(`(?s)(?:^|\n)\s*(?:SELECT|INSERT|UPDATE|DELETE|WITH)\b`)
+	tableRefRe        = regexp.MustCompile(`(?i)\b(?:FROM|JOIN|INTO|UPDATE|DELETE\s+FROM)\s+(?:"?[a-z_][a-z0-9_]*"?\.)?"?([a-z_][a-z0-9_]*)"?`)
+	cteRe             = regexp.MustCompile(`(?i)\b([a-z_][a-z0-9_]*)\s*(?:\([^()]*\))?\s+AS\s*(?:MATERIALIZED\s*)?\(`)
+	sqlCommentLineRe  = regexp.MustCompile(`(?m)--[^\n]*`)
 	sqlCommentBlockRe = regexp.MustCompile(`(?s)/\*.*?\*/`)
-	sqlFuncFromRe    = regexp.MustCompile(`(?i)\b(?:EXTRACT|SUBSTRING|TRIM|OVERLAY)\s*\([^()]*\)`)
+	sqlFuncFromRe     = regexp.MustCompile(`(?i)\b(?:EXTRACT|SUBSTRING|TRIM|OVERLAY)\s*\([^()]*\)`)
 )
 
 // nonTableTokens 是非表 token：SQL 片段、函数参数与提示文案里会出现的词，
@@ -42,12 +42,9 @@ var nonTableTokens = map[string]bool{
 	"jsonb_array_elements": true, "jsonb_array_elements_text": true, "jsonb_to_recordset": true,
 	"information_schema": true, "pg_catalog": true, "pg_database": true,
 	"only": true, "set": true, "where": true, "group": true, "order": true, "limit": true,
-	"created_at": true, // EXTRACT(EPOCH FROM created_at)
-	"max": true, "of": true, "skip": true, // SQL 片段/英文提示文案
+	"created_at": true,                           // EXTRACT(EPOCH FROM created_at)
+	"max":        true, "of": true, "skip": true, // SQL 片段/英文提示文案
 }
-
-// runtimeCreatedTables 是代码运行时建表（T-01）；M0-04 收敛进迁移后删除。
-var runtimeCreatedTables = map[string]bool{"llm_records": true, "llm_usage": true}
 
 // infraTables 由迁移框架自身创建，不在基线 DDL 里。
 var infraTables = map[string]bool{"schema_migrations": true}
@@ -130,7 +127,7 @@ func scanSQLTableRefs(root string) (map[string][]string, map[string]bool, error)
 func tableCoverageGaps(created map[string]bool, refs map[string][]string, ctes map[string]bool) []string {
 	var gaps []string
 	for table := range refs {
-		if created[table] || ctes[table] || nonTableTokens[table] || infraTables[table] || runtimeCreatedTables[table] {
+		if created[table] || ctes[table] || nonTableTokens[table] || infraTables[table] {
 			continue
 		}
 		gaps = append(gaps, table)
