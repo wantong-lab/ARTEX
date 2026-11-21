@@ -5,6 +5,8 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -68,21 +70,28 @@ func (s *Server) retentionSavePolicy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) retentionCleanup(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		DryRun bool   `json:"dry_run"`
+		Actor  string `json:"actor"`
+	}
+	// 空 body 默认 dry-run：避免误发的空 POST 触发真实删除；真实清理必须显式 dry_run:false。
+	dryRun := true
+	if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+		dryRun = body.DryRun
+	} else if !errors.Is(err, io.EOF) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
+		return
+	}
 	d := s.retentionStore()
 	if d == nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "数据库未就绪"})
 		return
 	}
-	var body struct {
-		DryRun bool   `json:"dry_run"`
-		Actor  string `json:"actor"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&body)
 	actor := strings.TrimSpace(body.Actor)
 	if actor == "" {
 		actor = "admin"
 	}
-	res, err := d.RunRetentionCleanup(r.Context(), d.LoadRetentionPolicy(), actor, body.DryRun)
+	res, err := d.RunRetentionCleanup(r.Context(), d.LoadRetentionPolicy(), actor, dryRun)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return

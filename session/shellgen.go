@@ -96,7 +96,7 @@ func GenerateShell(lang string, obfuscate bool, note string) (*GeneratedShell, e
 		tpl = aspxEncTemplate
 		mode = "cbc"
 	default:
-		return nil, opError("generate", "不支持的马体语言 %q（支持 php/jsp)", lang)
+		return nil, opError("generate", "不支持的马体语言 %q（支持 php/jsp/aspx）", lang)
 	}
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {

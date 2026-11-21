@@ -198,7 +198,10 @@ func (s *Server) cveAutosync(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Enabled *bool `json:"enabled"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&body)
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
+		return
+	}
 	if body.Enabled == nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "enabled 必填"})
 		return
