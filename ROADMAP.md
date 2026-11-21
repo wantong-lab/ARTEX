@@ -120,6 +120,7 @@
 | M1-05 | 已完成 | `7fdad77` | 提醒 + UA 池；M1 里程碑收官 |
 | M2-01 | 已完成 | `8d2ca82` | 会话/投递/隧道/知识库包 + 内网表 |
 | M2-02 | 已完成 | `2e74c05` | 会话四工具 + 审批/台账接线 |
+| M2-03 | 已完成 | `a332e93` | 隧道三工具 + 任务级 MITM 上游热切换 |
 | 其余 | 待开始 | — | 按第 10 节明细推进 |
 
 > 状态真相源：[dev-docs/TASKS.md](dev-docs/TASKS.md)；轮次流水：[dev-docs/PROGRESS.md](dev-docs/PROGRESS.md)；机器状态：[dev-docs/state.json](dev-docs/state.json)；目标定义与执行协议：[dev-docs/GOAL.md](dev-docs/GOAL.md)。

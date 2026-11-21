@@ -63,3 +63,9 @@
 - 结果：httptest 假 phpcmd 马跑通 register→exec→write→read；截断、RoE 拒绝、陈旧判死、schema 不漂移共 5 个用例全绿；全量 21 包全绿（EXIT=0）。提交 `2e74c05`。
 - 偏差：ssh/smb 会话登记与后台巡检扫器未纳入本 PR（延后 M2-04/M2-05）；活动流依赖 harness 既有 tool-call 记账，host_ledger 为显式台账。
 - 下一步：M2-03 隧道工具与任务级 MITM 热切换。
+
+## 轮次 11 · 2026-11-21
+- 动作：M2-03。新增 `server/tunnel_tools.go`（tunnel_deploy/list/teardown + 健康巡检随 server 生命周期启动 + 状态变化回调）与 `server/traffic_manager.go`（任务级 MITM：懒建独立实例/CA 目录/端口池，上游顺序 alive socks→全局→直连，热切换并刷新已缓存 worker 代理）；工具元数据进 BuiltinToolSeeds 绑定 worker/pentest。
+- 结果：上游选择表驱动、热切换含死亡回退、Plan 序列化往返、工具 schema 不漂移共 4 个用例全绿；全量 21 包全绿（EXIT=0）。提交 `a332e93`。
+- 偏差：`traffic/traffic.go` 未改（当前上游 0.3.15 已内置 SetUpstreamProxy）；chisel 二进制缺失，真机部署路径未端到端验证（工具返回明确错误）；回调地址取 env `ARTEX_CALLBACK_ADDR`，后续接入 config/设置页。
+- 下一步：M2-04 凭据与 RoE 范围审批。
