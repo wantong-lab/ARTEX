@@ -22,6 +22,7 @@ import (
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/intercept"
+	"github.com/Autumn-27/artex/kb"
 	"github.com/Autumn-27/artex/llmpool"
 	"github.com/Autumn-27/artex/llmrec"
 	"github.com/Autumn-27/artex/report"
@@ -54,6 +55,11 @@ type Server struct {
 	tunnelMu    sync.Mutex
 	tunnelRT    *tunnelRuntime
 	taskProxyRT *taskProxyManager
+
+	// 知识库句柄（M3-02）：懒打开，失败置 once=true 且 kbDB=nil（静默降级）。
+	kbMu   sync.Mutex
+	kbOnce bool
+	kbDB   *kb.Client
 
 	// concMu serializes concurrency-cap decisions (admission + reconcile) so a
 	// scheduler tick and an HTTP settings change / task creation can't both count
@@ -660,6 +666,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerSideRoutes(mux)
 	s.registerIntranetRoutes(mux)
+	s.registerKBRoutes(mux)
 
 	// Auth routes — exempt from JWT check (handled in requireAuth)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
