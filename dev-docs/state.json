@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "objective": "artex-product-parity",
-  "phase": "p1",
-  "round": 30,
-  "current_pr": "P1-10",
-  "current_branch": "feat/p1-10-ssh-smb-tunnel",
-  "development_branch": "feat/p1-10-ssh-smb-tunnel",
+  "phase": "p2",
+  "round": 31,
+  "current_pr": "P2-11",
+  "current_branch": "test/p2-11-llm-e2e",
+  "development_branch": "test/p2-11-llm-e2e",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -207,13 +207,14 @@
     "p1_06_c2": "migration 0010 http beacon; integration 13 checks; Playwright 11/11; db fresh tests ok",
     "p1_07_webshell_creds": "migration 0011; physical cleanup verified; Go tests + Playwright 6/6; full db/server/c2 green",
     "p1_08_kb": "kb/manage.go pagination/update/delete/SQL insights; planner extras; API 13 checks + Playwright 5/5; tests green",
-    "p1_09_proxypool": "mihomo import adapter; unified outbound sploitus+cve; UI auth/health/latency; API 8 checks + Playwright 4/4"
+    "p1_09_proxypool": "mihomo import adapter; unified outbound sploitus+cve; UI auth/health/latency; API 8 checks + Playwright 4/4",
+    "p1_10_ssh_smb_tunnel": "SSH/SMB registration+UI; SSH protocol test; real chisel loopback e2e PASS; real VPS SSH exec/read/write PASS; suo5/SMB real target not available"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T23:15:00+08:00",
+  "updated_at": "2026-11-22T00:00:00+08:00",
   "release": {
     "tag": "v0.4.1",
     "commit": "237a26f",
@@ -227,7 +228,7 @@
       "total": 3
     },
     "p1": {
-      "done": 6,
+      "done": 7,
       "total": 7
     },
     "p2": {

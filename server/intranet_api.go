@@ -17,6 +17,7 @@ import (
 
 func (s *Server) registerIntranetRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/intranet/sessions", s.intranetSessions)
+	mux.HandleFunc("POST /api/intranet/sessions", s.webshellRegister)
 	mux.HandleFunc("GET /api/intranet/tunnels", s.intranetTunnels)
 	mux.HandleFunc("GET /api/intranet/credentials", s.intranetCredentials)
 	mux.HandleFunc("POST /api/intranet/credentials", s.intranetCreateCredential)

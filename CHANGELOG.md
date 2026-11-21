@@ -7,6 +7,11 @@
 ## [0.4.1] - 2026-11-21
 
 ### 新增的功能
+- SSH/SMB 会话与真机验证（P1-10）：register_session 支持 kind=ssh（密码/私钥，可选 SOCKS5）、kind=smbexec（密码/NT hash，可选 proxychains），会话按 kind 解密恢复并复用执行/读写/清理；内网中枢「会话」页新增登记表单；POST /api/intranet/sessions 支持三类会话；新增 SSH 协议级测试（内置 sshd）与真实 chisel 二进制隧道 e2e（需 ARTEX_CHISEL_PATH），并在用户提供的真实 VPS 上验证 SSH 会话执行/读写。
+
+### 修复
+- SSH 会话写文件 base64 -d 重定向语义错误（实际写入名为 -- 的文件），改为直接重定向；读文件 base64 兜底去除换行后再解码。
+
 - 代理池增强（P1-9）：mihomo/Clash 配置适配器（`POST /api/proxy-pool/import-mihomo`，解析 proxies 列表导入 http/socks5、ss/vmess 如实跳过）；统一出站（Sploitus + CVE 同步共用代理池回退链）；代理池 UI 增加认证标识、健康/失败统计、最近探测时间、mihomo 导入与跳过原因展示。
 - 知识库补全（P1-8）：`/api/kb/entries` 服务端分页（offset/limit/category）、`PUT/DELETE /api/kb/entry` 条目编辑与删除（含 FTS 索引与正文文件清理）、`/api/v2/kb-insights` 改为 SQL GROUP BY 聚合；planner system prompt 自动注入 KB 三档统计与本地 CVE 语料量；情报页「全部条目」支持分页浏览、编辑、删除与统计展示。
 - WebShell/凭据闭环（P1-7）：登记可填目标侧绝对路径（迁移 0011 sessions.artifact_path），清理时先 rm 再校验文件不存在，失败保留会话并记 host_ledger；内网中枢「凭据」页支持手动新增、按需读取明文（服务端日志）、删除与复制复用。

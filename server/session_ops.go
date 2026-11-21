@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -242,4 +244,88 @@ func shellHost(rawURL string) string {
 		return ""
 	}
 	return u.Host
+}
+
+// registerSSHCore 用密码/私钥直接登录 SSH，登记为可恢复的 ssh 会话。
+func (h *sessionHub) registerSSHCore(ctx context.Context, sec session.SSHSecret, assetID int64) (map[string]any, error) {
+	sec.Host = strings.TrimSpace(sec.Host)
+	sec.User = strings.TrimSpace(sec.User)
+	if sec.Host == "" || sec.User == "" {
+		return nil, fmt.Errorf("host/user 必填")
+	}
+	if sec.Port <= 0 {
+		sec.Port = 22
+	}
+	addr := net.JoinHostPort(sec.Host, strconv.Itoa(sec.Port))
+	if h.gate != nil {
+		if err := h.gate(ctx, "ssh://"+addr); err != nil {
+			return nil, err
+		}
+	}
+	sh, err := session.DialSSH(sec, 15*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("SSH 连接失败：%w", err)
+	}
+	secret, err := json.Marshal(sh.Secret())
+	if err != nil {
+		return nil, fmt.Errorf("秘密序列化失败：%w", err)
+	}
+	ri := agent.RunInfoFrom(ctx)
+	rec := &db.SessionRecord{
+		Kind: "ssh", HostAssetID: assetID, URL: "ssh://" + sec.User + "@" + addr,
+		Secret: secret, Lang: "ssh", Status: db.SessionAlive,
+		CreatedByTask: ri.TaskID, CreatedByIntent: ri.IntentID,
+	}
+	id, err := h.store.Create(ctx, rec)
+	if err != nil {
+		_ = sh.Close(ctx)
+		return nil, fmt.Errorf("登记失败：%w", err)
+	}
+	sh.SetID(id)
+	h.reg.Add(sh)
+	h.setHost(id, sec.Host)
+	h.store.Touch(ctx, id)
+	return map[string]any{"session_id": id, "kind": "ssh", "host": sec.Host,
+		"port": sec.Port, "user": sec.User, "platform": sec.Platform}, nil
+}
+
+// registerSMBCore 用密码/NT hash 登记 Windows SMB（wmiexec）会话；每条命令独立往返。
+func (h *sessionHub) registerSMBCore(ctx context.Context, sec session.SMBSecret, assetID int64) (map[string]any, error) {
+	sec.Host = strings.TrimSpace(sec.Host)
+	sec.User = strings.TrimSpace(sec.User)
+	if sec.Host == "" || sec.User == "" {
+		return nil, fmt.Errorf("host/user 必填")
+	}
+	if strings.TrimSpace(sec.Pass) == "" && strings.TrimSpace(sec.Hash) == "" {
+		return nil, fmt.Errorf("需要 password 或 NT hash 其一")
+	}
+	if h.gate != nil {
+		if err := h.gate(ctx, "smb://"+sec.Host); err != nil {
+			return nil, err
+		}
+	}
+	sh, err := session.DialSMB(sec)
+	if err != nil {
+		return nil, fmt.Errorf("SMB 参数校验失败：%w", err)
+	}
+	secret, err := json.Marshal(sh.Secret())
+	if err != nil {
+		return nil, fmt.Errorf("秘密序列化失败：%w", err)
+	}
+	ri := agent.RunInfoFrom(ctx)
+	rec := &db.SessionRecord{
+		Kind: "smbexec", HostAssetID: assetID, URL: "smb://" + sec.User + "@" + sec.Host,
+		Secret: secret, Lang: "smbexec", Status: db.SessionAlive,
+		CreatedByTask: ri.TaskID, CreatedByIntent: ri.IntentID,
+	}
+	id, err := h.store.Create(ctx, rec)
+	if err != nil {
+		return nil, fmt.Errorf("登记失败：%w", err)
+	}
+	sh.SetID(id)
+	h.reg.Add(sh)
+	h.setHost(id, sec.Host)
+	h.store.Touch(ctx, id)
+	return map[string]any{"session_id": id, "kind": "smbexec", "host": sec.Host,
+		"user": sec.User, "hash_used": sec.Hash != ""}, nil
 }

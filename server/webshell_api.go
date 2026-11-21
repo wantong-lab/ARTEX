@@ -63,18 +63,42 @@ func (s *Server) webshellGenerate(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) webshellRegister(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		URL      string `json:"url"`
-		Password string `json:"password"`
-		Lang     string `json:"lang"`
-		Secret   string `json:"secret"`
-		AssetID  int64  `json:"asset_id"`
-		Path     string `json:"path"`
+		Kind        string `json:"kind"`
+		URL         string `json:"url"`
+		Password    string `json:"password"`
+		Lang        string `json:"lang"`
+		Secret      string `json:"secret"`
+		AssetID     int64  `json:"asset_id"`
+		Path        string `json:"path"`
+		Host        string `json:"host"`
+		Port        int    `json:"port"`
+		User        string `json:"user"`
+		Key         string `json:"key"`
+		Proxy       string `json:"proxy"`
+		Hash        string `json:"hash"`
+		Proxychains bool   `json:"proxychains"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
 		return
 	}
-	res, err := s.sessions().registerCore(r.Context(), body.URL, body.Password, body.Lang, body.Secret, body.AssetID, body.Path)
+	var (
+		res map[string]any
+		err error
+	)
+	switch strings.ToLower(strings.TrimSpace(body.Kind)) {
+	case "ssh":
+		res, err = s.sessions().registerSSHCore(r.Context(), session.SSHSecret{
+			Host: body.Host, Port: body.Port, User: body.User,
+			Password: body.Password, Key: body.Key, Proxy: body.Proxy,
+		}, body.AssetID)
+	case "smb", "smbexec":
+		res, err = s.sessions().registerSMBCore(r.Context(), session.SMBSecret{
+			Host: body.Host, User: body.User, Pass: body.Password, Hash: body.Hash, ProxyC: body.Proxychains,
+		}, body.AssetID)
+	default:
+		res, err = s.sessions().registerCore(r.Context(), body.URL, body.Password, body.Lang, body.Secret, body.AssetID, body.Path)
+	}
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return

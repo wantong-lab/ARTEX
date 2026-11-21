@@ -10,18 +10,26 @@ func SessionToolSeeds() []ToolSeed {
 	return []ToolSeed{
 		{
 			Key: "register_session",
-			Desc: "【立足点主通道】把已拿到的 webshell 登记为平台管理的会话：先无害探针探测马型，成功才落库；" +
-				"失败返回明确原因（不伪造）。登记目标 host 会过资产拦截(RoE)。lang: php/phpcmd/jsp/aspx/auto，加密马 phpenc/jspenc/aspxenc 需 secret。",
+			Desc: "立足点主通道：把已拿到的 webshell / SSH / SMB 凭据登记为平台会话。webshell 先探针再落库；" +
+				"SSH 直接登录；SMB（wmiexec）登记后每条命令独立往返；失败返回明确原因。目标 host 过资产拦截(RoE)。" +
+				"kind=webshell（默认，需 url）| ssh（host/user + password 或 key）| smbexec（host/user + password 或 hash）。",
 			Schema: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"url":      map[string]any{"type": "string", "description": "webshell 完整 URL，含协议（必填）"},
-					"password": map[string]any{"type": "string", "description": "连接密码（POST 字段名，默认 cmd；加密马不需要）"},
-					"lang":     map[string]any{"type": "string", "description": "马语言：php / phpcmd / jsp / aspx / auto；phpenc / jspenc / aspxenc"},
-					"secret":   map[string]any{"type": "string", "description": "加密马密钥（phpenc/jspenc/aspxenc 必填）"},
-					"asset_id": map[string]any{"type": "integer", "description": "对应资产 id（可选）"},
+					"kind":        map[string]any{"type": "string", "description": "会话类型：webshell（默认）/ ssh / smbexec"},
+					"url":         map[string]any{"type": "string", "description": "webshell 完整 URL（kind=webshell 必填）"},
+					"password":    map[string]any{"type": "string", "description": "webshell 连接密码 / SSH 密码 / SMB 密码"},
+					"lang":        map[string]any{"type": "string", "description": "webshell 语言：php / phpcmd / jsp / aspx / auto；phpenc/jspenc/aspxenc"},
+					"secret":      map[string]any{"type": "string", "description": "加密马密钥（phpenc/jspenc/aspxenc 必填）"},
+					"host":        map[string]any{"type": "string", "description": "SSH/SMB 目标主机（kind=ssh/smbexec 必填）"},
+					"port":        map[string]any{"type": "integer", "description": "SSH 端口（默认 22）"},
+					"user":        map[string]any{"type": "string", "description": "SSH/SMB 用户名"},
+					"key":         map[string]any{"type": "string", "description": "SSH PEM 私钥正文（与 password 二选一）"},
+					"proxy":       map[string]any{"type": "string", "description": "SSH 出网 socks5 代理（可选）"},
+					"hash":        map[string]any{"type": "string", "description": "SMB NT hash（pass-the-hash）"},
+					"proxychains": map[string]any{"type": "string", "description": "SMB 是否经 proxychains（true/false）"},
+					"asset_id":    map[string]any{"type": "integer", "description": "对应资产 id（可选）"},
 				},
-				"required": []any{"url"},
 			},
 			Agents: []string{"worker", "pentest"},
 		},

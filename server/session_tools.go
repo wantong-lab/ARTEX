@@ -121,13 +121,29 @@ func (h *sessionHub) load(ctx context.Context, id int64) (session.Session, error
 	if rec.Status != db.SessionAlive {
 		return nil, fmt.Errorf("会话 %d 状态为 %s，不可执行；请重新登记", id, rec.Status)
 	}
-	var sec session.Secret
-	if err := json.Unmarshal(rec.Secret, &sec); err != nil {
-		return nil, fmt.Errorf("会话 %d 秘密数据不可解析: %w", id, err)
+	var sh session.Session
+	switch rec.Kind {
+	case "ssh":
+		var sec session.SSHSecret
+		if err := json.Unmarshal(rec.Secret, &sec); err != nil {
+			return nil, fmt.Errorf("会话 %d 秘密数据不可解析: %w", id, err)
+		}
+		sh, err = session.RestoreSSHShell(rec.ID, sec)
+	case "smbexec":
+		var sec session.SMBSecret
+		if err := json.Unmarshal(rec.Secret, &sec); err != nil {
+			return nil, fmt.Errorf("会话 %d 秘密数据不可解析: %w", id, err)
+		}
+		sh, err = session.RestoreSMBShell(rec.ID, sec)
+	default:
+		var sec session.Secret
+		if err := json.Unmarshal(rec.Secret, &sec); err != nil {
+			return nil, fmt.Errorf("会话 %d 秘密数据不可解析: %w", id, err)
+		}
+		sh, err = session.RestoreHTTPShell(rec.ID, sec)
 	}
-	sh, err := session.RestoreHTTPShell(rec.ID, sec)
 	if err != nil {
-		return nil, fmt.Errorf("会话 %d 恢复失败（仅支持 HTTP 会话）: %w", id, err)
+		return nil, fmt.Errorf("会话 %d 恢复失败（%s）: %w", id, rec.Kind, err)
 	}
 	h.reg.Add(sh)
 	h.setHost(id, rec.URL)
@@ -157,67 +173,63 @@ func (h *sessionHub) recordLedger(ctx context.Context, sessionID int64, rawURL, 
 
 func (h *sessionHub) registerTool() actool.CoreTool {
 	return sessionTool("register_session",
-		"【立足点主通道】把已拿到的 webshell 登记为平台管理的会话。先发无害探针探测马型与可用执行函数，探测成功才落库；"+
-			"失败返回明确原因（不伪造成功）。登记目标 host 会过资产拦截(RoE)校验。lang: php/phpcmd/jsp/aspx/auto（明文），phpenc/jspenc/aspxenc（加密马，需 secret）；ssh 暂不支持。",
+		"立足点主通道：把已拿到的 webshell / SSH / SMB 凭据登记为平台会话。webshell 先探针再落库；SSH 直接登录；SMB 登记后每条命令经 wmiexec 往返；失败返回明确原因。目标 host 会过资产拦截(RoE)。",
 		map[string]any{
-			"url":      sessStr("webshell 完整 URL，含协议（必填）"),
-			"password": sessStr("连接密码（POST 字段名，默认 cmd；加密马不需要）"),
-			"lang":     sessStr("马语言：php / phpcmd / jsp / aspx / auto（默认 auto）；phpenc / jspenc / aspxenc；ssh 暂不支持"),
-			"secret":   sessStr("加密马密钥（phpenc/jspenc/aspxenc 必填）"),
-			"asset_id": sessInt("该会话对应资产 id（可选，用于把会话挂到已登记的服务资产）"),
-		}, []string{"url"}, false,
+			"kind":        sessStr("会话类型：webshell（默认）/ ssh / smbexec"),
+			"url":         sessStr("webshell 完整 URL（kind=webshell 必填）"),
+			"password":    sessStr("webshell 连接密码 / SSH 密码 / SMB 密码"),
+			"lang":        sessStr("webshell 语言：php / phpcmd / jsp / aspx / auto；phpenc/jspenc/aspxenc"),
+			"secret":      sessStr("加密马密钥（phpenc/jspenc/aspxenc 必填）"),
+			"host":        sessStr("SSH/SMB 目标主机（kind=ssh/smbexec 必填）"),
+			"port":        sessInt("SSH 端口（默认 22）"),
+			"user":        sessStr("SSH/SMB 用户名"),
+			"key":         sessStr("SSH PEM 私钥正文（与 password 二选一）"),
+			"proxy":       sessStr("SSH 出网 socks5 代理（可选）"),
+			"hash":        sessStr("SMB NT hash（pass-the-hash）"),
+			"proxychains": sessStr("SMB 是否经 proxychains（true/false）"),
+			"asset_id":    sessInt("该会话对应资产 id（可选）"),
+		}, []string{}, false,
 		func(ctx context.Context, in json.RawMessage) (actool.Result, error) {
 			var a struct {
-				URL      string `json:"url"`
-				Password string `json:"password"`
-				Lang     string `json:"lang"`
-				Secret   string `json:"secret"`
-				AssetID  int64  `json:"asset_id"`
+				Kind        string
+				URL         string
+				Password    string
+				Lang        string
+				Secret      string
+				Host        string
+				Port        int
+				User        string
+				Key         string
+				Proxy       string
+				Hash        string
+				Proxychains string
+				AssetID     int64
 			}
 			_ = json.Unmarshal(in, &a)
-			a.URL = strings.TrimSpace(a.URL)
-			if a.URL == "" {
-				return actool.Errorf("url 为必填参数"), nil
-			}
-			if strings.EqualFold(a.Lang, "ssh") || strings.HasPrefix(a.URL, "ssh://") {
-				return actool.Errorf("ssh 会话登记在后续里程碑提供；当前仅支持 HTTP webshell"), nil
-			}
-			if h.gate != nil {
-				if err := h.gate(ctx, a.URL); err != nil {
-					return actool.Errorf(err.Error()), nil
+			var res map[string]any
+			var err error
+			switch strings.ToLower(strings.TrimSpace(a.Kind)) {
+			case "ssh":
+				res, err = h.registerSSHCore(ctx, session.SSHSecret{
+					Host: a.Host, Port: a.Port, User: a.User, Password: a.Password,
+					Key: a.Key, Proxy: a.Proxy,
+				}, a.AssetID)
+			case "smb", "smbexec":
+				res, err = h.registerSMBCore(ctx, session.SMBSecret{
+					Host: a.Host, User: a.User, Pass: a.Password, Hash: a.Hash,
+					ProxyC: strings.EqualFold(strings.TrimSpace(a.Proxychains), "true") || a.Proxychains == "1",
+				}, a.AssetID)
+			default:
+				url := strings.TrimSpace(a.URL)
+				if url == "" {
+					return actool.Errorf("url 为必填参数（kind=webshell）"), nil
 				}
+				res, err = h.registerCore(ctx, url, a.Password, a.Lang, a.Secret, a.AssetID, "")
 			}
-			sh, err := h.dial(ctx, a.URL, a.Password, a.Lang, a.Secret)
 			if err != nil {
-				return actool.Errorf("探测失败：" + err.Error()), nil
+				return actool.Errorf(err.Error()), nil
 			}
-			hs, ok := sh.(*session.HTTPShell)
-			if !ok {
-				return actool.Errorf("会话实现不受支持（需要 HTTP webshell）"), nil
-			}
-			sec, err := json.Marshal(hs.Secret())
-			if err != nil {
-				return actool.Errorf("秘密序列化失败：" + err.Error()), nil
-			}
-			ri := agent.RunInfoFrom(ctx)
-			rec := &db.SessionRecord{
-				Kind: hs.Kind(), HostAssetID: a.AssetID, URL: a.URL,
-				Secret: sec, Lang: hs.Lang(), Status: db.SessionAlive,
-				CreatedByTask: ri.TaskID, CreatedByIntent: ri.IntentID,
-			}
-			id, err := h.store.Create(ctx, rec)
-			if err != nil {
-				return actool.Errorf("登记失败：" + err.Error()), nil
-			}
-			hs.SetID(id)
-			h.reg.Add(hs)
-			h.setHost(id, a.URL)
-			h.store.Touch(ctx, id)
-			info := hs.Secret()
-			out, _ := json.Marshal(map[string]any{
-				"session_id": id, "kind": hs.Kind(), "lang": hs.Lang(),
-				"funcs": info.Funcs, "platform": info.Platform, "variant": info.Variant,
-			})
+			out, _ := json.Marshal(res)
 			return actool.Text(string(out)), nil
 		})
 }

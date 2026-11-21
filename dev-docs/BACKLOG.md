@@ -17,7 +17,7 @@
 - [x] P1-7 WebShell/凭据闭环：目标侧马体物理删除+校验；凭据注入/复用 UI。
 - [x] P1-8 知识库补全：服务端分页、条目编辑/删除、planner extras 注入 kb/cve、insights SQL 聚合。
 - [x] P1-9 代理池增强：mihomo 适配器、其余出站统一接入、UI 认证延迟/健康度。
-- [ ] P1-10 SSH/SMB 会话登记 + 隧道真机验证（chisel/suo5）。
+- [x] P1-10 SSH/SMB 会话登记 + 隧道真机验证（chisel/suo5）。
 
 ## P2 验证与安全加固
 
@@ -49,3 +49,5 @@
 - 2026-11-21：P1-8 完成（kb/manage.go 分页/更新/删除/SQL Insights；kb API 三个新路由；planner extras 注入 KB/CVE；情报页全部条目分页+编辑+删除）。Go 单测 + kb/db/server/agent 全绿；API 集成 13 项、Playwright 5 项（分页 20/5、编辑、删除、统计）全过。
 
 - 2026-11-21：P1-9 完成（proxypool/mihomo.go 解析依赖零 YAML 库；import-mihomo API；Sploitus+CVE 统一出站；UI 认证/健康/延迟/最近探测 + 导入结果）。API 集成 8 项、Playwright 4 项、单测与全量测试全绿。
+
+- 2026-11-21：P1-10 完成（SSH/SMB 登记 + 恢复 + UI；SSH 协议级测试；真实 chisel 二进制 loopback e2e；真实 VPS SSH 会话执行/读写）。偏差：suo5 二进制/payload 未提供未真机；SMB 无 Windows 目标仅验证登记/错误路径；VPS 反向回连隧道受 NAT/ssh -R 实验性验证未闭环，chisel 真机以本机 loopback 验证。

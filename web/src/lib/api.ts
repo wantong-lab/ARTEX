@@ -1438,6 +1438,23 @@ export const api = {
   proxyPoolImportMihomo: (body: { yaml?: string; url?: string; name_prefix?: string }) =>
     post<MihomoImportResult>("/proxy-pool/import-mihomo", body),
 
+  intranetRegisterSession: (body: {
+    kind?: string;
+    url?: string;
+    password?: string;
+    lang?: string;
+    secret?: string;
+    host?: string;
+    port?: number;
+    user?: string;
+    key?: string;
+    proxy?: string;
+    hash?: string;
+    proxychains?: boolean;
+    asset_id?: number;
+    path?: string;
+  }) => post<{ session_id: number; kind: string }>("/intranet/sessions", body),
+
   // ---- WebShell 生成与管理（M4-02）----
   webshellShells: () => get<{ shells: WebshellShell[] }>(`/webshell/shells`),
   webshellGenerate: (body: { lang: string; obfuscate?: boolean; note?: string }) =>

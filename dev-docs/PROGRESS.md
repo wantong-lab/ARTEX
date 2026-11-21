@@ -190,3 +190,10 @@
 - 动作：新增 proxypool/mihomo.go（Clash/mihomo proxies 列表解析，零 YAML 依赖；http/socks5 导入、ss/vmess 等如实跳过）与单测；kb 增加 SetCVEHTTPClient，server 代理池初始化时把 Sploitus + CVE 同步统一接入代理池回退链；新增 POST /api/proxy-pool/import-mihomo（支持 yaml 文本或订阅 URL）；列表返回认证标记、健康/失败统计、统一出站消费者与未探测时不返回 last_checked；内网中枢代理池 UI 增加导入卡、健康摘要、认证列、最近检查列与跳过原因。
 - 结果：proxypool 单测通过；fresh DB 下 proxypool/kb/db/server/agent 全绿；API 集成 8 项（导入 2 跳 1、重复 2、认证标记、健康/统一出站、探测失败状态回写、非法 YAML 400）全过；Playwright 4 项（导入、健康 0、认证/跳过原因、探测失败、删除）全过、0 console error；截图 /tmp/artex-ui-p19-shots/proxypool.png。
 - 下一步：P1-10 SSH/SMB 会话登记 + 隧道真机验证（chisel/suo5）。
+
+
+## 轮次 31 · 2026-11-21（P1-10 SSH/SMB 会话与真机验证）
+- 动作：register_session 扩展 kind=ssh/smbexec（schema/目录/运行时同步）；新增 registerSSHCore/registerSMBCore（RoE 门、secret 加密落库、setHost/Touch）；load 按 kind 解密恢复 HTTPShell/SSHShell/SMBShell；POST /api/intranet/sessions 统一登记；内网中枢会话页新增登记表单（SSH/SMB/WebShell）；修复 SSHShell 写文件 base64 -d 重定向语义错误与读文件 base64 换行解码。
+- 结果：SSH 协议级测试（内置 sshd：登录/执行/读写/坏密码/门禁）通过；SMB 登记+恢复+无 wmiexec 明确报错通过；真实 chisel 二进制 loopback 隧道 e2e 通过（server/client 进程、socks 入口、经隧道 HTTP 取回 marker、台账 alive）；用户提供的真实 VPS 上 SSH 会话执行 hostname/uname、远端文件读写通过。全量 session/server/tunnel/agent 测试通过。
+- 偏差：suo5 真机未验证（无二进制/payload）；SMB 无 Windows 真机（仅登记/错误路径）；VPS 反向回连隧道受 NAT/ssh -R 路径限制，实验未闭环（chisel 以本机 loopback 真机验证）。
+- 下一步：进入 P2 验证与加固（P2-11 LLM 全链路 E2E 与治理强制场景）。

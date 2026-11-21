@@ -166,11 +166,18 @@ func (s *SSHShell) ReadFile(ctx context.Context, path string) ([]byte, error) {
 			return nil, err
 		}
 		defer sess2.Close()
-		b64, e3 := sess2.Output("base64 -w0 -- " + sshQuote(path) + " 2>/dev/null || base64 -- " + sshQuote(path))
+		b64, e3 := sess2.Output("base64 -w0 -- " + sshQuote(path) + " 2>/dev/null || base64 " + sshQuote(path))
 		if e3 != nil {
 			return nil, err
 		}
-		return base64.StdEncoding.DecodeString(strings.TrimSpace(string(b64)))
+		clean := strings.Map(func(r rune) rune {
+			switch r {
+			case '\n', '\r', ' ', '\t':
+				return -1
+			}
+			return r
+		}, string(b64))
+		return base64.StdEncoding.DecodeString(clean)
 	}
 	return out, nil
 }
@@ -188,7 +195,7 @@ func (s *SSHShell) WriteFile(ctx context.Context, path string, data []byte) erro
 			op = ">"
 		}
 		enc := base64.StdEncoding.EncodeToString(data[off:end])
-		if _, _, err := s.Exec(ctx, "printf %s '"+enc+"' | base64 -d "+op+" -- "+sshQuote(path), 60*time.Second); err != nil {
+		if _, _, err := s.Exec(ctx, "printf %s '"+enc+"' | base64 -d "+op+" "+sshQuote(path), 60*time.Second); err != nil {
 			return err
 		}
 		if len(data) == 0 {

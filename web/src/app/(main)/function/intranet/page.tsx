@@ -202,7 +202,10 @@ export default function IntranetPage() {
             <Loader2Icon className="size-4 animate-spin" /> 加载中…
           </div>
         ) : tab === "sessions" ? (
-          <SessionsTable rows={sessions} onHandoff={(s) => setHandoff(s)} />
+          <>
+            <SessionRegisterBlock onChanged={load} />
+            <SessionsTable rows={sessions} onHandoff={(s) => setHandoff(s)} />
+          </>
         ) : tab === "tunnels" ? (
           <TunnelsTable rows={tunnels} />
         ) : tab === "credentials" ? (
@@ -255,6 +258,117 @@ export default function IntranetPage() {
 
 function EmptyState({ text }: { text: string }) {
   return <div className="p-10 text-center text-muted-foreground text-sm">{text}</div>;
+}
+
+function SessionRegisterBlock({ onChanged }: { onChanged: () => Promise<void> | void }) {
+  const [kind, setKind] = React.useState("ssh");
+  const [form, setForm] = React.useState({
+    url: "",
+    password: "",
+    lang: "auto",
+    host: "127.0.0.1",
+    port: "22",
+    user: "root",
+    key: "",
+    proxy: "",
+    hash: "",
+    proxychains: false,
+  });
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [notice, setNotice] = React.useState("");
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const submit = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const body: Parameters<typeof api.intranetRegisterSession>[0] = { kind };
+      if (kind === "webshell") {
+        body.url = form.url.trim();
+        body.password = form.password;
+        body.lang = form.lang;
+      } else if (kind === "ssh") {
+        body.host = form.host.trim();
+        body.port = Number.parseInt(form.port, 10) || 22;
+        body.user = form.user.trim();
+        body.password = form.password;
+        body.key = form.key;
+        body.proxy = form.proxy.trim();
+      } else {
+        body.host = form.host.trim();
+        body.user = form.user.trim();
+        body.password = form.password;
+        body.hash = form.hash.trim();
+        body.proxychains = form.proxychains;
+      }
+      const r = await api.intranetRegisterSession(body);
+      setNotice("已登记 " + r.kind + " 会话 #" + r.session_id);
+      setForm((f) => ({ ...f, password: "", key: "", hash: "" }));
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 border-b p-3">
+      {error ? <p className="text-destructive text-sm">登记失败：{error}</p> : null}
+      {notice ? <p className="text-emerald-600 text-sm">{notice}</p> : null}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-medium text-sm">登记会话</span>
+        <select
+          className="rounded-md border bg-transparent px-2 py-1.5 text-sm"
+          value={kind}
+          onChange={(e) => setKind(e.target.value)}
+        >
+          <option value="ssh">SSH（密码/私钥）</option>
+          <option value="smbexec">SMB（wmiexec / NT hash）</option>
+          <option value="webshell">WebShell</option>
+        </select>
+      </div>
+      {kind === "webshell" ? (
+        <div className="grid gap-2 md:grid-cols-3">
+          <Input placeholder="webshell URL" value={form.url} onChange={set("url")} />
+          <Input placeholder="连接密码" value={form.password} onChange={set("password")} />
+          <Input placeholder="lang: auto/phpcmd/jsp/aspx" value={form.lang} onChange={set("lang")} />
+        </div>
+      ) : kind === "ssh" ? (
+        <div className="grid gap-2 md:grid-cols-6">
+          <Input placeholder="host" value={form.host} onChange={set("host")} />
+          <Input placeholder="port" value={form.port} onChange={set("port")} />
+          <Input placeholder="user" value={form.user} onChange={set("user")} />
+          <Input placeholder="password" type="password" value={form.password} onChange={set("password")} />
+          <Input placeholder="私钥 PEM（可选）" className="md:col-span-2" value={form.key} onChange={set("key")} />
+          <Input placeholder="socks5 代理（可选）" className="md:col-span-2" value={form.proxy} onChange={set("proxy")} />
+        </div>
+      ) : (
+        <div className="grid gap-2 md:grid-cols-5">
+          <Input placeholder="host" value={form.host} onChange={set("host")} />
+          <Input placeholder="DOMAIN\user" value={form.user} onChange={set("user")} />
+          <Input placeholder="password" type="password" value={form.password} onChange={set("password")} />
+          <Input placeholder="NT hash（pass-the-hash）" value={form.hash} onChange={set("hash")} />
+          <label className="flex items-center gap-1 text-xs">
+            <input
+              type="checkbox"
+              checked={form.proxychains}
+              onChange={(e) => setForm((f) => ({ ...f, proxychains: e.target.checked }))}
+            />
+            proxychains
+          </label>
+        </div>
+      )}
+      <div>
+        <Button size="sm" disabled={busy} onClick={() => void submit()}>
+          {busy ? "登记中…" : "登记会话"}
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 function SessionsTable({
