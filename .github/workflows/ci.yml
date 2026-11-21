@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client >/dev/null
-          psql "$ARTEX_PG_DSN" -f db/migrations/0001_baseline.sql
+          for f in db/migrations/*.sql; do psql "$ARTEX_PG_DSN" -f "$f"; done
       - name: test
         run: go test -p 1 ./... -count=1
 
