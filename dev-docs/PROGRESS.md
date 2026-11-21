@@ -106,3 +106,10 @@
 - 结果：`npm run build` 通过并生成 `/function/intel`；手工入库可检索、同步可中断 2 个新用例通过；干净库全量 **22 包全绿**（EXIT=0）。提交 `a536548`。**M3 情报面里程碑全部完成。**
 - 偏差：知识库检索分页为客户端分页（后端 search 尚无 offset）；Sploitus 需外网，离线时展示错误态。
 - 下一步：M4-01 C2。
+
+## 轮次 18 · 2026-11-21
+- 动作：M4-01。二开版 `c2` 整包带 Reconstructed 标记，按导入政策**不拷贝**，改为按协议设计自研：`c2/`（AES-256-GCM 信封、帧编解码、token 握手、会话/任务管理器、Python 载荷模板）；`db/c2.go` 台账（监听器/会话/任务/事件，token 加密落库、无主密钥 fail-closed）；迁移 `0007_c2.sql`；`server/c2_server.go` 运行时（默认关闭、显式启用后按台账起监听器、会话上下线落库）+ API（status/enable/listeners/sessions/tasks/启停）+ 3 个 agent 工具（未启用明确拒绝）。
+- 结果：9 个用例全绿（帧/信封/握手/派发/停止/坏 token/加密台账/状态机/默认关闭）；干净库全量 **23 包全绿**（EXIT=0）。提交 `c415314`。
+- 偏差：仅实现 TCP 反向监听（HTTP beacon 回调留待后续）；C2 前端页面未做（登记 M5）；非回环绑定的范围校验依赖 RoE/Guard 在工具层已有的约束。
+- 过程问题：迁移计数断言需同步 7；共享测试库残留再次导致 `TestCompanyScopeAttribution` 误报，重建库后全绿。
+- 下一步：M4-02 WebShell 接线。
