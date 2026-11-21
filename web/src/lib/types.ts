@@ -1602,6 +1602,28 @@ export interface UpdateProgress {
   error?: string;
 }
 
+// ---- 代理池（M4-03）----
+
+export interface ProxyEntry {
+  id: number;
+  name: string;
+  masked: string;
+  scheme: string;
+  status: string;
+  exit_ip?: string;
+  latency_ms: number;
+  fail_count: number;
+  last_checked?: string;
+  last_error?: string;
+}
+
+export interface ProxyPoolState {
+  entries: ProxyEntry[];
+  active_id: number;
+  global_set: boolean;
+  probe_url: string;
+}
+
 // ---- WebShell 管理（M4-02）----
 
 export interface WebshellShell {

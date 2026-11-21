@@ -18,10 +18,11 @@ import type {
   IntranetSession,
   IntranetTunnel,
   GeneratedWebshell,
+  ProxyPoolState,
   WebshellShell,
 } from "@/lib/types";
 
-type TabKey = "sessions" | "tunnels" | "credentials" | "ledger" | "scope" | "webshell";
+type TabKey = "sessions" | "tunnels" | "credentials" | "ledger" | "scope" | "webshell" | "proxypool";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "sessions", label: "会话" },
@@ -30,6 +31,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "ledger", label: "主机台账" },
   { key: "scope", label: "范围审批" },
   { key: "webshell", label: "WebShell" },
+  { key: "proxypool", label: "代理池" },
 ];
 
 function fmtTime(ts?: string) {
@@ -204,6 +206,8 @@ export default function IntranetPage() {
           <TunnelsTable rows={tunnels} />
         ) : tab === "credentials" ? (
           <CredentialsTable rows={credentials} />
+        ) : tab === "proxypool" ? (
+          <ProxyPoolBlock />
         ) : tab === "webshell" ? (
           <WebshellBlock />
         ) : tab === "ledger" ? (
@@ -672,6 +676,157 @@ function WebshellBlock() {
           <Button size="sm" variant="outline" disabled={busy || !selected} onClick={() => void readFile()}>读取</Button>
         </div>
         <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded bg-muted p-2 text-xs">{execOut}</pre>
+      </Card>
+    </div>
+  );
+}
+
+// ---------------- 代理池（M4-03）：录入 / 探测 / 切换 / 回退 ----------------
+
+function ProxyPoolBlock() {
+  const [state, setState] = React.useState<ProxyPoolState | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [notice, setNotice] = React.useState("");
+  const [form, setForm] = React.useState({ name: "", url: "" });
+  const [globalURL, setGlobalURL] = React.useState("");
+  const [egress, setEgress] = React.useState("");
+
+  const refresh = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      setState(await api.proxyPool());
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    try {
+      await fn();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {error ? <Card className="border-destructive/40 bg-destructive/5 p-3 text-destructive text-sm">{error}</Card> : null}
+      {notice ? <Card className="border-emerald-500/40 bg-emerald-500/5 p-3 text-emerald-600 text-sm">{notice}</Card> : null}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="flex flex-col gap-2 p-3">
+          <p className="font-medium text-sm">录入代理（http/https/socks5，支持认证）</p>
+          <div className="flex gap-2">
+            <Input placeholder="名称（可选）" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input placeholder="http://user:pass@host:port" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
+            <Button size="sm" disabled={busy || !form.url.trim()} onClick={() => void run(async () => {
+              const r = await api.proxyPoolAdd({ url: form.url, name: form.name });
+              const bad = r.results.find((x) => x.error);
+              setNotice(bad ? `录入失败：${bad.error}` : "录入成功（重复项自动去重）");
+              setForm({ name: "", url: "" });
+              await refresh();
+            })}>录入</Button>
+          </div>
+        </Card>
+        <Card className="flex flex-col gap-2 p-3">
+          <p className="font-medium text-sm">全局兜底代理（活动代理失败时自动回退）</p>
+          <div className="flex gap-2">
+            <Input placeholder="留空 = 直连" value={globalURL} onChange={(e) => setGlobalURL(e.target.value)} />
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void run(async () => {
+              await api.proxyPoolGlobal(globalURL);
+              setNotice(globalURL ? "全局兜底代理已保存" : "已清除全局兜底代理");
+              await refresh();
+            })}>保存</Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(async () => {
+              const r = await api.proxyPoolFallback();
+              setNotice(r.global_set ? "已切回兜底代理" : "已切回直连");
+              await refresh();
+            })}>切回兜底</Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => void run(async () => {
+              const r = await api.proxyPoolEgress();
+              setEgress(`出口 IP：${r.exit_ip ?? "-"}（活动代理 ${r.active_id ?? 0}）`);
+            })}>出口自检</Button>
+            <span className="text-muted-foreground text-xs">{egress}</span>
+          </div>
+        </Card>
+      </div>
+
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between p-2">
+          <p className="font-medium text-sm">代理池（{state?.entries.length ?? 0}）</p>
+          <Button size="sm" variant="ghost" onClick={() => void refresh()}>
+            <RefreshCwIcon className="size-4" /> 刷新
+          </Button>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground text-sm">
+            <Loader2Icon className="size-4 animate-spin" /> 加载中…
+          </div>
+        ) : (state?.entries.length ?? 0) === 0 ? (
+          <div className="p-8 text-center text-muted-foreground text-sm">代理池为空</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-16">ID</TableHead>
+                <TableHead>地址</TableHead>
+                <TableHead className="w-24">状态</TableHead>
+                <TableHead className="w-32">出口 IP</TableHead>
+                <TableHead className="w-20">延迟</TableHead>
+                <TableHead className="w-16">失败</TableHead>
+                <TableHead className="w-52">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(state?.entries ?? []).map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell>{e.id}</TableCell>
+                  <TableCell className="max-w-md truncate">
+                    {e.name ? `${e.name} · ` : ""}{e.masked}
+                    {state?.active_id === e.id ? <Badge className="ml-2">活动</Badge> : null}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={e.status === "active" ? "default" : "secondary"}>{e.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-xs">{e.exit_ip || "-"}</TableCell>
+                  <TableCell className="text-xs">{e.latency_ms ? `${e.latency_ms}ms` : "-"}</TableCell>
+                  <TableCell className="text-xs">{e.fail_count}</TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(async () => {
+                      const r = await api.proxyPoolProbe(e.id);
+                      setNotice(r.ok ? `探测成功：出口 ${r.exit_ip}（${r.latency_ms}ms）` : `探测失败：${r.error}`);
+                      await refresh();
+                    })}>探测</Button>
+                    <Button size="sm" variant="ghost" disabled={busy || state?.active_id === e.id} onClick={() => void run(async () => {
+                      await api.proxyPoolSwitch(e.id);
+                      setNotice(`已切换到代理 #${e.id}，新请求将走新出口`);
+                      await refresh();
+                    })}>切换</Button>
+                    <Button size="sm" variant="destructive" disabled={busy} onClick={() => void run(async () => {
+                      if (!window.confirm(`删除代理 #${e.id}？`)) return;
+                      await api.proxyPoolDelete(e.id);
+                      await refresh();
+                    })}>删除</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </Card>
     </div>
   );

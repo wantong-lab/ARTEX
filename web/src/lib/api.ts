@@ -60,6 +60,7 @@ import type {
   KBEntry,
   KBInsights,
   KBSearchResult,
+  ProxyPoolState,
   SploitusItem,
   WebshellShell,
   IntranetHostOp,
@@ -1364,6 +1365,17 @@ export const api = {
   intranetRejectScope: (id: number) => post<{ ok: boolean }>(`/intranet/pending-scope/${id}/reject`, {}),
   intranetHandoff: (body: { task_id?: number; session_id: number; goal?: string; description?: string }) =>
     post<{ task_id: string; session_id: number; scope_error?: string }>(`/intranet/handoff`, body),
+
+  // ---- 代理池（M4-03）----
+  proxyPool: () => get<ProxyPoolState>(`/proxy-pool`),
+  proxyPoolAdd: (body: { url?: string; name?: string; entries?: { name?: string; url: string }[] }) =>
+    post<{ results: { id?: number; duplicate?: boolean; error?: string; name?: string }[] }>(`/proxy-pool/entries`, body),
+  proxyPoolProbe: (id: number) => post<{ ok: boolean; exit_ip?: string; latency_ms: number; error?: string }>(`/proxy-pool/${id}/probe`),
+  proxyPoolSwitch: (id: number) => post<{ ok: boolean; active_id: number }>(`/proxy-pool/${id}/switch`),
+  proxyPoolFallback: () => post<{ ok: boolean; active_id: number; global_set: boolean }>(`/proxy-pool/fallback`),
+  proxyPoolGlobal: (url: string) => put<{ ok: boolean; global_set: boolean }>(`/proxy-pool/global`, { url }),
+  proxyPoolEgress: () => post<{ ok: boolean; exit_ip?: string; error?: string; active_id?: number }>(`/proxy-pool/egress`),
+  proxyPoolDelete: (id: number) => del<{ ok: boolean }>(`/proxy-pool/${id}`),
 
   // ---- WebShell 生成与管理（M4-02）----
   webshellShells: () => get<{ shells: WebshellShell[] }>(`/webshell/shells`),

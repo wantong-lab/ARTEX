@@ -65,6 +65,10 @@ type Server struct {
 	c2Mu sync.Mutex
 	c2RT *c2Runtime
 
+	// 代理池运行时（M4-03）。
+	proxyMu sync.Mutex
+	proxyRT *proxyPoolRuntime
+
 	// CVE 语料库与同步状态（M3-03）。
 	cveMu         sync.Mutex
 	cveOnce       bool
@@ -283,6 +287,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	s.startTaskArchiveWorker()
 	s.wireInterceptReviewer() // LLM 兜底审批:未命中拦截规则的命令交给模型判定
 	s.startC2IfEnabled(ctx)   // C2 默认关闭；仅 c2_enabled=on 时按台账拉起监听器
+	s.proxyPool()             // 代理池：加载全局/活动配置并注入出站 client
 	return s
 }
 
@@ -682,6 +687,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerCVERoutes(mux)
 	s.registerC2Routes(mux)
 	s.registerWebshellRoutes(mux)
+	s.registerProxyPoolRoutes(mux)
 
 	// Auth routes — exempt from JWT check (handled in requireAuth)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)

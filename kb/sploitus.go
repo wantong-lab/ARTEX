@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -156,7 +157,7 @@ func SearchSploitus(ctx context.Context, query, exploitType string, limit int) (
 	req.Header.Set("Referer", referer)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36")
 
-	cli := &http.Client{Timeout: sploitusRequestTimeout}
+	cli := sploitusClient()
 	resp, err := cli.Do(req)
 	if err != nil {
 		return nil, 0, err
@@ -179,4 +180,23 @@ func SearchSploitus(ctx context.Context, query, exploitType string, limit int) (
 		}
 	}
 	return items, sr.ExploitsTotal, nil
+}
+
+// sploitusClientVal 允许上层注入带代理的 http.Client（M4-03 代理池联动）。
+var sploitusClientVal atomic.Value // *http.Client
+
+func init() {
+	sploitusClientVal.Store(&http.Client{Timeout: sploitusRequestTimeout})
+}
+
+// SetSploitusHTTPClient 注入出站客户端（nil 表示恢复默认）。
+func SetSploitusHTTPClient(c *http.Client) {
+	if c == nil {
+		c = &http.Client{Timeout: sploitusRequestTimeout}
+	}
+	sploitusClientVal.Store(c)
+}
+
+func sploitusClient() *http.Client {
+	return sploitusClientVal.Load().(*http.Client)
 }
