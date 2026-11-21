@@ -145,4 +145,5 @@
 
 ## 发布验证 · 2026-11-21
 - main push 触发 `ci` workflow：**success**（go build/vet + 迁移 + 全量 24 包测试 + web build）。
-- v0.4.0 tag 触发 `release` workflow：frontend、五平台 binaries、GitHub Release 全部 **success**；docker 推送因仓库未配置 DOCKERHUB secrets 失败 → 已把 docker job 改为 `continue-on-error`（可选步骤，不阻塞发布），重打 tag 复验。
+- v0.4.0 tag 触发 `release` workflow：frontend、五平台 binaries、GitHub Release 全部 **success**；docker 推送因仓库未配置 DOCKERHUB secrets 失败 → 已把 docker job 改为 `continue-on-error`（可选步骤，不阻塞发布）。
+- 复验（tag 移至 `9c48ba9`）：`ci` run 44866944144 **success**；`release` run 44866949571 **success**（frontend、linux/darwin amd64+arm64、windows amd64、GitHub Release 均 success；docker 失败但 continue-on-error 不阻塞）。**总目标达成。**

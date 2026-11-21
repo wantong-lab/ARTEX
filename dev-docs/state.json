@@ -200,13 +200,13 @@
     "m5_01": "分类五档与 chain_tags 优先、空 payload 落 general；frontier 默认 8 第 9 个拒派、释放后可再取；接力表与同键重复拒绝；广播多订阅者收发/退订/跨任务隔离；全新库 24 包全绿",
     "m5_02": "preview 只计到期行；dry-run 数据不变且不写审计；真实清理只删到期行（新行存活），审计含 actor/策略/删除数；非法策略回落默认并夹取；全新库 24 包全绿",
     "m5_03": "CHANGELOG/README/部署指南与代码一致；本地 CI 等脚本（go build/vet、迁移+全量测试、web build、release workflow 五平台矩阵）核对通过；v0.4.0 tag 推送触发 release workflow",
-    "release_ci": "main push: ci success；v0.4.0 tag: frontend/五平台 binaries/GitHub Release success，docker 因缺 secrets 改为 continue-on-error 后复验通过"
+    "release_ci": "ci run 44866944144 success；release run 44866949571 success（frontend + 五平台 binaries + GitHub Release success；docker continue-on-error）"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T18:20:00+08:00",
+  "updated_at": "2026-11-21T18:45:00+08:00",
   "release": {
     "tag": "v0.4.0",
     "branch": "docs/m5-03-release",
