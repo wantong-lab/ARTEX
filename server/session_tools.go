@@ -36,6 +36,8 @@ type sessionStoreAPI interface {
 	Get(ctx context.Context, id int64) (*db.SessionRecord, error)
 	UpdateStatus(ctx context.Context, id int64, status string) error
 	Touch(ctx context.Context, id int64)
+	List(ctx context.Context, status string) ([]*db.SessionRecord, error)
+	Delete(ctx context.Context, id int64) error
 }
 
 // hostLedgerAPI 是主机台账写入面。

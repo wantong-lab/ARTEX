@@ -1602,6 +1602,32 @@ export interface UpdateProgress {
   error?: string;
 }
 
+// ---- WebShell 管理（M4-02）----
+
+export interface WebshellShell {
+  id: number;
+  kind: string;
+  lang: string;
+  status: string;
+  host: string;
+  url: string;
+  host_asset_id?: number;
+  created_by_task?: number;
+  last_beat?: string;
+  created_at?: string;
+}
+
+export interface GeneratedWebshell {
+  lang: string;
+  filename: string;
+  content: string;
+  key_b64: string;
+  key_digest: string;
+  mode: string;
+  note?: string;
+  register_hint?: string;
+}
+
 // ---- 情报（M3-04）----
 
 export interface KBEntry {

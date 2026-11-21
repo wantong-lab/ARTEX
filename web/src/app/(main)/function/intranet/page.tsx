@@ -17,9 +17,11 @@ import type {
   IntranetPendingScope,
   IntranetSession,
   IntranetTunnel,
+  GeneratedWebshell,
+  WebshellShell,
 } from "@/lib/types";
 
-type TabKey = "sessions" | "tunnels" | "credentials" | "ledger" | "scope";
+type TabKey = "sessions" | "tunnels" | "credentials" | "ledger" | "scope" | "webshell";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "sessions", label: "会话" },
@@ -27,6 +29,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "credentials", label: "凭据" },
   { key: "ledger", label: "主机台账" },
   { key: "scope", label: "范围审批" },
+  { key: "webshell", label: "WebShell" },
 ];
 
 function fmtTime(ts?: string) {
@@ -201,6 +204,8 @@ export default function IntranetPage() {
           <TunnelsTable rows={tunnels} />
         ) : tab === "credentials" ? (
           <CredentialsTable rows={credentials} />
+        ) : tab === "webshell" ? (
+          <WebshellBlock />
         ) : tab === "ledger" ? (
           <LedgerTable rows={ops} />
         ) : (
@@ -451,4 +456,223 @@ function PendingScopeTable({
 
 function EmptyPlaceholder() {
   return null;
+}
+// ---------------- WebShell（M4-02）：生成 / 登记 / 执行 / 读取 / 清理 ----------------
+
+function WebshellBlock() {
+  const [shells, setShells] = React.useState<WebshellShell[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [notice, setNotice] = React.useState("");
+  const [gen, setGen] = React.useState<GeneratedWebshell | null>(null);
+  const [genLang, setGenLang] = React.useState("php");
+  const [obfuscate, setObfuscate] = React.useState(false);
+  const [regForm, setRegForm] = React.useState({ url: "", password: "cmd", lang: "auto", secret: "" });
+  const [selected, setSelected] = React.useState<number | null>(null);
+  const [command, setCommand] = React.useState("id");
+  const [execOut, setExecOut] = React.useState("");
+  const [readPath, setReadPath] = React.useState("/etc/passwd");
+  const [busy, setBusy] = React.useState(false);
+
+  const refresh = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      setShells((await api.webshellShells()).shells ?? []);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const generate = async () => {
+    setBusy(true);
+    try {
+      const g = await api.webshellGenerate({ lang: genLang, obfuscate });
+      setGen(g);
+      setNotice(`已生成 ${g.lang}（${g.filename}），密钥只显示这一次`);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const register = async () => {
+    setBusy(true);
+    try {
+      const r = await api.webshellRegister({
+        url: regForm.url, password: regForm.password || undefined,
+        lang: regForm.lang, secret: regForm.secret || undefined,
+      });
+      setNotice(`已登记会话 #${r.session_id}（${r.kind}）`);
+      setError("");
+      setSelected(r.session_id);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const run = async () => {
+    if (!selected) return;
+    setBusy(true);
+    try {
+      const r = await api.webshellExec({ session_id: selected, command });
+      setExecOut(r.stdout || r.stderr || "（无输出）");
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const readFile = async () => {
+    if (!selected) return;
+    setBusy(true);
+    try {
+      const r = await api.webshellRead({ session_id: selected, path: readPath });
+      setExecOut(r.text ?? `size=${r.size} truncated=${r.truncated}`);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cleanup = async (id: number) => {
+    if (!window.confirm("清理该 WebShell？清理动作会写入 host_ledger，会话记录将被删除。")) return;
+    setBusy(true);
+    try {
+      const r = await api.webshellCleanup(id);
+      setNotice(r.cleanup);
+      setSelected(null);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {error ? <Card className="border-destructive/40 bg-destructive/5 p-3 text-destructive text-sm">{error}</Card> : null}
+      {notice ? <Card className="border-emerald-500/40 bg-emerald-500/5 p-3 text-emerald-600 text-sm">{notice}</Card> : null}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="flex flex-col gap-2 p-3">
+          <p className="font-medium text-sm">生成加密马（平台侧渲染）</p>
+          <div className="flex gap-2">
+            <select className="rounded-md border bg-transparent px-2 text-sm" value={genLang} onChange={(e) => setGenLang(e.target.value)}>
+              <option value="php">php</option>
+              <option value="jsp">jsp</option>
+              <option value="aspx">aspx</option>
+            </select>
+            <label className="flex items-center gap-1 text-xs">
+              <input type="checkbox" checked={obfuscate} onChange={(e) => setObfuscate(e.target.checked)} />
+              轻度混淆
+            </label>
+            <Button size="sm" disabled={busy} onClick={() => void generate()}>
+              生成
+            </Button>
+          </div>
+          {gen ? (
+            <div className="flex flex-col gap-1 text-xs">
+              <p className="text-muted-foreground">
+                文件名 {gen.filename} · 模式 {gen.mode} · 密钥 sha256 {gen.key_digest}
+              </p>
+              <textarea className="min-h-20 rounded border p-2 font-mono text-xs" readOnly value={gen.key_b64} />
+              <textarea className="min-h-32 rounded border p-2 font-mono text-xs" readOnly value={gen.content} />
+              {gen.register_hint ? <p className="text-muted-foreground">{gen.register_hint}</p> : null}
+            </div>
+          ) : null}
+        </Card>
+
+        <Card className="flex flex-col gap-2 p-3">
+          <p className="font-medium text-sm">登记已有 WebShell</p>
+          <Input placeholder="完整 URL（含协议）" value={regForm.url} onChange={(e) => setRegForm({ ...regForm, url: e.target.value })} />
+          <div className="grid grid-cols-3 gap-2">
+            <Input placeholder="password" value={regForm.password} onChange={(e) => setRegForm({ ...regForm, password: e.target.value })} />
+            <Input placeholder="lang: auto/php/phpcmd/jsp/aspx/phpenc..." value={regForm.lang} onChange={(e) => setRegForm({ ...regForm, lang: e.target.value })} />
+            <Input placeholder="加密马 secret" value={regForm.secret} onChange={(e) => setRegForm({ ...regForm, secret: e.target.value })} />
+          </div>
+          <Button size="sm" disabled={busy || !regForm.url.trim()} onClick={() => void register()}>
+            登记（先探测再落库）
+          </Button>
+        </Card>
+      </div>
+
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between p-2">
+          <p className="font-medium text-sm">已登记 WebShell（{shells.length}）</p>
+          <Button size="sm" variant="ghost" onClick={() => void refresh()}>
+            <RefreshCwIcon className="size-4" /> 刷新
+          </Button>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground text-sm">
+            <Loader2Icon className="size-4 animate-spin" /> 加载中…
+          </div>
+        ) : shells.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground text-sm">暂无 WebShell 会话</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-16">ID</TableHead>
+                <TableHead>host</TableHead>
+                <TableHead className="w-24">kind</TableHead>
+                <TableHead className="w-20">状态</TableHead>
+                <TableHead className="w-32">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shells.map((sh) => (
+                <TableRow key={sh.id} className={selected === sh.id ? "bg-muted/50" : ""}>
+                  <TableCell>{sh.id}</TableCell>
+                  <TableCell className="max-w-md truncate">{sh.host}</TableCell>
+                  <TableCell className="text-xs">{sh.kind}</TableCell>
+                  <TableCell>
+                    <Badge variant={sh.status === "alive" ? "default" : "secondary"}>{sh.status}</Badge>
+                  </TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setSelected(sh.id)}>
+                      选中
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => void cleanup(sh.id)}>
+                      清理
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
+
+      <Card className="flex flex-col gap-2 p-3">
+        <p className="font-medium text-sm">执行 / 读取（选中会话 #{selected ?? "-"}）</p>
+        <div className="flex gap-2">
+          <Input placeholder="shell 命令" value={command} onChange={(e) => setCommand(e.target.value)} />
+          <Button size="sm" disabled={busy || !selected} onClick={() => void run()}>执行</Button>
+        </div>
+        <div className="flex gap-2">
+          <Input placeholder="目标文件路径" value={readPath} onChange={(e) => setReadPath(e.target.value)} />
+          <Button size="sm" variant="outline" disabled={busy || !selected} onClick={() => void readFile()}>读取</Button>
+        </div>
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded bg-muted p-2 text-xs">{execOut}</pre>
+      </Card>
+    </div>
+  );
 }

@@ -52,6 +52,7 @@ import type {
   InterceptDetail,
   CVERecord,
   CVEStatus,
+  GeneratedWebshell,
   CVESyncState,
   InterceptPending,
   InterceptRule,
@@ -60,6 +61,7 @@ import type {
   KBInsights,
   KBSearchResult,
   SploitusItem,
+  WebshellShell,
   IntranetHostOp,
   IntranetPendingScope,
   IntranetSession,
@@ -1362,6 +1364,18 @@ export const api = {
   intranetRejectScope: (id: number) => post<{ ok: boolean }>(`/intranet/pending-scope/${id}/reject`, {}),
   intranetHandoff: (body: { task_id?: number; session_id: number; goal?: string; description?: string }) =>
     post<{ task_id: string; session_id: number; scope_error?: string }>(`/intranet/handoff`, body),
+
+  // ---- WebShell 生成与管理（M4-02）----
+  webshellShells: () => get<{ shells: WebshellShell[] }>(`/webshell/shells`),
+  webshellGenerate: (body: { lang: string; obfuscate?: boolean; note?: string }) =>
+    post<GeneratedWebshell>(`/webshell/generate`, body),
+  webshellRegister: (body: { url: string; password?: string; lang?: string; secret?: string; asset_id?: number }) =>
+    post<{ session_id: number; kind: string; lang: string }>(`/webshell/register`, body),
+  webshellExec: (body: { session_id: number; command: string; timeout_seconds?: number }) =>
+    post<{ stdout: string; stderr: string; truncated: boolean; ms: number }>(`/webshell/exec`, body),
+  webshellRead: (body: { session_id: number; path: string; max_bytes?: number }) =>
+    post<{ size: number; truncated: boolean; text?: string }>(`/webshell/read`, body),
+  webshellCleanup: (id: number) => del<{ ok: boolean; cleanup: string }>(`/webshell/shells/${id}`),
 
   // ---- 情报：知识库（M3-04）----
   kbStatus: () => get<{ ok: boolean; dir: string; entries: number }>(`/kb/status`),
