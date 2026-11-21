@@ -6,6 +6,7 @@ import { Loader2Icon, NetworkIcon, RefreshCwIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -198,9 +199,7 @@ export default function IntranetPage() {
 
       <Card className="overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center gap-2 p-10 text-muted-foreground text-sm">
-            <Loader2Icon className="size-4 animate-spin" /> 加载中…
-          </div>
+          <PageSkeleton rows={5} />
         ) : tab === "sessions" ? (
           <>
             <SessionRegisterBlock onChanged={load} />
@@ -879,9 +878,7 @@ function WebshellBlock() {
           </Button>
         </div>
         {loading ? (
-          <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground text-sm">
-            <Loader2Icon className="size-4 animate-spin" /> 加载中…
-          </div>
+          <PageSkeleton rows={4} dense />
         ) : shells.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground text-sm">暂无 WebShell 会话</div>
         ) : (
@@ -1098,9 +1095,7 @@ function ProxyPoolBlock() {
           </Button>
         </div>
         {loading ? (
-          <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground text-sm">
-            <Loader2Icon className="size-4 animate-spin" /> 加载中…
-          </div>
+          <PageSkeleton rows={4} dense />
         ) : (state?.entries.length ?? 0) === 0 ? (
           <div className="p-8 text-center text-muted-foreground text-sm">代理池为空</div>
         ) : (

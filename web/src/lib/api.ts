@@ -137,17 +137,29 @@ function getToken(): string | null {
   return localStorage.getItem("artex_token");
 }
 
+export function notifyApiError(status: number, message: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("artex:api-error", { detail: { status, message } }));
+}
+
 export async function http<T>(path: string, init?: RequestInit): Promise<T> {
   if (MOCK) return mockHandle<T>(init?.method ?? "GET", path, init?.body ?? null);
   const token = getToken();
-  const r = await fetch(`/api${path}`, {
-    ...init,
-    headers: {
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers as Record<string, string> | undefined),
-    },
-  });
+  let r: Response;
+  try {
+    r = await fetch("/api" + path, {
+      ...init,
+      headers: {
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: "Bearer " + token } : {}),
+        ...(init?.headers as Record<string, string> | undefined),
+      },
+    });
+  } catch {
+    const message = "无法连接后端服务，请检查服务是否运行";
+    notifyApiError(0, message);
+    throw new Error(message);
+  }
   if (r.status === 401) {
     // 登录/初始化接口的 401 是「凭据错误」的业务反馈，必须交给页面展示内联错误；
     // 若在这里统一清 token + 硬跳 /login，页面会被刷新、错误提示随之丢失。
@@ -156,13 +168,14 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
       if (typeof window !== "undefined") {
         localStorage.removeItem("artex_token");
         document.cookie = "artex_token=; path=/; max-age=0";
-        window.location.href = "/login";
+        const next = window.location.pathname + window.location.search;
+        window.location.href = "/login/?next=" + encodeURIComponent(next);
       }
       throw new Error("未授权");
     }
   }
   if (!r.ok) {
-    const fallback = `${init?.method ?? "GET"} ${path}: ${r.status}`;
+    const fallback = (init?.method ?? "GET") + " " + path + ": " + r.status;
     let message = fallback;
     try {
       const payload = (await r.json()) as { error?: unknown };
@@ -171,6 +184,13 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
       }
     } catch {
       // Keep the status-based fallback for empty or non-JSON error responses.
+    }
+    // 5xx 通常是全局故障（数据库/进程）、403 是权限边界，统一 toast；
+    // 其余 4xx（参数/业务校验）交给页面 inline 展示，避免重复噪音。
+    if (r.status >= 500) {
+      notifyApiError(r.status, "服务异常（" + r.status + "）：" + message);
+    } else if (r.status === 403) {
+      notifyApiError(403, "无权限：" + message);
     }
     throw new Error(message);
   }

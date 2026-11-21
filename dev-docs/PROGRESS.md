@@ -228,3 +228,9 @@
 - 动作：编写 docs/llm-config.md、docs/ops-manual.md、docs/faq.md；README 与 docs/deploy-v0.4.0.md 增加文档索引与延伸阅读。内容基于真实运行经验（opencode-go zen 需 session_header_key + 非流式、/api/llm/test 需完整字段、C2 回环默认拒绝与开关、代理池/清理调度、master key 轮换、审计校验、/metrics 回环限制等）。
 - 结果：三份文档共 456 行；代码块与 token 占位符检查通过（无残留 @F@/@C@）；无代码改动。
 - 下一步：P3-16 前端打磨（C2 Soon 页替换、暗色对比、加载骨架/错误边界、401/403 体验、移动端细节）。
+
+
+## 轮次 37 · 2026-11-22（P3-16 前端打磨）
+- 动作：新增 components/error-state.tsx、components/page-skeleton.tsx、components/api-error-toaster.tsx、app/error.tsx、(main)/error.tsx、app/loading.tsx、(main)/loading.tsx；api.ts http() 统一网络/5xx/403/401 体验（401 带 next 回跳）；登录页支持 ?next=；proxy 与主布局跳登录带 next；暗色主题提升对比度；内网中枢加载态改骨架；C2 页面确认已是真实功能页。
+- 验证：tsc --noEmit 通过、npm run build:static EXIT=0、Go embed 构建通过；Playwright 13 项全 PASS：暗色 5 页截图、401→/login/?next=%2Ffunction%2Ftasks%2F、登录后回跳 /function/tasks/、403 toast「无权限：无权限-e2e」、加载骨架 role=status 可见、移动端 390px 四页 scrollWidth==390 无溢出。
+- 下一步：P3-17 Docker 镜像发布启用（secrets）/ demo seed 数据 / 安装体验，然后补丁 tag 收口。

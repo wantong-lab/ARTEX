@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import type { Metadata } from "next";
 
+import { ApiErrorToaster } from "@/components/api-error-toaster";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_CONFIG } from "@/config/app-config";
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           >
             {children}
             <Toaster />
+            <ApiErrorToaster />
           </PreferencesStoreProvider>
         </TooltipProvider>
       </body>

@@ -7,6 +7,8 @@
 ## [0.4.1] - 2026-11-21
 
 ### 新增的功能
+- 前端打磨（P3-16）：新增全局/主界面错误边界（ErrorState + error.tsx，含重试/返回/错误详情）与页面级加载骨架（PageSkeleton、app/loading、主路由 loading，内网中枢加载态替换为骨架）；API 统一错误体验（网络不可达与 5xx toast、403 统一无权限提示、401 跳登录并携带 next，登录后回跳原页面）；暗色主题对比度提升（muted/border/input/ring 与图表色板）；移动端关键页面（仪表盘/C2/内网中枢/任务）390px 宽度无横向溢出；C2 页面已完成真实功能（P1-6），侧栏无 Soon 占位。
+
 - 文档（P3-15）：新增 docs/llm-config.md（协议格式、profile 全字段、opencode-go + session_header_key 实战配方、流式/非流式、失败转移与五层重试、用量记录、排障速查与密钥管理）、docs/ops-manual.md（C2/代理池/保留清理/调度与监控运维手册）、docs/faq.md（24 条实战 FAQ）；README 与部署指南补充文档索引。
 
 - 可观测性（P2-14）：新增 Prometheus 文本 /metrics（HTTP 计数/耗时/在途、任务计数、DB 连接池、LLM 在途调用、维护调度任务状态、Go runtime；默认仅回环抓取，支持 ARTEX_METRICS_TOKEN）；新增 GET /api/observability/status 汇总接口；ARTEX_LOG_FORMAT=json 时输出结构化访问日志与调度任务事件（不含 query，避免 token 泄漏）；新增 scripts/acceptance/observability_check.py。

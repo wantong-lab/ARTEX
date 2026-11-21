@@ -13,7 +13,8 @@ export function proxy(request: NextRequest) {
 
   // 未登录 → 跳转登录页
   if (!token && !isAuthPage) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const next = request.nextUrl.pathname + request.nextUrl.search;
+    return NextResponse.redirect(new URL("/login/?next=" + encodeURIComponent(next), request.url));
   }
 
   // 已登录时访问登录/初始化页 → 跳转主界面

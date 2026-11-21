@@ -14,6 +14,18 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 
+function nextTarget(): string {
+  try {
+    const raw = new URLSearchParams(window.location.search).get("next");
+    if (raw && raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/login")) {
+      return raw;
+    }
+  } catch {
+    // ignore malformed next
+  }
+  return "/function/tasks";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -47,7 +59,7 @@ export default function LoginPage() {
       // localStorage 可能仍有凭据但 cookie 已丢失。先同步，再发起全新请求，
       // 避免服务端守卫或路由缓存把跳转送回仍处于 checking 状态的登录页。
       auth.setToken(token);
-      window.location.replace("/function/tasks");
+      window.location.replace(nextTarget());
       return;
     }
     api
@@ -70,7 +82,7 @@ export default function LoginPage() {
     try {
       const { token } = await api.login("ARTEX", password);
       auth.setToken(token);
-      window.location.replace("/function/tasks");
+      window.location.replace(nextTarget());
     } catch {
       setError("用户名或密码错误");
     } finally {
