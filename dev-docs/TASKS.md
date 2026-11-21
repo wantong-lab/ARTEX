@@ -12,7 +12,7 @@
 | M0-04 | M0 | `chore/m0-04-test-baseline` | 已完成 | `5910df5` | 空库+全部迁移后 `go test -p 1 ./...` 连续两次 15 包全绿 |
 | M1-01 | M1 | `feat/m1-01-chainskel` | 已完成 | `7aed114` | 逐字节复制 + sha256 一致；17 个用例通过（9 类骨架/标签/截断/静默降级） |
 | M1-02 | M1 | `feat/m1-02-prompt-tails` | 已完成 | `c8d1747` | 固定尾不可被 DB 覆盖、意图骨架注入、chain_tags 校验；全量 16 包全绿；蜜罐处置纪律延后 M1-04 |
-| M1-03 | M1 | `feat/m1-03-stuck` | 待开始 | — | 见 ROADMAP 第 10 节 |
+| M1-03 | M1 | `feat/m1-03-stuck` | 已完成 | `e5db440` | 三检测器 + steer 接线；10 个单测；全量 16 包全绿 |
 | M1-04 | M1 | `feat/m1-04-honeydetect` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M1-05 | M1 | `feat/m1-05-nudges` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M2-01 | M2 | `feat/m2-01-import-session` | 待开始 | — | 见 ROADMAP 第 10 节 |

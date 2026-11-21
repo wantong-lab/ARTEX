@@ -37,3 +37,8 @@
 - 结果：5 个新用例全绿（固定尾不可被 DB 覆盖、骨架注入、无匹配静默、标签校验）；agent 包测试通过；全量 16 包全绿（EXIT=0）。提交 `c8d1747`。
 - 偏差：planner 的蜜罐处置纪律依赖 `honeypot_assets` 态势字段，延后到 M1-04 与评分一起落地。
 - 下一步：M1-03 停滞检测与死面熔断。
+
+## 轮次 6 · 2026-11-21
+- 动作：M1-03。新增 `agent/stuck.go`（输出归一化+签名，同签名 12 次或同工具失败 15 次且相似度 ≥0.8）、`agent/deadsurface.go`（按 host 传输失败 5/5xx 8/出口代理 3）、`agent/repeating.go`（同参数连续 3 次拦截并回放上次结果）、`agent/detectors.go`（组合 + settings 开关）。经 `steerHooks` 挂在 PreToolUse/PostToolUse：命中拦下一次调用、把转向指令交回模型，并写 system 活动。
+- 结果：10 个单测全绿；`go build/vet` 通过；全量 16 包全绿（EXIT=0）。提交 `e5db440`。
+- 下一步：M1-04 蜜罐识别 + planner 蜜罐处置纪律（补齐 M1-02 延期项）。
