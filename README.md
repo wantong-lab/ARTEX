@@ -62,6 +62,27 @@ AI 自主渗透测试系统（Go 后端 + Next.js 前端）
 
 ---
 
+## 二开能力（v0.4.0）
+
+v0.4.0 在 0.3.15 基线上补齐二开能力，按里程碑组织；**默认关闭或默认保守**的能力在表格里标注。完整验收记录见 dev-docs/TASKS.md，路线图见 ROADMAP.md。
+
+| 能力 | 入口 | 默认状态 |
+|---|---|---|
+| 会话中枢（HTTP/加密 WebShell） | 内网中枢 → 会话；session_* 工具 | 开启 |
+| 隧道中枢（chisel/suo5） | 内网中枢 → 隧道；tunnel_* 工具 | 开启，二进制缺失时明确报错 |
+| 凭据 / 主机台账 | 内网中枢 → 凭据/台账 | 开启 |
+| 范围护栏 + RoE | settings roe_scope_mode（off/warn/strict）+ 范围审批页签 | warn |
+| 语义记忆 | settings ARTEX_EMBED_*；无 pgvector 自动降级关键词召回 | 开启（embedder 可选） |
+| 知识库 | 情报页 → 知识库；kb_search / kb_add | 开启 |
+| CVE / Sploitus | 情报页 → CVE/Sploitus；cve_search；/api/cve/sync | 开启，Sploitus 需外网 |
+| C2 运行时 | /api/c2/*；c2_list_sessions / c2_exec / c2_task_result | **关闭**（settings c2_enabled=on 显式启用） |
+| WebShell 生成与管理 | 内网中枢 → WebShell；generate_webshell | 开启 |
+| 代理池 | 内网中枢 → 代理池；/api/proxy-pool/* | 开启（录入后生效） |
+| 分级路由 | 自动生效（五档预算 / frontier 8 / 接力 / 广播） | 开启 |
+| 清理与保留 | /api/retention/*（dry-run 优先） | 手动触发 |
+
+升级部署与开关细节见 [docs/deploy-v0.4.0.md](docs/deploy-v0.4.0.md)。
+
 ## 安装
 
 > 依赖数据库 **PostgreSQL**；探索需配置 **LLM**（`ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY`，也可在 UI 里配）。
