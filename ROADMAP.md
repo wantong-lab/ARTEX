@@ -112,6 +112,8 @@
 | M0-02 | 待开始 | — | 迁移机制 |
 | 其余 | 待开始 | — | 按第 10 节明细推进 |
 
+> 状态真相源：[dev-docs/TASKS.md](dev-docs/TASKS.md)；轮次流水：[dev-docs/PROGRESS.md](dev-docs/PROGRESS.md)；机器状态：[dev-docs/state.json](dev-docs/state.json)；目标定义与执行协议：[dev-docs/GOAL.md](dev-docs/GOAL.md)。
+
 ## 10. 阶段工作明细
 
 > 每个 PR 固定四段：目标 / 任务拆解 / 涉及文件 / 验收。人日为单人估算，可并行压缩。
