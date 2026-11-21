@@ -7,6 +7,7 @@
 ## [0.4.1] - 2026-11-21
 
 ### 新增的功能
+- 数据保留前端页（P1-5，`/system/retention`）：策略编辑、到期预览、试运行（dry-run）、带确认的真实清理、审计与目标侧清理清单、定时调度状态与手动执行；侧栏「系统」新增「数据保留」入口。
 - 维护性定时调度器（P1-4）：统一调度保留自动清理（默认关，可配 1–168 小时）、CVE 自动同步（复用既有 cve_autosync 开关，默认关）、代理池健康巡检（默认开、30 分钟、空池跳过）；新增 `GET /api/scheduler/status` 与 `POST /api/scheduler/run/{name}`（运维手动触发），支持 `ARTEX_SCHEDULER_TICK_SECONDS` 环境变量调整 tick。
 
 ### 变更

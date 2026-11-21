@@ -159,3 +159,9 @@
 - 动作：新增 server/maintenance.go（maintainer）：后台单循环每分钟 tick，热读 settings；任务=保留自动清理、CVE 自动同步（复用 cveSyncStart 抽出的 launchCVESync）、代理池健康巡检；新增 GET /api/scheduler/status、POST /api/scheduler/run/{name}；支持 ARTEX_SCHEDULER_TICK_SECONDS；默认 retention/CVE 关、代理池巡检开（空池跳过）。
 - 结果：单元测试 4 个（settings 默认/到期调度/禁用跳过/RunNow）通过；集成实测 status 默认值+next_run、retention 手动执行删除 40 天前日志并写审计 actor=scheduler、空池巡检跳过、未知任务 400、运行后 last_result/last_run/next_run 回填。
 - 下一步：P1-5 保留/清理前端页（复用 scheduler/retention API）。
+
+
+## 轮次 26 · 2026-11-21（P1-5 保留/清理前端页）
+- 动作：新增 web/src/app/(main)/system/retention/page.tsx（策略编辑、到期预览、dry-run、真实清理确认、审计、目标侧清理清单、调度状态与手动执行）；api.ts/types.ts 增加 retention/scheduler 接口与类型；侧栏系统组新增「数据保留」。
+- 结果：tsc/build:static 通过；Playwright 实测 7 项全过（页面加载、策略值 30/14/30、调度 3 任务且 retention/proxy 启用、dry-run、真删确认、手动执行调度任务、侧栏入口），0 console error；截图 /tmp/artex-ui-p15-shots/retention*.png。
+- 下一步：P1-6 C2 完善（前端页 + listener 删除 API + HTTP beacon）。

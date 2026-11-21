@@ -12,7 +12,7 @@
 ## P1 能力补全（对齐 ROADMAP 偏差）
 
 - [x] P1-4 统一定时调度器：retention 自动清理、CVE autosync 实际调度、代理池健康巡检（settings 可控）。
-- [ ] P1-5 保留/清理前端页：策略编辑、预览、dry-run、审计、目标侧清理清单。
+- [x] P1-5 保留/清理前端页：策略编辑、预览、dry-run、审计、目标侧清理清单。
 - [ ] P1-6 C2 完善：前端页（监听器/会话/任务）、listener 删除 API、HTTP beacon、多语言 implant（DNS 可拆）。
 - [ ] P1-7 WebShell/凭据闭环：目标侧马体物理删除+校验；凭据注入/复用 UI。
 - [ ] P1-8 知识库补全：服务端分页、条目编辑/删除、planner extras 注入 kb/cve、insights SQL 聚合。
@@ -39,3 +39,5 @@
 - 2026-11-21：P0 全部完成。提交：88c485a（P0-2/P0-3）、237a26f（v0.4.1 定版）。CI run 44909962033 success；release run 44910352144 success（五平台 zip + SHA256SUMS，非 draft/预发布）。下一步 P1-4 统一定时调度器。
 
 - 2026-11-21：P1-4 完成（server/maintenance.go + cve launch 复用 + /api/scheduler/*）。集成验证：默认任务表、retention 手动执行删到期行并写 actor=scheduler 审计、空池巡检跳过、未知任务 400、状态 last/next 回填。
+
+- 2026-11-21：P1-5 完成（/system/retention：策略/预览/dry-run/真删确认/审计/清理清单/调度状态+手动执行）。Playwright 7 项交互全过、0 console error。

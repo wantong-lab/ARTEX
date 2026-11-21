@@ -119,6 +119,11 @@ import type {
   UsageStats,
   WorkspaceFile,
   WorkspaceListing,
+  RetentionPolicy,
+  RetentionStatus,
+  RetentionCleanupResult,
+  RetentionCleanupList,
+  SchedulerStatus,
 } from "@/lib/types";
 
 function getToken(): string | null {
@@ -253,6 +258,15 @@ function interceptPageQuery(page: number, size: number, filter: InterceptApprova
 }
 
 export const api = {
+  // ---- retention / scheduler（P1-4 / P1-5）----
+  retentionStatus: () => get<RetentionStatus>("/retention/status"),
+  retentionSavePolicy: (policy: RetentionPolicy) => put<{ ok: boolean; policy: RetentionPolicy }>("/retention/policy", policy),
+  retentionCleanup: (dryRun: boolean, actor?: string) =>
+    post<RetentionCleanupResult>("/retention/cleanup", { dry_run: dryRun, actor }),
+  retentionCleanupList: () => get<RetentionCleanupList>("/retention/cleanup-list"),
+  schedulerStatus: () => get<SchedulerStatus>("/scheduler/status"),
+  schedulerRun: (name: string) => post<{ ok: boolean; name: string; result: string }>("/scheduler/run/" + name, {}),
+
   // 后端应用版本号（release 时由 ldflags 注入，默认 "dev"）。
   health: () => get<{ ok: boolean; service: string; version: string }>("/health"),
 

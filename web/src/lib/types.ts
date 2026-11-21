@@ -1803,3 +1803,71 @@ export interface InterceptExecution {
   seq: number;
   items: Activity[];
 }
+
+
+// ---- 数据保留与调度（P1-4/P1-5）----
+export interface RetentionPolicy {
+  activity_days: number;
+  logs_days: number;
+  c2_days: number;
+}
+export interface RetentionCounts {
+  activity: number;
+  server_logs: number;
+  c2_tasks: number;
+  c2_events: number;
+  c2_sessions: number;
+}
+export interface RetentionAudit {
+  id: number;
+  at: string;
+  actor: string;
+  dry_run: boolean;
+  policy: RetentionPolicy;
+  deleted: RetentionCounts;
+}
+export interface RetentionStatus {
+  policy: RetentionPolicy;
+  preview: RetentionCounts;
+  last_cleanup: RetentionAudit | null;
+}
+export interface RetentionCleanupResult {
+  dry_run: boolean;
+  policy: RetentionPolicy;
+  counts: RetentionCounts;
+  deleted?: RetentionCounts;
+  audit_id?: number;
+  at?: string;
+}
+export interface CleanupListItem {
+  id: number;
+  host: string;
+  session_id: number;
+  channel: string;
+  artifact_type: string;
+  cleanup_cmd: string;
+  note: string;
+  created_at: string;
+  age_days: number;
+}
+export interface RetentionCleanupList {
+  items: CleanupListItem[];
+  total: number;
+  by_host: Record<string, number>;
+  hint: string;
+}
+export interface SchedulerJob {
+  name: string;
+  enabled: boolean;
+  running: boolean;
+  interval_seconds: number;
+  next_run_unix?: number;
+  last_run_unix?: number;
+  last_error?: string;
+  last_result?: string;
+}
+export interface SchedulerStatus {
+  tick_seconds: number;
+  now_unix: number;
+  jobs: SchedulerJob[];
+}
