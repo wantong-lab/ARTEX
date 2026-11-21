@@ -59,6 +59,7 @@ type Worker struct {
 	workDir         string
 	proxyAddr       string
 	proxyCACert     string            // recording proxy's CA cert path (for WebFetch HTTPS verify)
+	uaPoolFn        func() []string   // per-run UA pool provider (nil = default pool, M1-05)
 	webSearch       WebSearchOpts     // web_search tool backend selection (off by default)
 	tx              *transcript.Store // raw LLM conversation persistence (nil = off)
 	window          int               // context window in tokens (for compaction)
@@ -189,6 +190,9 @@ func (w *Worker) compactionWindow() int {
 // that MITM proxy. Empty addr disables the hint.
 func (w *Worker) SetProxy(addr, caCert string) { w.proxyAddr, w.proxyCACert = addr, caCert }
 
+// SetUAPoolFn 设置本任务的 UA 池提供者（每 run 读，支持运行时改 settings）。
+func (w *Worker) SetUAPoolFn(fn func() []string) { w.uaPoolFn = fn }
+
 // SetWebSearch selects the web_search backend for this worker (off by default).
 func (w *Worker) SetWebSearch(o WebSearchOpts) { w.webSearch = o }
 
@@ -202,6 +206,24 @@ func (w *Worker) SetWebSearch(o WebSearchOpts) { w.webSearch = o }
 // honor the proxy vars. ALL_PROXY is set too so a socks5 egress proxy (which curl
 // only reads from ALL_PROXY, not HTTP(S)_PROXY) works in the capture-off path.
 // Empty proxyAddr → nil (direct, unchanged env).
+// bashEnv 返回 Bash 子进程环境：代理/CA（若有）+ 本任务稳定的 UA（M1-05）。
+func (w *Worker) bashEnv(taskID int64) []string {
+	env := proxyEnv(w.proxyAddr, w.proxyCACert)
+	if ua := w.pickUA(taskID); ua != "" {
+		env = append(env, "ARTEX_UA="+ua)
+	}
+	return env
+}
+
+// pickUA 按任务稳定取 UA；pool 未配置时回落默认池。
+func (w *Worker) pickUA(taskID int64) string {
+	var pool []string
+	if w.uaPoolFn != nil {
+		pool = w.uaPoolFn()
+	}
+	return PickUA(pool, taskID)
+}
+
 func proxyEnv(proxyAddr, caCert string) []string {
 	if proxyAddr == "" {
 		return nil
@@ -456,7 +478,7 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 		DeepSeekSearchModel:   w.webSearch.DeepSeekModel,
 		WebSearchProxy:        w.webSearch.Proxy,
 		// Bash 子命令的 HTTP 默认走记录代理 + 信任其 CA（工具无需 -x/-k）。
-		BashEnv:    proxyEnv(w.proxyAddr, w.proxyCACert),
+		BashEnv:    w.bashEnv(taskID),
 		WorkingDir: runDir,
 		MaxTurns:   w.maxTurns, // 0 = unlimited (configurable in agent management)
 		// 墙钟预算,轮边界判,不打断半路;0 = 不限。有任务级 deadline 时夹逼到 min(自身预算,

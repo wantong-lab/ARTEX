@@ -33,9 +33,14 @@ const plannerCleanupRule = `
 2. 清理范围只含测试与临时痕迹；已纳管的立足点与凭据复用通道**保留且保持隐蔽**——清理意图中明确写“保留立足点，仅清测试与临时文件”。
 3. 不要把「痕迹清理」当探索方向重复派发；同一目标收尾阶段最多一条。`
 
-// workerFixedTails 汇总 worker 的代码固定尾（meta 铁律 + 证据先行 + 里程碑收尾 + 反蜜罐）。
+// workerClientFingerprintRule 客户端指纹纪律（M1-05）：配合 ARTEX_UA 环境变量使用。
+const workerClientFingerprintRule = `
+
+**客户端指纹纪律(不可编辑)**: HTTP 请求需要自定 User-Agent 时，使用环境变量 ARTEX_UA 的值(本任务固定分配，整任务不要混换)；工具不支持该变量则保持默认，不要用裸浏览器 UA 拼 curl 的半吊子伪装。`
+
+// workerFixedTails 汇总 worker 的代码固定尾（meta 铁律 + 证据先行 + 里程碑收尾 + 反蜜罐 + 指纹纪律）。
 func workerFixedTails() string {
-	return chainskel.WorkerMetaRules + evidenceFirstRule + milestoneWrapRule + workerAntiTrapRules
+	return chainskel.WorkerMetaRules + evidenceFirstRule + milestoneWrapRule + workerAntiTrapRules + workerClientFingerprintRule
 }
 
 // plannerHoneypotRule 蜜罐处置纪律（M1-04 补齐 M1-02 延期项）：

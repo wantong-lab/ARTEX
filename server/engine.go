@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -544,6 +545,8 @@ type steerHooks struct {
 	det *agent.DetectorSet
 	// onDetect 在检测器触发时回调（引擎接线：写 system 活动，便于事后核对）。
 	onDetect func(message string)
+	// nudge 是工具纪律软提醒（M1-05）：Bash 命令前钉一行 stderr，不改语义。
+	nudge *agent.NudgeState
 }
 
 // 空转回合(只有思考、既无正文也无工具调用)续跑次数的默认值，与 SDK 空响应重试的
@@ -594,8 +597,28 @@ func (h steerHooks) PreToolUse(ctx context.Context, name string, input []byte) (
 				"\n（本次工具调用未执行；请按上面的提示调整下一步，不要原样重试。）", nil
 		}
 	}
+	block, msg, updated := false, "", []byte(nil)
 	if h.inner != nil {
-		return h.inner.PreToolUse(ctx, name, input)
+		block, msg, updated = h.inner.PreToolUse(ctx, name, input)
+		if block {
+			return block, msg, updated
+		}
+		if len(updated) > 0 {
+			input = updated
+		}
+	}
+	if h.nudge != nil && name == "Bash" {
+		var probe struct {
+			Command string `json:"command"`
+		}
+		if err := json.Unmarshal(input, &probe); err == nil {
+			if text := h.nudge.OnBash(probe.Command); text != "" {
+				if next, ok := agent.PrependBashStderr(input, text); ok {
+					log.Printf("[work %s] 工具纪律提醒: %s", h.label, detectorSummary(text))
+					return false, "", next
+				}
+			}
+		}
 	}
 	return false, "", nil
 }
@@ -1057,6 +1080,7 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 		limit:  e.emptyTurnNudgeLimit(),
 		label:  label,
 		det:    agent.NewDetectorSet(agent.DetectorConfigFromSettings(e.settingGetter())),
+		nudge:  agent.NewNudgeState(agent.NudgeConfigFromSettings(e.settingGetter())),
 		onDetect: func(msg string) {
 			taskEmit(db.Activity{Kind: "system", Tool: "detector", Summary: detectorSummary(msg), Detail: msg})
 		},
