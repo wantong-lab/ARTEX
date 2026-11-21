@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-21
+
 ### 变更
 - CI 增加 `gofmt` 检查与 API 冒烟门禁（14 个无 LLM/无外网用例）；新增 `scripts/smoke/api_smoke.py`、`scripts/smoke/ui_smoke.mjs` 与使用说明。
 - 未知路由改为返回 404（自定义中文 404 页 + Go 静态服务 404 语义），不再静默回退到首页/任务页。
