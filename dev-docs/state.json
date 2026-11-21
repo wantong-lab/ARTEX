@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "objective": "artex-product-parity",
-  "phase": "release",
-  "round": 38,
-  "current_pr": "release-v0.4.2",
-  "current_branch": "release/v0.4.2",
-  "development_branch": "release/v0.4.2",
+  "phase": "complete",
+  "round": 39,
+  "current_pr": "done",
+  "current_branch": "main",
+  "development_branch": "main",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -215,13 +215,14 @@
     "p2_14_observability": "/metrics Prometheus text + observability status + JSON structured logs; observability_check.py EXIT=0 (counter growth 3->8, 3 scheduler jobs, DB pool, JSON http_request); metrics remote denied w/o token, token allowed",
     "p3_15_docs": "docs/llm-config.md (205 lines), docs/ops-manual.md (155), docs/faq.md (96); README + deploy doc index updated",
     "p3_16_frontend_polish": "error boundary + loading skeleton + api 401 next/403 toast/5xx toast + dark contrast + mobile no-overflow; Playwright 13 PASS; tsc and build:static pass",
-    "p3_17_docker_demo": "release docker job -> GHCR via GITHUB_TOKEN (no DockerHub secrets), compose image ghcr, demo seed idempotent (2 paused DEMO tasks, 4 KB, 4 assets), README 5-min demo, YAML/compose valid, local docker build verified"
+    "p3_17_docker_demo": "release docker job -> GHCR via GITHUB_TOKEN (no DockerHub secrets), compose image ghcr, demo seed idempotent (2 paused DEMO tasks, 4 KB, 4 assets), README 5-min demo, YAML/compose valid, local docker build verified",
+    "release_v0_4_2": "tag v0.4.2; release run 44929501199 success; assets 5 zips + SHA256SUMS; GHCR ghcr.io/wantong-lab/artex:v0.4.2 & latest (amd64/arm64 OCI index); final go build/vet/test all pass; local docker build + seed verified"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-22T01:45:00+08:00",
+  "updated_at": "2026-11-22T01:40:00+08:00",
   "release": {
     "tag": "v0.4.1",
     "commit": "237a26f",
@@ -246,5 +247,6 @@
       "done": 3,
       "total": 3
     }
-  }
+  },
+  "status": "complete"
 }

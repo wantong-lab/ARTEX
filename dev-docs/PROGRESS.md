@@ -240,3 +240,9 @@
 - 动作：① .github/workflows/release.yml 的 docker job 改为 GHCR（GITHUB_TOKEN + packages: write，多架构 amd64/arm64，ghcr.io/wantong-lab/artex），移除失败的 DockerHub secrets 依赖；docker-compose.yml 默认镜像改 ghcr；② 新增 scripts/demo/seed_demo.py（HTTP API 幂等种子）并 COPY 进镜像 /app/seed_demo.py；③ README 新增「5 分钟体验：灌入 demo 数据」与 GHCR 可见性说明，install.sh 启动后提示；④ CHANGELOG 拆出 [0.4.2] 并写入 P1–P3 全部条目与 P3-17。
 - 验证：seed 在全新库实跑 SEED1=0/SEED2=0（2 任务 paused、4 KB、资产写入，二次执行幂等）；release.yml YAML 解析、docker compose config 通过；本地 docker build 与镜像内二进制验证；tag v0.4.2 后将由 Release 工作流产出五平台 zip + GHCR 镜像。
 - 下一步：打 v0.4.2 tag → 等 Release 工作流（binaries/release/docker）成功 → 校验 Release 资产与 GHCR 镜像 → 目标收口。
+
+
+## 轮次 39 · 2026-11-22（v0.4.2 发布收口，P0–P3 完成）
+- 发布：tag v0.4.2 → Release 工作流 44929501199 全绿（frontend、darwin/linux/windows 五平台 binaries、release、docker）；Release 资产 5 个 zip + SHA256SUMS；docker job 改用 GITHUB_TOKEN 推 GHCR 成功，ghcr.io/wantong-lab/artex:v0.4.2 / :latest 为多架构 OCI index（本地 docker manifest inspect 验证）。
+- 最终验证：go build/vet/test ./... 全绿（全新 artex_final 库）；本地 docker build 成功，镜像内 artex -h 与 /app/seed_demo.py --help 可执行；demo seed 在全新库两次运行均 EXIT=0（幂等）。
+- 结论：P0（发布收口）、P1（7 项能力）、P2（4 项验证加固）、P3（3 项体验文档）全部完成，BACKLOG 17/17 勾选；目标完成。
