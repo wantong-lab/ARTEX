@@ -29,7 +29,7 @@
 | M4-03 | M4 | `feat/m4-03-proxypool` | 已完成 | `4d47718` | 代理池录入/探测/切换/回退 + 出站联动 Sploitus + 中枢页签；4 组用例；next build 与 24 包全绿。偏差：mihomo 适配器后置；仅 Sploitus 出站接入代理 client |
 | M5-01 | M5 | `feat/m5-01-agent-routing` | 已完成 | `84b8e78` | 五档预算分类+超时、frontier=8 拒派、接力幂等、任务广播；4 组用例；24 包全绿。偏差：接力只发事件由 planner 决定派发，不自动建意图 |
 | M5-02 | M5 | `feat/m5-02-cleanup` | 已完成 | `b5f4329` | 保留策略+预览+dry-run 清理+审计+host_ledger 清理清单；2 组用例；24 包全绿。偏差：清理为手动 API（未加定时调度），无前端页 |
-| M5-03 | M5 | `docs/m5-03-release` | 待开始 | — | 见 ROADMAP 第 10 节 |
+| M5-03 | M5 | `docs/m5-03-release` | 已完成 | `3f01bb5` | CHANGELOG/README/部署指南 + v0.4.0 tag + release workflow 核对；CI 等脚本本地全绿 |
 
 ## 已知问题（基线测试债）
 

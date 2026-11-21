@@ -132,6 +132,7 @@
 | M4-03 | 已完成 | `4d47718` | 代理池最小闭环；M4 里程碑收官 |
 | M5-01 | 已完成 | `84b8e78` | 意图预算五档 + frontier/接力/广播 |
 | M5-02 | 已完成 | `b5f4329` | 保留策略 + dry-run 清理 + 审计 + 清理清单 |
+| M5-03 | 已完成 | `3f01bb5` | 发布收口：文档/CHANGELOG/v0.4.0 tag |
 | 其余 | 待开始 | — | 按第 10 节明细推进 |
 
 > 状态真相源：[dev-docs/TASKS.md](dev-docs/TASKS.md)；轮次流水：[dev-docs/PROGRESS.md](dev-docs/PROGRESS.md)；机器状态：[dev-docs/state.json](dev-docs/state.json)；目标定义与执行协议：[dev-docs/GOAL.md](dev-docs/GOAL.md)。

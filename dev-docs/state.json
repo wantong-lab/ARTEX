@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "objective": "artex-product-parity",
-  "phase": "M5",
-  "round": 22,
-  "current_pr": "M5-03",
+  "phase": "done",
+  "round": 23,
+  "current_pr": null,
   "current_branch": "docs/m5-03-release",
-  "development_branch": "feat/m5-02-cleanup",
+  "development_branch": "docs/m5-03-release",
   "status_counts": {
-    "completed": 23,
+    "completed": 24,
     "in_progress": 0,
-    "pending": 1,
+    "pending": 0,
     "blocked": 0
   },
   "prs": {
@@ -150,6 +150,12 @@
       "branch": "feat/m5-02-cleanup",
       "status": "completed",
       "commit": "b5f4329"
+    },
+    "M5-03": {
+      "milestone": "M5",
+      "branch": "docs/m5-03-release",
+      "status": "completed",
+      "commit": "3f01bb5"
     }
   },
   "known_issues": [
@@ -192,12 +198,18 @@
     "m4_02": "登记→执行→读取→列表→清理全链路用例通过；清理写 host_ledger（channel=webshell/artifact=true/cleanup 文案）并删会话、注册表同步移除后再执行必失败；secret 不外泄；gate 拒绝登记；next build 通过；全新库 23 包全绿",
     "m4_03": "探测可用性判断（坏代理 failed）、切换后出口 IP 改变、活动代理坏死回退全局/直连且累计 fail_count、URL 密文+去重、next build 通过、全新库 24 包全绿",
     "m5_01": "分类五档与 chain_tags 优先、空 payload 落 general；frontier 默认 8 第 9 个拒派、释放后可再取；接力表与同键重复拒绝；广播多订阅者收发/退订/跨任务隔离；全新库 24 包全绿",
-    "m5_02": "preview 只计到期行；dry-run 数据不变且不写审计；真实清理只删到期行（新行存活），审计含 actor/策略/删除数；非法策略回落默认并夹取；全新库 24 包全绿"
+    "m5_02": "preview 只计到期行；dry-run 数据不变且不写审计；真实清理只删到期行（新行存活），审计含 actor/策略/删除数；非法策略回落默认并夹取；全新库 24 包全绿",
+    "m5_03": "CHANGELOG/README/部署指南与代码一致；本地 CI 等脚本（go build/vet、迁移+全量测试、web build、release workflow 五平台矩阵）核对通过；v0.4.0 tag 推送触发 release workflow"
   },
   "next_actions": [
-    "M5-03: 发布（CHANGELOG/README/部署文档、CI 验证、打 v0.4.0 tag、release workflow）",
-    "收尾后核对总目标并打 tag v0.4.0，goal 可 complete"
+    "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T17:50:00+08:00"
+  "updated_at": "2026-11-21T18:20:00+08:00",
+  "release": {
+    "tag": "v0.4.0",
+    "branch": "docs/m5-03-release",
+    "changelog": "CHANGELOG.md 0.4.0",
+    "deploy_doc": "docs/deploy-v0.4.0.md"
+  }
 }

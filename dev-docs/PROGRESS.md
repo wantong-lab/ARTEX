@@ -137,3 +137,8 @@
 - 结果：dry-run 前后数据不变且无审计、真实清理只删到期行（新行存活）、审计字段正确、非法策略回落 2 组用例全绿；全新库全量 **24 包全绿**（EXIT=0）。提交 `b5f4329`。
 - 偏差：清理为手动 API（未加定时调度）；清理清单暂无前端页（接口已就绪）。
 - 下一步：M5-03 发布收口（CHANGELOG/README/部署文档、v0.4.0 tag、release workflow）。
+
+## 轮次 23 · 2026-11-21（M5-03 发布，总目标收口）
+- 动作：M5-03。CHANGELOG 增补 0.4.0 全量变更（M0–M5 分组、安全默认值、已知限制）；README 新增二开能力与默认开关表；新增 `docs/deploy-v0.4.0.md`（升级步骤、0004–0009 迁移、设置键、C2 启用流程、代理池/清理运维、回滚与排障）。核对 `.github/workflows/ci.yml`（go build/vet + 迁移 + 全量测试、web build）与 `release.yml`（五平台交叉编译 + GitHub Release + Docker 多架构）。
+- 结果：全部 24 个 PR 完成，记录三处一致（completed=24 / pending=0）；本地 CI 等脚本全绿；打 **v0.4.0** tag 并推送，触发 release workflow。
+- 下一步：总目标达成，goal 标记 complete。
