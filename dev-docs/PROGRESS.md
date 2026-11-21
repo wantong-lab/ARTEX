@@ -81,3 +81,10 @@
 - 结果：`npm run build` 通过且生成 `/function/intranet` 路由；Go 全量 21 包全绿（EXIT=0）；凭据错密钥场景列表可用、单行 `SecretOK=false`。提交 `c416901`。**M2 内网中枢里程碑全部完成。**
 - 偏差：页签为会话/隧道/凭据/台账/审批，规格中的「拓扑」「投递」视图延后（需拓扑图数据与 stage API）；未做 MOCK 渲染验证（页面走真实 API）。
 - 下一步：M3-01 知识库与语义记忆包导入。
+
+## 轮次 14 · 2026-11-21
+- 动作：M3-01。复制 `memory` 包并适配：无 pgvector 扩展时降级关键词召回（TEXT 列 + ILIKE），修复 fork 的 `Close` 关队列导致 worker 空转缺陷（closed 通道 + 幂等 Close）；新增 `0006_memory.sql`（尝试安装扩展，表由 ensure 按 ARTEX_EMBED_DIM 建）。`server/reflector.go`：意图 done→打法、blocked/exhausted→负面清单，内容脱敏后异步入记忆；引擎终态调用。worker system 注入历史相似经验块（Manager 懒初始化 memory，召回为空/不可用不注入）。
+- 结果：memory 4 用例 + reflector 3 用例全绿；干净测试库全量 **22 包全绿**（EXIT=0）。提交 `7717328`。
+- 过程问题：mock 阶段曾因共用 artex_test 残留 company_scope 行导致 `TestCompanyScopeAttribution` 误报；重建干净库后全绿（环境残留，非代码回归）。
+- 偏差：迁移编号为 0006（规格写 0005，编号已被 pending_scope 占用）；`mem_entries` 表结构由运行时 ensure 建（维度依赖 ARTEX_EMBED_DIM），迁移只装扩展。
+- 下一步：M3-02 知识库 API 与入库员。

@@ -20,7 +20,7 @@
 | M2-03 | M2 | `feat/m2-03-tunnel` | 已完成 | `a332e93` | 隧道三工具 + 任务级 MITM 热切换；4 用例 + 全量 21 包全绿。偏差：未改 traffic/traffic.go（上游已有 SetUpstreamProxy）；chisel 真机部署未端到端验证 |
 | M2-04 | M2 | `feat/m2-04-cred-scope` | 已完成 | `15482b7` | RoE 三态+提取+off/warn/strict、pending_scope 审批即时生效；7 单测+PG 用例；21 包全绿。偏差：pending_scope HTTP API 与任务移交延后 M2-05 |
 | M2-05 | M2 | `feat/m2-05-ui-intranet` | 已完成 | `c416901` | API + 五页签 + 侧栏分组 + 移交；next build 与 21 包全绿。偏差：页签为 会话/隧道/凭据/台账/审批（拓扑与投递延后）；未做 mock 渲染验证 |
-| M3-01 | M3 | `feat/m3-01-import-kb-memory` | 待开始 | — | 见 ROADMAP 第 10 节 |
+| M3-01 | M3 | `feat/m3-01-import-kb-memory` | 已完成 | `7717328` | memory 包 + pgvector/关键词降级 + Close 空转修复 + reflector 沉淀 + worker 召回注入；memory/reflector 7 用例；干净库 22 包全绿。偏差：迁移编号 0006（非规格 0005） |
 | M3-02 | M3 | `feat/m3-02-kb-api` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M3-03 | M3 | `feat/m3-03-cve` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M3-04 | M3 | `feat/m3-04-ui-intel` | 待开始 | — | 见 ROADMAP 第 10 节 |

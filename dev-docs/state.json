@@ -2,14 +2,14 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "M3",
-  "round": 13,
-  "current_pr": "M3-01",
-  "current_branch": "feat/m3-01-import-kb-memory",
-  "development_branch": "feat/m2-05-ui-intranet",
+  "round": 14,
+  "current_pr": "M3-02",
+  "current_branch": "feat/m3-02-kb-api",
+  "development_branch": "feat/m3-01-import-kb-memory",
   "status_counts": {
-    "completed": 14,
+    "completed": 15,
     "in_progress": 0,
-    "pending": 10,
+    "pending": 9,
     "blocked": 0
   },
   "prs": {
@@ -96,6 +96,12 @@
       "branch": "feat/m2-05-ui-intranet",
       "status": "completed",
       "commit": "c416901"
+    },
+    "M3-01": {
+      "milestone": "M3",
+      "branch": "feat/m3-01-import-kb-memory",
+      "status": "completed",
+      "commit": "7717328"
     }
   },
   "known_issues": [
@@ -129,12 +135,13 @@
     "m2_02": "httptest 假 phpcmd 马：register→exec→write→read 全通；exec 输出 16KB 截断；RoE 门拒绝路径；last_beat 超时探活置 dead；schema 与 BuiltinToolSeeds 目录不漂移；全量 21 包全绿",
     "m2_03": "pickUpstream 表驱动（alive/最新/suo5 鉴权/portfwd 跳过/回落）、任务 MITM 热切换含死亡回退、Plan JSON 往返、工具 schema 与目录一致；全量 21 包全绿",
     "m2_04": "guard 三态/提取/模式/loopback 7 单测；PG 审批写 task_scope（10.1.2.0/24）、重复审批拒绝、拒绝路径；全量 21 包全绿",
-    "m2_05": "next build 通过且 /function/intranet 在路由表；Go 全量 21 包全绿；凭据解密降级 PG 用例（错误密钥列表可用、单行 SecretOK=false）"
+    "m2_05": "next build 通过且 /function/intranet 在路由表；Go 全量 21 包全绿；凭据解密降级 PG 用例（错误密钥列表可用、单行 SecretOK=false）",
+    "m3_01": "memory 4 用例（embedder 不可达关键词召回降级、recallBlock 空、vecLit、env 默认）+ reflector 3 用例（脱敏、摘要、无记忆 no-op）；干净库全量 22 包全绿"
   },
   "next_actions": [
-    "M3-01: 导入 kb/memory 包与 sqlite/kb.sqlite、kb 工具、planner 记忆段",
-    "M3-02: 知识库工具与 CVE 指纹/知识源接入"
+    "M3-02: 知识库 API 与入库员（kb 工具、知识源接入）",
+    "M3-03/M3-04: CVE 指纹与知识增强、前端知识库页"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T13:34:00+08:00"
+  "updated_at": "2026-11-21T13:52:00+08:00"
 }

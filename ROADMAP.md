@@ -123,6 +123,7 @@
 | M2-03 | 已完成 | `a332e93` | 隧道三工具 + 任务级 MITM 上游热切换 |
 | M2-04 | 已完成 | `15482b7` | RoE 范围执行 + 越界范围审批 |
 | M2-05 | 已完成 | `c416901` | 内网中枢 API + 页面；M2 里程碑收官 |
+| M3-01 | 已完成 | `7717328` | 语义记忆 + 终态沉淀 + 召回注入 |
 | 其余 | 待开始 | — | 按第 10 节明细推进 |
 
 > 状态真相源：[dev-docs/TASKS.md](dev-docs/TASKS.md)；轮次流水：[dev-docs/PROGRESS.md](dev-docs/PROGRESS.md)；机器状态：[dev-docs/state.json](dev-docs/state.json)；目标定义与执行协议：[dev-docs/GOAL.md](dev-docs/GOAL.md)。
