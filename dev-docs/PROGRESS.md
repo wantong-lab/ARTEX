@@ -47,3 +47,8 @@
 - 动作：M1-04。逐字节复制 honeydetect 包（sha256 一致）；迁移 0003 给 assets 加 `honeypot_score`/`honeypot_evidence` 与部分索引；服务资产落库后 best-effort 评分、回写并写 fact 锚定；planner 固定尾补「蜜罐处置纪律」，M1-02 延期项关闭。
 - 结果：honeydetect 6 个用例、db 评分读写（取最高分、低分不覆盖）与 planner 固定尾用例全绿；`go build` 通过；全量 17 包全绿（EXIT=0）。提交 `e972c91`。
 - 下一步：M1-05 侦察/军火库软提醒 + UA 池，随后进入 M2 内网中枢。
+
+## 轮次 8 · 2026-11-21
+- 动作：M1-05。`nudges.go`：侦察提醒（curl/wget 累计阈值、用过批量工具后永久沉默、上限 2）与手写 webshell 提醒，经 steer 钩子把提示前置到 Bash 的 stderr（不改语义）。`uapool.go`：按 taskID 稳定分配 UA 并经 ARTEX_UA 注入 BashEnv，settings `web_ua_pool` 可配；worker 固定尾补客户端指纹纪律。
+- 结果：8 个单测全绿；`go build/vet` 通过；全量 17 包全绿（EXIT=0）。提交 `7fdad77`。**M1 认知层里程碑全部完成。**
+- 下一步：M2-01 导入 session/stage/tunnel/kb 基础包与 0004 迁移，进入内网中枢。

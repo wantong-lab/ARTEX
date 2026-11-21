@@ -2,14 +2,14 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "M1",
-  "round": 7,
-  "current_pr": "M1-05",
-  "current_branch": "feat/m1-05-nudges",
+  "round": 8,
+  "current_pr": "M2-01",
+  "current_branch": "feat/m2-01-import-session",
   "development_branch": "feat/m1-01-chainskel",
   "status_counts": {
-    "completed": 8,
+    "completed": 9,
     "in_progress": 0,
-    "pending": 16,
+    "pending": 15,
     "blocked": 0
   },
   "prs": {
@@ -60,6 +60,12 @@
       "branch": "feat/m1-04-honeydetect",
       "status": "completed",
       "commit": "e972c91"
+    },
+    "M1-05": {
+      "milestone": "M1",
+      "branch": "feat/m1-05-nudges",
+      "status": "completed",
+      "commit": "7fdad77"
     }
   },
   "known_issues": [
@@ -87,12 +93,13 @@
     "m1_01": "chainskel 15 个文件 sha256 与来源一致；17 个用例通过（骨架齐全/标签校验/8000 rune 截断/缺失静默降级）",
     "m1_02": "固定尾单测（DB 正文任意内容仍在）；意图骨架注入与静默降级；chain_tags 非法值报错；全量 16 包全绿",
     "m1_03": "归一化/签名与失败相似度、按 host 的传输失败与 5xx、出口代理熔断、同参数重复拦截共 10 个单测；steer 拦截走 PreToolUse、活动记账走 taskEmit；全量 16 包全绿",
-    "m1_04": "honeydetect 包 sha256 一致；0003 迁移幂等；评分读写用例（取最高分）；planner 蜜罐纪律单测；全量 17 包全绿"
+    "m1_04": "honeydetect 包 sha256 一致；0003 迁移幂等；评分读写用例（取最高分）；planner 蜜罐纪律单测；全量 17 包全绿",
+    "m1_05": "侦察提醒阈值/批量工具后沉默、军火库提醒上限、stderr 前缀不改语义、UA 按 taskID 稳定、settings 开关解析；全量 17 包全绿"
   },
   "next_actions": [
-    "M1-05: 侦察/军火库软提醒 + UA 池（噪音阈值沿用二开实测）",
-    "M2-01: 导入 session/stage/tunnel 基础包与 db 层"
+    "M2-01: 导入 session/stage/tunnel/kb 包与 sessions/tunnels/credentials/host_ledger 迁移（0004）",
+    "M2-02: 会话工具与审批接线"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T11:40:00+08:00"
+  "updated_at": "2026-11-21T11:58:00+08:00"
 }
