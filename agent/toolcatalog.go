@@ -96,6 +96,14 @@ func BuiltinToolSeeds() []ToolSeed {
 			Agents: agents,
 		})
 	}
+	// 会话工具（M2-02）的 handler 在 server 层（需要 DB/会话中枢依赖），这里只播种
+	// 目录元数据与默认绑定；运行时若 handler 未注入，ToolResolve 不会凭空造出工具。
+	for _, s := range SessionToolSeeds() {
+		if _, ok := m[s.Key]; ok {
+			continue
+		}
+		out = append(out, s)
+	}
 	return out
 }
 

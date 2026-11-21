@@ -46,6 +46,10 @@ type Server struct {
 	skillDir string // root directory for skill subdirectories
 	jwtKey   []byte // HS256 signing key loaded from / generated into dataDir/jwt.key
 
+	// sessionMu 保护 sessHub；会话中枢是进程级共享（注册表跨任务/worker 复用）。
+	sessionMu sync.Mutex
+	sessHub   *sessionHub
+
 	// concMu serializes concurrency-cap decisions (admission + reconcile) so a
 	// scheduler tick and an HTTP settings change / task creation can't both count
 	// free slots off the same snapshot and over-promote past the limit.
