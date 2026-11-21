@@ -69,3 +69,9 @@
 - 结果：上游选择表驱动、热切换含死亡回退、Plan 序列化往返、工具 schema 不漂移共 4 个用例全绿；全量 21 包全绿（EXIT=0）。提交 `a332e93`。
 - 偏差：`traffic/traffic.go` 未改（当前上游 0.3.15 已内置 SetUpstreamProxy）；chisel 二进制缺失，真机部署路径未端到端验证（工具返回明确错误）；回调地址取 env `ARTEX_CALLBACK_ADDR`，后续接入 config/设置页。
 - 下一步：M2-04 凭据与 RoE 范围审批。
+
+## 轮次 12 · 2026-11-21
+- 动作：M2-04。`guard/extract.go` 提取 URL/host:port/IP/CIDR（跳过文件名）；`guard/scope.go` 三态匹配（loopback 永不拦，空 scope=unknown 不拦）；`guard/roe.go` 三模式 off/warn/strict 并接入 Guard PreToolUse；任务 Guard 从 settings 读 `roe_scope_mode`（默认 warn）、scope 每轮从 task_scope 重建。新增 0005 迁移 `pending_scope`（IP 按 /24、IPv6 /64 聚合；source=approval 约束），批准写 task_scope 即时生效、拒绝可审计。
+- 结果：guard 7 个单测全绿；PG 上审批写范围、重复审批拒绝、拒绝路径用例通过；全量 21 包全绿（EXIT=0）。提交 `15482b7`。
+- 偏差：pending_scope 的 HTTP API 与任务移交（以会话为起点建子任务、初始 /32）延后到 M2-05；凭据单行解密降级实现随 M2-01 导入已存在，未新增专测（记入 M2-05 待补）。
+- 下一步：M2-05 内网中枢页与审批 UI。

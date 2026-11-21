@@ -2,14 +2,14 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "M2",
-  "round": 11,
-  "current_pr": "M2-04",
-  "current_branch": "feat/m2-04-cred-scope",
-  "development_branch": "feat/m2-03-tunnel",
+  "round": 12,
+  "current_pr": "M2-05",
+  "current_branch": "feat/m2-05-ui-intranet",
+  "development_branch": "feat/m2-04-cred-scope",
   "status_counts": {
-    "completed": 12,
+    "completed": 13,
     "in_progress": 0,
-    "pending": 12,
+    "pending": 11,
     "blocked": 0
   },
   "prs": {
@@ -84,6 +84,12 @@
       "branch": "feat/m2-03-tunnel",
       "status": "completed",
       "commit": "a332e93"
+    },
+    "M2-04": {
+      "milestone": "M2",
+      "branch": "feat/m2-04-cred-scope",
+      "status": "completed",
+      "commit": "15482b7"
     }
   },
   "known_issues": [
@@ -115,12 +121,13 @@
     "m1_05": "侦察提醒阈值/批量工具后沉默、军火库提醒上限、stderr 前缀不改语义、UA 按 taskID 稳定、settings 开关解析；全量 17 包全绿",
     "m2_01": "session/stage/tunnel/kb 包测试全绿（session 3.7s）；0004 迁移在真实 PG 上应用成功（4 个迁移）；全量 21 包全绿",
     "m2_02": "httptest 假 phpcmd 马：register→exec→write→read 全通；exec 输出 16KB 截断；RoE 门拒绝路径；last_beat 超时探活置 dead；schema 与 BuiltinToolSeeds 目录不漂移；全量 21 包全绿",
-    "m2_03": "pickUpstream 表驱动（alive/最新/suo5 鉴权/portfwd 跳过/回落）、任务 MITM 热切换含死亡回退、Plan JSON 往返、工具 schema 与目录一致；全量 21 包全绿"
+    "m2_03": "pickUpstream 表驱动（alive/最新/suo5 鉴权/portfwd 跳过/回落）、任务 MITM 热切换含死亡回退、Plan JSON 往返、工具 schema 与目录一致；全量 21 包全绿",
+    "m2_04": "guard 三态/提取/模式/loopback 7 单测；PG 审批写 task_scope（10.1.2.0/24）、重复审批拒绝、拒绝路径；全量 21 包全绿"
   },
   "next_actions": [
-    "M2-04: 凭据收割/复用（register_credential/cred_use）与 RoE 范围审批",
-    "M2-05: 内网中枢前端页（会话/隧道/凭据/台账）"
+    "M2-05: 内网中枢页（会话/隧道/凭据/台账 + pending_scope 审批 API 与页面）",
+    "M2-05 同时补：任务移交（以会话为起点建子任务，初始 scope /32）"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T12:46:00+08:00"
+  "updated_at": "2026-11-21T13:06:00+08:00"
 }

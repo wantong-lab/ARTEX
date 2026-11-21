@@ -18,7 +18,7 @@
 | M2-01 | M2 | `feat/m2-01-import-session` | 已完成 | `8d2ca82` | 4 包 + 4 db 文件 + 0004 迁移；包测试全绿；全量 21 包全绿 |
 | M2-02 | M2 | `feat/m2-02-session-tools` | 已完成 | `2e74c05` | 四工具 + RoE 门 + gcm1 加密 + host_ledger + 16KB 截断 + 陈旧会话判死；httptest 假马全链路；21 包全绿。偏差：ssh/smb 会话与后台巡检延后 |
 | M2-03 | M2 | `feat/m2-03-tunnel` | 已完成 | `a332e93` | 隧道三工具 + 任务级 MITM 热切换；4 用例 + 全量 21 包全绿。偏差：未改 traffic/traffic.go（上游已有 SetUpstreamProxy）；chisel 真机部署未端到端验证 |
-| M2-04 | M2 | `feat/m2-04-cred-scope` | 待开始 | — | 见 ROADMAP 第 10 节 |
+| M2-04 | M2 | `feat/m2-04-cred-scope` | 已完成 | `15482b7` | RoE 三态+提取+off/warn/strict、pending_scope 审批即时生效；7 单测+PG 用例；21 包全绿。偏差：pending_scope HTTP API 与任务移交延后 M2-05 |
 | M2-05 | M2 | `feat/m2-05-ui-intranet` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M3-01 | M3 | `feat/m3-01-import-kb-memory` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M3-02 | M3 | `feat/m3-02-kb-api` | 待开始 | — | 见 ROADMAP 第 10 节 |
