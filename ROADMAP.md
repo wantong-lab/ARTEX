@@ -128,6 +128,7 @@
 | M3-03 | 已完成 | `7b6d0d3` | 可续跑 CVE 同步 + API + 检索工具 |
 | M3-04 | 已完成 | `a536548` | 情报页（知识库/CVE/Sploitus）；M3 里程碑收官 |
 | M4-01 | 已完成 | `c415314` | C2 运行时（默认关闭）+ 台账 + 工具 |
+| M4-02 | 已完成 | `85836c1` | WebShell 闭环 + 中枢页签 |
 | 其余 | 待开始 | — | 按第 10 节明细推进 |
 
 > 状态真相源：[dev-docs/TASKS.md](dev-docs/TASKS.md)；轮次流水：[dev-docs/PROGRESS.md](dev-docs/PROGRESS.md)；机器状态：[dev-docs/state.json](dev-docs/state.json)；目标定义与执行协议：[dev-docs/GOAL.md](dev-docs/GOAL.md)。

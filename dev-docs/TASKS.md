@@ -25,7 +25,7 @@
 | M3-03 | M3 | `feat/m3-03-cve` | 已完成 | `7b6d0d3` | 可续跑同步（断点 30ms 级验证）+ 5 个 API + cve_search 工具；5 用例；干净库 22 包全绿。偏差：autosync 仅持久化开关（调度归 M5）；Sploitus 线上路径用 stub 验证 |
 | M3-04 | M3 | `feat/m3-04-ui-intel` | 已完成 | `a536548` | 情报页三块（知识库/CVE/Sploitus）+ kb add API + 同步中断；next build 与 22 包全绿。偏差：检索分页为客户端分页；Sploitus 需外网 |
 | M4-01 | M4 | `feat/m4-01-c2` | 已完成 | `c415314` | 自研 c2 包（信封/帧/管理器）+ 0007 台账 + 运行时/API + 3 工具；9 用例；干净库 23 包全绿。偏差：整包 Reconstructed 按政策重写；仅 TCP 反向；C2 前端留 M5 |
-| M4-02 | M4 | `feat/m4-02-webshell` | 待开始 | — | 见 ROADMAP 第 10 节 |
+| M4-02 | M4 | `feat/m4-02-webshell` | 已完成 | `85836c1` | 生成/登记/执行/读取/清理闭环 + 内网中枢 WebShell 页签；全链路用例；next build 与 23 包全绿。偏差：清理走 host_ledger 记录并删会话，目标侧落地清除仍需人工/后续 agent 执行 |
 | M4-03 | M4 | `feat/m4-03-proxypool` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M5-01 | M5 | `feat/m5-01-agent-routing` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M5-02 | M5 | `feat/m5-02-cleanup` | 待开始 | — | 见 ROADMAP 第 10 节 |

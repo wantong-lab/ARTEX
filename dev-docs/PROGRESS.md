@@ -113,3 +113,9 @@
 - 偏差：仅实现 TCP 反向监听（HTTP beacon 回调留待后续）；C2 前端页面未做（登记 M5）；非回环绑定的范围校验依赖 RoE/Guard 在工具层已有的约束。
 - 过程问题：迁移计数断言需同步 7；共享测试库残留再次导致 `TestCompanyScopeAttribution` 误报，重建库后全绿。
 - 下一步：M4-02 WebShell 接线。
+
+## 轮次 19 · 2026-11-21
+- 动作：M4-02。新增 `server/session_ops.go`（登记/执行/读取/列表/清理内核，工具与 API 共用）、`server/webshell_api.go`（6 个路由）、`server/webshell_tools.go`（generate_webshell）、`agent/webshelltoolmeta.go`；内网中枢页新增 WebShell 页签（生成、登记、列表、执行/读取、清理）。清理动作先写 host_ledger（channel=webshell、artifact=true、cleanup「删除已上传 WebShell」）再删会话并同步移除内存注册表。
+- 结果：登记→执行→读取→列表→清理全链路用例通过（清理后再执行必失败、secret 不外泄、gate 拒绝登记）；`npm run build` 通过；全新库全量 **23 包全绿**（EXIT=0）。提交 `85836c1`。
+- 偏差：清理只落台账+删会话，目标侧马体文件的实际删除需后续通过会话执行（避免管理页直接对目标发命令）。
+- 下一步：M4-03 代理池最小闭环。
