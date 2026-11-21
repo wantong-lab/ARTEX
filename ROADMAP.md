@@ -118,6 +118,7 @@
 | M1-03 | 已完成 | `e5db440` | 停滞/死面/重复检测器 + steer 接线 |
 | M1-04 | 已完成 | `e972c91` | honeydetect + 评分挂点 + 处置纪律 |
 | M1-05 | 已完成 | `7fdad77` | 提醒 + UA 池；M1 里程碑收官 |
+| M2-01 | 已完成 | `8d2ca82` | 会话/投递/隧道/知识库包 + 内网表 |
 | 其余 | 待开始 | — | 按第 10 节明细推进 |
 
 > 状态真相源：[dev-docs/TASKS.md](dev-docs/TASKS.md)；轮次流水：[dev-docs/PROGRESS.md](dev-docs/PROGRESS.md)；机器状态：[dev-docs/state.json](dev-docs/state.json)；目标定义与执行协议：[dev-docs/GOAL.md](dev-docs/GOAL.md)。

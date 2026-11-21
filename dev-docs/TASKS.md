@@ -15,7 +15,7 @@
 | M1-03 | M1 | `feat/m1-03-stuck` | 已完成 | `e5db440` | 三检测器 + steer 接线；10 个单测；全量 16 包全绿 |
 | M1-04 | M1 | `feat/m1-04-honeydetect` | 已完成 | `e972c91` | 复制包 sha256 一致；0003 迁移；评分+fact+planner 纪律；全量 17 包全绿 |
 | M1-05 | M1 | `feat/m1-05-nudges` | 已完成 | `7fdad77` | 提醒阈值/静默、UA 稳定分配、stderr 前置；全量 17 包全绿 |
-| M2-01 | M2 | `feat/m2-01-import-session` | 待开始 | — | 见 ROADMAP 第 10 节 |
+| M2-01 | M2 | `feat/m2-01-import-session` | 已完成 | `8d2ca82` | 4 包 + 4 db 文件 + 0004 迁移；包测试全绿；全量 21 包全绿 |
 | M2-02 | M2 | `feat/m2-02-session-tools` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M2-03 | M2 | `feat/m2-03-tunnel` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M2-04 | M2 | `feat/m2-04-cred-scope` | 待开始 | — | 见 ROADMAP 第 10 节 |

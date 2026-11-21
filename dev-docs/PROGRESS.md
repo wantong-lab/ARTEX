@@ -52,3 +52,8 @@
 - 动作：M1-05。`nudges.go`：侦察提醒（curl/wget 累计阈值、用过批量工具后永久沉默、上限 2）与手写 webshell 提醒，经 steer 钩子把提示前置到 Bash 的 stderr（不改语义）。`uapool.go`：按 taskID 稳定分配 UA 并经 ARTEX_UA 注入 BashEnv，settings `web_ua_pool` 可配；worker 固定尾补客户端指纹纪律。
 - 结果：8 个单测全绿；`go build/vet` 通过；全量 17 包全绿（EXIT=0）。提交 `7fdad77`。**M1 认知层里程碑全部完成。**
 - 下一步：M2-01 导入 session/stage/tunnel/kb 基础包与 0004 迁移，进入内网中枢。
+
+## 轮次 9 · 2026-11-21
+- 动作：M2-01。逐字节复制 `session`/`stage`/`tunnel`/`kb` 四个包（含 `ldpreload_x86_64.so` 与 `shelltpl/*.tpl` 三个模板、生成器）与 `db/{sessions,tunnels,credentials,host_ledger}.go`；新增 `0004_inner_net.sql` 建四张表与索引，迁移测试期望改为 4；补 `itoa64` 助手；登记导入来源。
+- 结果：`go build/vet` 通过；session/stage/tunnel/kb 包测试全绿（session 3.7s）；真实 PG 上 4 个迁移应用成功；全量 21 包全绿（EXIT=0）。提交 `8d2ca82`，分支 `feat/m2-01-import-session`。
+- 下一步：M2-02 会话工具与审批接线。
