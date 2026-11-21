@@ -5,9 +5,9 @@ package db
 import (
 	"context"
 	"database/sql"
-	_ "embed"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -16,9 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx database/sql driver ("pgx")
 )
-
-//go:embed schema.sql
-var schemaSQL string
 
 const schemaMigrationLockKey int64 = 7337741001
 
@@ -45,7 +42,7 @@ func isPostgresDeadlock(err error) bool {
 
 func applySchemaWithRetry(ctx context.Context, execer schemaExecer, sleep func(time.Duration)) error {
 	for attempt := 0; ; attempt++ {
-		if _, err := execer.ExecContext(ctx, schemaSQL); err != nil {
+		if _, err := execer.ExecContext(ctx, baselineSQL()); err != nil {
 			if !isPostgresDeadlock(err) || attempt >= len(schemaDeadlockRetryDelays) {
 				return err
 			}
@@ -157,8 +154,18 @@ func Open(dsn string) (*DB, error) {
 	// Keep the dedicated lock connection checked out until both DDL and seeding
 	// finish so concurrent application instances cannot initialize out of order.
 	err = withSchemaMigrationLock(context.Background(), sqlDB, func(conn *sql.Conn) error {
-		if err := applySchemaWithRetry(context.Background(), conn, time.Sleep); err != nil {
-			return fmt.Errorf("apply schema: %w", err)
+		if legacySchemaEnabled() {
+			if err := applySchemaWithRetry(context.Background(), conn, time.Sleep); err != nil {
+				return fmt.Errorf("apply schema (legacy): %w", err)
+			}
+		} else {
+			applied, err := applyMigrations(context.Background(), conn, time.Sleep)
+			if err != nil {
+				return fmt.Errorf("apply migrations: %w", err)
+			}
+			if applied > 0 {
+				log.Printf("[db] applied %d migration(s)", applied)
+			}
 		}
 		if err := d.seedBuiltins(); err != nil {
 			return fmt.Errorf("seed builtins: %w", err)
