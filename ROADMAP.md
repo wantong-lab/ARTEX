@@ -108,11 +108,217 @@
 
 | ID | 状态 | commit | 备注 |
 |---|---|---|---|
-| M0-01 | 进行中 | — | 本文件随该 PR 引入 |
-| 其余 | 待开始 | — | 按依赖顺序推进 |
+| M0-01 | 已完成 | `8deb132` | 路线图、协作规范、CI、导入登记表 |
+| M0-02 | 待开始 | — | 迁移机制 |
+| 其余 | 待开始 | — | 按第 10 节明细推进 |
 
-## 10. 变更记录
+## 10. 阶段工作明细
+
+> 每个 PR 固定四段：目标 / 任务拆解 / 涉及文件 / 验收。人日为单人估算，可并行压缩。
+
+### M0 地基（第 1 周）
+
+#### M0-02 迁移机制 · `feat/m0-02-migrations` · 1.5 人日
+**目标**：把单文件 schema 改成可增量、幂等、可回溯的迁移体系。
+**任务**
+1. 将 `db/schema.sql` 原样落为 `db/migrations/0001_baseline.sql`，保留 `CREATE TABLE IF NOT EXISTS` 的幂等性。
+2. 新增 `schema_migrations(version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`。
+3. 新增 `db/migrate.go`：`go:embed migrations/*.sql`，按文件名排序，事务内执行未应用项并登记；失败回滚，沿用现有重试语义。
+4. 历史库兼容：库里已有表但没有迁移记录时，先执行 baseline（幂等）再登记 0001。
+5. 保留 `ARTEX_LEGACY_SCHEMA=1` 回退旧路径一个版本周期。
+**文件**：新增 `db/migrations/0001_baseline.sql`、`db/migrate.go`、`db/migrate_test.go`；修改 `db/db.go`。
+**验收**：`ARTEX_PG_DSN=… go test ./db -run TestMigrate` 绿；空库启动建全表；二次启动 `applied=0`。
+
+#### M0-03 schema 覆盖检查 · `chore/m0-03-schema-check` · 0.5 人日
+**目标**：杜绝「代码查表、库里没表」这类干净实例事故。
+**任务**
+1. 新增 `db/schema_required_test.go`，维护 `requiredTables` 清单（新增表时同步）。
+2. 测试把迁移应用到临时 schema，校验清单中每张表及其必需列存在。
+3. 在 CI 的 test 步骤中生效；缺失时打印缺失项并失败。
+**文件**：新增 `db/schema_required_test.go`；可选 `db/testdata/schema_expect.json`。
+**验收**：故意注释一张表 → CI 失败并指出表名。
+
+### M1 认知层（第 2–3 周）
+
+#### M1-01 链路骨架包 · `feat/m1-01-chainskel` · 2 人日
+**目标**：九类攻击面的「场景→判据→转向」骨架、meta 铁律、反证清单成为可注入的代码资产。
+**任务**
+1. 复制 `agent/chainskel/`（4 个 go + 9 个 md + 测试），适配模块路径与包注释。
+2. 校验 9 个分类齐全，`Valid/Normalize/Validate` 行为与原实现一致。
+3. 增加 `SkeletonForPayload(payload)`：解析 `chain_tags`，无 tag 时走关键词回退。
+4. 单测覆盖标签校验、8000 rune 截断、骨架缺失静默降级。
+**文件**：`agent/chainskel/*`。
+**验收**：`go test ./agent/chainskel` 绿；9 类骨架均可读。
+
+#### M1-02 纪律固定尾接入 · `feat/m1-02-prompt-tails` · 2 人日
+**目标**：纪律由代码拥有，DB 正文改不掉。
+**任务**
+1. `workerSystem` 追加：worker meta 铁律、证据先行、里程碑收尾、反蜜罐红线。
+2. `plannerSystem` 追加：planner meta 铁律、蜜罐处置纪律、收尾痕迹清理纪律。
+3. `renderIntentTask` 按意图 `chain_tags` 注入 L3 骨架与 L4 原文指引（意图正文在用户消息，不破坏 system 缓存）。
+4. `add_intent` 的 payload schema 增加可选 `chain_tags`，用 `ValidateChainTags` 校验。
+**文件**：修改 `agent/worker.go`、`agent/planner.go`、`agent/mainagent.go`、`agent/goals.go`、`agent/tools.go`；新增对应 `_test.go`。
+**验收**：单测把 DB 正文改任意内容后固定尾仍在；非法 `chain_tags` 返回明确报错。
+
+#### M1-03 停滞检测与死面熔断 · `feat/m1-03-stuck` · 3 人日
+**目标**：把「同质输出硬磨」「对已死 host 继续打」变成确定性干预。
+**任务**
+1. `agent/stuck.go`：输出归一化（时间戳/路径/hex/随机串/数字）+ 签名哈希 + 阈值/冷却/次数。
+2. `agent/deadsurface.go`：按 host 统计传输层失败、5xx、本地代理口失败三类信号。
+3. `agent/repeating.go`：连续 3 次同参数调用时拦截并回显上次结果。
+4. 在 worker 的 hook 装配处合并 steer hooks（与 guard 同注册点）；触发时注入纠正消息并写 activity。
+5. settings：`stuck_detect`、`stuck_same_trigger`、`dead_surface`，默认开。
+**文件**：新增 3 个实现 + 3 个测试；修改 `agent/worker.go`、`server/engine.go`、settings 相关。
+**验收**：纯函数单测覆盖「12 次同签名触发」「5 次超时熔断」「冷却期内不重复」；真实任务可观察到注入。
+
+#### M1-04 蜜罐识别与反诱导 · `feat/m1-04-honeydetect` · 2 人日
+**目标**：静态签名识别 + 处置纪律 + 反 attestation 红线。
+**任务**
+1. 复制 `honeydetect/`（含 `signatures.json` 与测试）。
+2. 资产落库挂点：服务资产插入/指纹回写后评分，命中回写 `honeypot_score`/`honeypot_evidence`，best-effort。
+3. 命中时向探索图写 fact 锚定，planner 态势可见。
+4. 处置纪律与反蜜罐红线补单测。
+**文件**：`honeydetect/*`；`db/migrations/0002_honeypot_columns.sql`；`agent/tools_insert.go` 挂点；`agent/honeypot.go`。
+**验收**：`go test ./honeydetect`；固定 ServiceView 断言评分与证据；评分失败不影响资产登记。
+
+#### M1-05 工具纪律提醒与 UA 池 · `feat/m1-05-nudges` · 1.5 人日
+**目标**：减少手写 curl 替代批量工具、手搓明文马；同一任务 UA 稳定。
+**任务**
+1. `agent/reconnudge.go`：同 run 内 curl 计数达阈值且未用批量工具时注入一行 stderr 提醒（上限 2 次，用过批量工具后永久沉默）。
+2. `agent/arsenalnudge.go`：检测写 php/jsp/aspx 且含马体特征时提醒标准模板。
+3. `agent/uapool.go` + `proxyEnv` 注入 `ARTEX_UA`（按 taskID 稳定分配），settings `web_ua_pool` 可配。
+4. 阈值沿用二开实测值（10 次/间隔 12/上限 2）。
+**文件**：新增 2 个 nudge + `agent/uapool.go` + 测试；修改 `agent/worker.go`。
+**验收**：单测覆盖阈值与静默条件；`proxyenv_test` 断言 UA 注入且同任务不变。
+
+### M2 内网中枢（第 4–6 周）
+
+#### M2-01 导入会话/投递/隧道基础包 · `feat/m2-01-import-session` · 3 人日
+**目标**：原源包先能编译、协议测试绿。
+**任务**
+1. 复制 `session/`、`stage/`、`tunnel/`、`kb/`（session 依赖 kb）、`db/sessions.go`、`db/tunnels.go`、`db/credentials.go`、`db/host_ledger.go`。
+2. 迁移 0003：`sessions`、`tunnels`、`credentials`、`host_ledger`。
+3. 在 `dev-docs/upstream-imports.md` 登记来源、路径、日期、改动。
+4. 剥离对旧 Server/db 接口的引用，只保留纯逻辑。
+**文件**：上述包 + 3 张表迁移 + 登记表。
+**验收**：`go build ./... && go vet ./...`；`go test ./session ./stage ./tunnel ./kb` 全绿。
+
+#### M2-02 会话工具与审批接线 · `feat/m2-02-session-tools` · 4 人日
+**目标**：agent 可登记/执行/读写立足点，全程走审批与审计。
+**任务**
+1. 实现 4 个 CoreTool：`register_session`、`session_exec`、`session_read`、`session_write`，schema 与二开一致。
+2. 注册进 `BuiltinToolSeeds`，绑定 worker/pentest；`session_exec` 输出上限 16KB。
+3. 接 guard/intercept 审批，写 activity 与 host_ledger。
+4. 会话启动探活：`last_beat` 超时的 alive 会话重新探测，判死后置状态。
+**文件**：新增 `server/session_tools.go` + 测试；修改 `agent/toolcatalog.go`、`server/intercept.go`。
+**验收**：用 httptest 假一句话马跑通 exec/read/write；审批拒绝路径有测试。
+
+#### M2-03 隧道与任务级 MITM · `feat/m2-03-tunnel` · 4 人日
+**目标**：隧道计划可持久化重拉；每任务 MITM 上游可热切换。
+**任务**
+1. 隧道工具：`tunnel_deploy`、`tunnel_list`、`tunnel_teardown`；计划整体存 `deploy_params`。
+2. 健康巡检：定期探活、断链重建、状态回写。
+3. `traffic` 改多实例：`EnsureTaskTraffic(taskID)`、每实例独立 CA 目录、`SetUpstreamProxy` 热切换。
+4. 上游选择顺序：任务 alive socks 隧道 → 全局代理 → 直连。
+**文件**：新增 `server/tunnel_tools.go`、`traffic/manager.go`；修改 `traffic/traffic.go`、`server/assembly.go`。
+**验收**：计划序列化往返；上游切换后录制仍归属任务库；隧道死亡自动回退。
+
+#### M2-04 凭据、RoE 与范围审批 · `feat/m2-04-cred-scope` · 4 人日
+**目标**：凭据加密托管；出界行为可管；新网段必须审批。
+**任务**
+1. 凭据存储复用现有密钥派生，`gcm1:` 封装；单行解密失败降级不拖垮列表。
+2. `guard` 扩展：`ScopeMatcher` 三态、命令/URL 目标提取、模式 off/warn/strict。
+3. `pending_scope` 表 + API：新 IP 按 /24 聚合、审批后写 `task_scope`、即时生效。
+4. 任务移交：以会话为起点建子任务，初始 scope /32，父子关联。
+**文件**：新增 `guard/scope.go`、`guard/roe.go`、`guard/extract.go`、`server/pending_scope.go`、`server/handoff.go`；迁移 0004。
+**验收**：三态单测；strict 不拦 loopback；审批后下一次工具调用生效。
+
+#### M2-05 内网中枢页 · `feat/m2-05-ui-intranet` · 5 人日
+**目标**：单页承载会话/隧道/凭据/拓扑/投递五个视图。
+**任务**
+1. 路由 `(main)/function/intranet/page.tsx`，五个页签。
+2. `web/src/lib/api` 增加 sessions/tunnels/credentials/intranet/stage 客户端。
+3. 侧栏新增「立足点与后渗透」一级分组，容纳内网与 C2。
+4. 空状态、加载态、错误态齐全；危险操作二次确认。
+**文件**：新增页面与组件；修改 `navigation/sidebar/sidebar-items.ts`。
+**验收**：`npm run build` 通过；五页签在 mock 数据下渲染；危险操作有确认。
+
+### M3 情报面（第 7–8 周）
+
+#### M3-01 知识库与语义记忆包 · `feat/m3-01-import-kb-memory` · 3 人日
+**目标**：知识检索与历史相似案例注入可用且可降级。
+**任务**
+1. `kb` 已随 M2-01 引入；本 PR 补 `memory/` 与 reflector 接线。
+2. 迁移 0005：`mem_entries` + `vector` 扩展（无扩展时降级关键词）。
+3. 嵌入配置：`ARTEX_EMBED_URL`、`ARTEX_EMBED_MODEL`，不可达静默降级。
+4. 沉淀：意图 done 提炼打法（IP/URL 脱敏），blocked 提炼负面清单。
+**文件**：`memory/*`、`server/reflector.go`、迁移 0005。
+**验收**：`go test ./memory`（需补测试）；嵌入不可达时主流程不受影响。
+
+#### M3-02 知识库 API 与入库员 · `feat/m3-02-kb-api` · 3 人日
+**目标**：检索/入库/回填/洞察闭环。
+**任务**
+1. API：`/api/kb/status|search|entry|backfill`、`/api/v2/kb-insights`。
+2. 检索：FTS5 + 严格过滤，宁可空结果也不污染调用方。
+3. 入库员：漏洞确认后自动提炼入库，失败只记日志。
+**文件**：新增 `server/kb_api.go`、`server/kb_curator.go` + 测试。
+**验收**：同义查询不返回同批条目；入库幂等。
+
+#### M3-03 CVE 与 Sploitus · `feat/m3-03-cve` · 3 人日
+**目标**：203k CVE 可检索，Sploitus 可查。
+**任务**
+1. 引入 `kb/cve.go`、`sploitus.go`；重写同步任务（可中断、可续跑）。
+2. API：status/search/sploitus/sync/autosync。
+3. 只读挂载回退 `immutable=1`，避免 WAL 打不开。
+**文件**：`kb/cve*.go`、`server/cve_api.go` + 测试。
+**验收**：fixture 库检索命中；同步中断可续；只读挂载可检索。
+
+#### M3-04 情报页 · `feat/m3-04-ui-intel` · 4 人日
+**目标**：知识库页 + CVE 情报页。
+**任务**：检索、详情、入库、同步进度四个区块；分页与空状态；同步可中断。
+**验收**：`npm run build`；检索分页正常；同步进度可中断。
+
+### M4 后渗透面（第 9–10 周）
+
+#### M4-01 C2 · `feat/m4-01-c2` · 5 人日
+**目标**：监听器/载荷/会话闭环，默认关闭。
+**任务**
+1. 接入 `c2` 包（协议/信封/管理器）；迁移 0006 `c2_*`。
+2. 重写 `server/c2_server.go`：监听器生命周期、会话、任务下发、结果回传。
+3. 工具：`c2_list_sessions`、`c2_exec`、`c2_task_result`。
+4. 默认关闭，需显式启用并配置回调地址。
+**验收**：帧编解码单测；监听器启停；关闭时不监听端口。
+
+#### M4-02 WebShell 接线 · `feat/m4-02-webshell` · 3 人日
+**目标**：WebShell 生成与管理接线重写，复用 `session/http_shell`。
+**任务**：生成/登记/管理 API；中枢页增加 WebShell 页签；清理走 host_ledger。
+**验收**：登记→执行→读取→清理全链路测试。
+
+#### M4-03 代理池最小闭环 · `feat/m4-03-proxypool` · 4 人日
+**目标**：能录入、探测、切换、回退；mihomo 适配器后置。
+**任务**：`proxy_pool` 表与 API；出口探测（exit IP）；切换后新请求走新出口；失败回退全局代理。
+**验收**：探测可用性判断；切换生效；失败自动回退。
+
+### M5 收口（第 11 周）
+
+#### M5-01 Agent 分级路由 · `feat/m5-01-agent-routing` · 3 人日
+**目标**：预算按意图自动分档，frontier 可控，角色可接力。
+**任务**：worker 五档（900/1800/2400/2400/1800）；意图预算分类；frontier 上限 8；角色接力表；同任务广播总线。
+**验收**：分类单测；frontier 满时拒派；接力幂等。
+
+#### M5-02 清理与保留 · `feat/m5-02-cleanup` · 1.5 人日
+**目标**：数据有保留策略，收尾有痕迹清理清单。
+**任务**：保留策略（activity 30d / logs 14d / c2 30d，可配）；清理 API 与审计；按 host_ledger 生成清理清单。
+**验收**：只删到期数据；dry-run 不删。
+
+#### M5-03 发布 · `docs/m5-03-release` · 2 人日
+**目标**：可发布版本。
+**任务**：更新 CHANGELOG、README、部署文档；打 `v0.4.0` tag；release workflow 产出五平台二进制。
+**验收**：CI 全绿；tag 触发发布成功。
+
+## 11. 变更记录
 
 | 日期 | 变更 |
 |---|---|
-| 2026-11-21 | 建立路线图、协作规范、CI 与导入登记表 |
+| 2026-11-21 | 建立路线图、协作规范、CI 与导入登记表（`8deb132`） |
+| 2026-11-21 | 补充每个阶段与 PR 的工作明细（目标/任务/文件/验收） |
