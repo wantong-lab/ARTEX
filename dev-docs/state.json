@@ -2,14 +2,14 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "M3",
-  "round": 14,
-  "current_pr": "M3-02",
-  "current_branch": "feat/m3-02-kb-api",
-  "development_branch": "feat/m3-01-import-kb-memory",
+  "round": 15,
+  "current_pr": "M3-03",
+  "current_branch": "feat/m3-03-cve",
+  "development_branch": "feat/m3-02-kb-api",
   "status_counts": {
-    "completed": 15,
+    "completed": 16,
     "in_progress": 0,
-    "pending": 9,
+    "pending": 8,
     "blocked": 0
   },
   "prs": {
@@ -102,6 +102,12 @@
       "branch": "feat/m3-01-import-kb-memory",
       "status": "completed",
       "commit": "7717328"
+    },
+    "M3-02": {
+      "milestone": "M3",
+      "branch": "feat/m3-02-kb-api",
+      "status": "completed",
+      "commit": "e1114d5"
     }
   },
   "known_issues": [
@@ -136,12 +142,13 @@
     "m2_03": "pickUpstream 表驱动（alive/最新/suo5 鉴权/portfwd 跳过/回落）、任务 MITM 热切换含死亡回退、Plan JSON 往返、工具 schema 与目录一致；全量 21 包全绿",
     "m2_04": "guard 三态/提取/模式/loopback 7 单测；PG 审批写 task_scope（10.1.2.0/24）、重复审批拒绝、拒绝路径；全量 21 包全绿",
     "m2_05": "next build 通过且 /function/intranet 在路由表；Go 全量 21 包全绿；凭据解密降级 PG 用例（错误密钥列表可用、单行 SecretOK=false）",
-    "m3_01": "memory 4 用例（embedder 不可达关键词召回降级、recallBlock 空、vecLit、env 默认）+ reflector 3 用例（脱敏、摘要、无记忆 no-op）；干净库全量 22 包全绿"
+    "m3_01": "memory 4 用例（embedder 不可达关键词召回降级、recallBlock 空、vecLit、env 默认）+ reflector 3 用例（脱敏、摘要、无记忆 no-op）；干净库全量 22 包全绿",
+    "m3_02": "空查询/无关查询返回空、命中可检索；entry/insights/backfill 用例；入库幂等（finding-77 两次仍 1 条）且内容脱敏；干净库 22 包全绿"
   },
   "next_actions": [
-    "M3-02: 知识库 API 与入库员（kb 工具、知识源接入）",
-    "M3-03/M3-04: CVE 指纹与知识增强、前端知识库页"
+    "M3-03: CVE 指纹与 Sploitus 知识源（cve_search 工具 + 按指纹关联）",
+    "M3-04: 知识库前端页与 CVE UI"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T13:52:00+08:00"
+  "updated_at": "2026-11-21T14:12:00+08:00"
 }

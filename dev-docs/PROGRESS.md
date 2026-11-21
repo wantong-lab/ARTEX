@@ -88,3 +88,9 @@
 - 过程问题：mock 阶段曾因共用 artex_test 残留 company_scope 行导致 `TestCompanyScopeAttribution` 误报；重建干净库后全绿（环境残留，非代码回归）。
 - 偏差：迁移编号为 0006（规格写 0005，编号已被 pending_scope 占用）；`mem_entries` 表结构由运行时 ensure 建（维度依赖 ARTEX_EMBED_DIM），迁移只装扩展。
 - 下一步：M3-02 知识库 API 与入库员。
+
+## 轮次 15 · 2026-11-21
+- 动作：M3-02。新增 `server/kb_api.go`（status/search/entry/backfill + v2/kb-insights）、`server/kb_tools.go`（kb_search/kb_add，元数据进 BuiltinToolSeeds 并注入 worker/pentest）、`server/kb_curator.go`（FindingRecorder 装饰器：漏洞记录成功后幂等入库、内容脱敏、失败只记日志）；`kb.Reindex` 兼容 poc/entries 两种库形态；知识库在 `data/kb` 懒打开，失败静默降级。
+- 结果：空查询与无关查询严格返回空、命中可检索、条目/洞察/backfill 用例、入库幂等（同 finding 两次仍 1 条）与脱敏用例共 6 个全绿；干净库全量 **22 包全绿**（EXIT=0）。提交 `e1114d5`。
+- 偏差：planner 无 extras 注入通道，kb_search/kb_add 目前只给 worker/pentest；kb-insights 用前 500 条本地聚合（数据量大后需 SQL 聚合）。
+- 下一步：M3-03 CVE 与 Sploitus。
