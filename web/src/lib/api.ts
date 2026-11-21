@@ -128,6 +128,7 @@ import type {
   C2Session,
   C2Task,
   WebshellCleanupResult,
+  KBEntryPage,
 } from "@/lib/types";
 
 function getToken(): string | null {
@@ -1446,6 +1447,22 @@ export const api = {
   webshellCleanup: (id: number) => del<WebshellCleanupResult>(`/webshell/shells/${id}`),
 
   // ---- 情报：知识库（M3-04）----
+  kbEntries: (offset = 0, limit = 20, category?: string) => {
+    const sp = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+    if (category) sp.set("category", category);
+    return get<KBEntryPage>("/kb/entries?" + sp.toString());
+  },
+  kbUpdate: (body: {
+    id: string;
+    title: string;
+    category?: string;
+    vuln_class?: string;
+    product?: string;
+    cve?: string;
+    description?: string;
+    content: string;
+  }) => put<{ ok: boolean; id: string }>("/kb/entry", body),
+  kbDelete: (id: string) => del<{ ok: boolean; id: string }>("/kb/entry?id=" + encodeURIComponent(id)),
   kbStatus: () => get<{ ok: boolean; dir: string; entries: number }>(`/kb/status`),
   kbSearch: (q: string, limit = 50) =>
     get<KBSearchResult>(`/kb/search?q=${encodeURIComponent(q)}&limit=${limit}`),

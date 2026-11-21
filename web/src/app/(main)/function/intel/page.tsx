@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import type { CVERecord, CVEStatus, KBEntry, KBSearchResult, SploitusItem } from "@/lib/types";
+import type { CVERecord, CVEStatus, KBEntry, KBEntryPage, KBInsights, KBSearchResult, SploitusItem } from "@/lib/types";
 
 type TabKey = "kb" | "cve" | "sploitus";
 
@@ -71,6 +71,12 @@ function KnowledgeBlock({ onError }: { onError: (msg: string) => void }) {
   const [addOpen, setAddOpen] = React.useState(false);
   const [addBusy, setAddBusy] = React.useState(false);
   const [notice, setNotice] = React.useState("");
+  const [browse, setBrowse] = React.useState(false);
+  const [pageData, setPageData] = React.useState<KBEntryPage | null>(null);
+  const [browseOffset, setBrowseOffset] = React.useState(0);
+  const [insights, setInsights] = React.useState<KBInsights | null>(null);
+  const [editTarget, setEditTarget] = React.useState<KBEntry | null>(null);
+  const BROWSE_LIMIT = 20;
 
   const entries = res?.entries ?? [];
   const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
@@ -96,6 +102,64 @@ function KnowledgeBlock({ onError }: { onError: (msg: string) => void }) {
       setLoading(false);
     }
   }, [onError]);
+
+  const loadBrowse = React.useCallback(async (nextOffset: number) => {
+    setLoading(true);
+    onError("");
+    try {
+      const r = await api.kbEntries(nextOffset, BROWSE_LIMIT);
+      setPageData(r);
+      setBrowseOffset(nextOffset);
+    } catch (e) {
+      onError("知识库条目加载失败：" + errText(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [onError]);
+
+  const loadInsights = React.useCallback(async () => {
+    try {
+      setInsights(await api.kbInsights());
+    } catch {
+      setInsights(null);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!browse) return;
+    void loadBrowse(0);
+    void loadInsights();
+  }, [browse, loadBrowse, loadInsights]);
+
+  const submitEdit = async (form: { title: string; category: string; vuln_class: string; product: string; cve: string; content: string }) => {
+    if (!editTarget) return;
+    setAddBusy(true);
+    onError("");
+    try {
+      await api.kbUpdate({ id: editTarget.id, ...form });
+      setNotice("条目已更新 #" + editTarget.id);
+      setEditTarget(null);
+      await loadBrowse(browseOffset);
+      await loadInsights();
+    } catch (e) {
+      onError("更新失败：" + errText(e));
+    } finally {
+      setAddBusy(false);
+    }
+  };
+
+  const removeEntry = async (id: string) => {
+    if (!window.confirm("删除条目 #" + id + "？（含 FTS 索引）")) return;
+    onError("");
+    try {
+      await api.kbDelete(id);
+      setNotice("已删除条目 #" + id);
+      await loadBrowse(browseOffset);
+      await loadInsights();
+    } catch (e) {
+      onError("删除失败：" + errText(e));
+    }
+  };
 
   const openDetail = async (id: string) => {
     setDetailLoading(true);
@@ -126,6 +190,9 @@ function KnowledgeBlock({ onError }: { onError: (msg: string) => void }) {
           <Button type="button" variant="outline" onClick={() => setAddOpen((v) => !v)}>
             入库
           </Button>
+          <Button type="button" variant={browse ? "default" : "outline"} onClick={() => setBrowse((v) => !v)}>
+            {browse ? "关闭浏览" : "全部条目"}
+          </Button>
         </form>
         {notice ? <p className="mt-2 text-emerald-600 text-xs">{notice}</p> : null}
       </Card>
@@ -146,6 +213,100 @@ function KnowledgeBlock({ onError }: { onError: (msg: string) => void }) {
               setAddBusy(false);
             }
           }}
+        />
+      ) : null}
+
+      {browse ? (
+        <Card className="overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3">
+            <p className="font-medium text-sm">全部条目（服务端分页）</p>
+            <span className="text-muted-foreground text-xs">
+              {insights
+                ? "共 " + insights.total + " 条 · ammo " + (insights.by_category.ammo ?? 0) + " · tactic " +
+                  (insights.by_category.tactic ?? 0) + " · negative " + (insights.by_category.negative ?? 0)
+                : "统计加载中…"}
+            </span>
+          </div>
+          {pageData && pageData.entries.length > 0 ? (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-24">分档</TableHead>
+                    <TableHead>标题</TableHead>
+                    <TableHead className="w-28">漏洞类</TableHead>
+                    <TableHead className="w-24">产品</TableHead>
+                    <TableHead className="w-16">已验证</TableHead>
+                    <TableHead className="w-36">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pageData.entries.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell>{e.category || "-"}</TableCell>
+                      <TableCell className="max-w-lg truncate">
+                        <button type="button" className="text-left hover:underline" onClick={() => void openDetail(e.id)}>
+                          {e.title}
+                        </button>
+                      </TableCell>
+                      <TableCell>{e.vuln_class || "-"}</TableCell>
+                      <TableCell>{e.product || "-"}</TableCell>
+                      <TableCell>{e.verified ? "是" : "否"}</TableCell>
+                      <TableCell className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setEditTarget(e)}>
+                          编辑
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => void removeEntry(e.id)}>
+                          删除
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex items-center justify-end gap-2 border-t p-2 text-muted-foreground text-xs">
+                <span>
+                  共 {pageData.total} 条 · 第 {Math.floor(pageData.offset / BROWSE_LIMIT) + 1}/
+                  {Math.max(1, Math.ceil(pageData.total / BROWSE_LIMIT))} 页
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={pageData.offset <= 0}
+                  onClick={() => void loadBrowse(Math.max(0, pageData.offset - BROWSE_LIMIT))}
+                >
+                  上一页
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={pageData.offset + BROWSE_LIMIT >= pageData.total}
+                  onClick={() => void loadBrowse(pageData.offset + BROWSE_LIMIT)}
+                >
+                  下一页
+                </Button>
+              </div>
+            </>
+          ) : (
+            <p className="p-8 text-center text-muted-foreground text-sm">知识库暂无条目</p>
+          )}
+        </Card>
+      ) : null}
+
+      {editTarget ? (
+        <AddEntryCard
+          key={editTarget.id}
+          busy={addBusy}
+          submitLabel="保存修改"
+          initial={{
+            title: editTarget.title,
+            category: editTarget.category || "tactic",
+            vuln_class: editTarget.vuln_class || "",
+            product: editTarget.product || "",
+            cve: editTarget.cve || "",
+            content: editTarget.content || editTarget.description || "",
+          }}
+          onSubmit={submitEdit}
         />
       ) : null}
 
@@ -209,16 +370,22 @@ function KnowledgeBlock({ onError }: { onError: (msg: string) => void }) {
 function AddEntryCard({
   busy,
   onSubmit,
+  initial,
+  submitLabel,
 }: {
   busy: boolean;
   onSubmit: (form: { title: string; category: string; vuln_class: string; product: string; cve: string; content: string }) => Promise<void>;
+  initial?: { title: string; category: string; vuln_class: string; product: string; cve: string; content: string };
+  submitLabel?: string;
 }) {
-  const [form, setForm] = React.useState({ title: "", category: "tactic", vuln_class: "", product: "", cve: "", content: "" });
+  const [form, setForm] = React.useState(
+    initial ?? { title: "", category: "tactic", vuln_class: "", product: "", cve: "", content: "" },
+  );
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
   return (
     <Card className="flex flex-col gap-2 p-3">
-      <p className="font-medium text-sm">手工入库</p>
+      <p className="font-medium text-sm">{submitLabel ?? "手工入库"}</p>
       <div className="grid gap-2 md:grid-cols-2">
         <Input placeholder="标题（必填）" value={form.title} onChange={set("title")} />
         <Input placeholder="分档：ammo|tactic|negative" value={form.category} onChange={set("category")} />
@@ -234,7 +401,7 @@ function AddEntryCard({
       />
       <div>
         <Button disabled={busy || !form.title.trim() || !form.content.trim()} onClick={() => void onSubmit(form)}>
-          {busy ? <Loader2Icon className="size-4 animate-spin" /> : null} 提交入库
+          {busy ? <Loader2Icon className="size-4 animate-spin" /> : null} {submitLabel ?? "提交入库"}
         </Button>
       </div>
     </Card>

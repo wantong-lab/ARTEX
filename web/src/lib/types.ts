@@ -1667,6 +1667,13 @@ export interface KBEntry {
   verified: boolean;
 }
 
+export interface KBEntryPage {
+  entries: KBEntry[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
 export interface KBSearchResult {
   total: number;
   entries: KBEntry[];
@@ -1676,6 +1683,7 @@ export interface KBInsights {
   total: number;
   by_category: Record<string, number>;
   by_vuln_class: Record<string, number>;
+  by_kind?: Record<string, number>;
   recent: { id: string; title: string; category: string; vuln_class: string }[];
 }
 

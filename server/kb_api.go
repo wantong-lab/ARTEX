@@ -41,6 +41,9 @@ func (s *Server) registerKBRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/kb/status", s.kbStatus)
 	mux.HandleFunc("GET /api/kb/search", s.kbSearch)
 	mux.HandleFunc("GET /api/kb/entry", s.kbEntry)
+	mux.HandleFunc("GET /api/kb/entries", s.kbEntries)
+	mux.HandleFunc("PUT /api/kb/entry", s.kbUpdateEntry)
+	mux.HandleFunc("DELETE /api/kb/entry", s.kbDeleteEntry)
 	mux.HandleFunc("POST /api/kb/backfill", s.kbBackfill)
 	mux.HandleFunc("POST /api/kb/add", s.kbAdd)
 	mux.HandleFunc("GET /api/v2/kb-insights", s.kbInsights)
@@ -158,33 +161,92 @@ func (s *Server) kbAdd(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": id})
 }
 
-// kbInsights 汇总：按 category / vuln_class 计数 + 最近条目摘要（取全量前 500 条聚合）。
+// kbInsights 汇总：SQL GROUP BY 聚合（P1-8 起不再取前 500 条内存聚合）。
 func (s *Server) kbInsights(w http.ResponseWriter, r *http.Request) {
 	c := s.kbClient()
 	if c == nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "知识库不可用"})
 		return
 	}
-	res, err := c.Search("", 500)
+	ins, err := c.Insights()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	byCat := map[string]int{}
-	byClass := map[string]int{}
-	recent := []map[string]any{}
-	for _, e := range res.Entries {
-		byCat[e.Category]++
-		if e.VulnClass != "" {
-			byClass[e.VulnClass]++
-		}
-		if len(recent) < 10 {
-			recent = append(recent, map[string]any{"id": e.ID, "title": e.Title, "category": e.Category, "vuln_class": e.VulnClass})
-		}
+	writeJSON(w, http.StatusOK, ins)
+}
+
+// kbEntries 服务端分页列举（offset/limit/category）。
+func (s *Server) kbEntries(w http.ResponseWriter, r *http.Request) {
+	c := s.kbClient()
+	if c == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "知识库不可用"})
+		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"total": res.Total, "by_category": byCat, "by_vuln_class": byClass, "recent": recent,
-	})
+	q := r.URL.Query()
+	offset, _ := strconv.Atoi(strings.TrimSpace(q.Get("offset")))
+	limit, _ := strconv.Atoi(strings.TrimSpace(q.Get("limit")))
+	page, err := c.ListPage(offset, limit, strings.TrimSpace(q.Get("category")))
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, page)
+}
+
+// kbUpdateEntry 编辑条目（title/content/category/vuln_class/product/cve 等）。
+func (s *Server) kbUpdateEntry(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID          string `json:"id"`
+		Title       string `json:"title"`
+		Category    string `json:"category"`
+		VulnClass   string `json:"vuln_class"`
+		Product     string `json:"product"`
+		CVE         string `json:"cve"`
+		Description string `json:"description"`
+		Content     string `json:"content"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
+		return
+	}
+	if strings.TrimSpace(body.ID) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "id 必填"})
+		return
+	}
+	c := s.kbClient()
+	if c == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "知识库不可用"})
+		return
+	}
+	if err := c.Update(&kb.Entry{
+		ID: body.ID, Title: strings.TrimSpace(body.Title), Category: strings.TrimSpace(body.Category),
+		VulnClass: strings.TrimSpace(body.VulnClass), Product: strings.TrimSpace(body.Product),
+		CVE: strings.TrimSpace(body.CVE), Description: body.Description, Content: body.Content,
+	}); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": body.ID})
+}
+
+// kbDeleteEntry 删除条目（含 FTS 与相对路径正文文件）。
+func (s *Server) kbDeleteEntry(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	if id == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "id 必填"})
+		return
+	}
+	c := s.kbClient()
+	if c == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "知识库不可用"})
+		return
+	}
+	if err := c.Delete(id); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": id})
 }
 
 // 确保 sync 被使用（Server 字段类型在 server.go，这里仅防未用导入）。

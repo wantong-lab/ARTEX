@@ -178,3 +178,9 @@
 - 结果：Go 测试（物理删除真实 temp 文件、相对路径拒绝）+ fresh DB 全量 db/server/c2 均 ok；Playwright 6/6：凭据创建→显示明文→删除、WebShell 路径登记→清理提示「已物理删除并校验…（已校验文件不存在）」且文件消失，0 console error；截图 /tmp/artex-ui-p17-shots/{credentials,webshell-cleanup}.png。
 - 偏差：明文读取仅记服务端日志，未落审计表（P2-13 安全审计统一补）。
 - 下一步：P1-8 知识库补全（服务端分页、编辑/删除、planner extras、SQL insights）。
+
+
+## 轮次 29 · 2026-11-21（P1-8 知识库补全）
+- 动作：新增 kb/manage.go（ListPage 服务端分页、Update、Delete 含 FTS/正文文件清理、Insights SQL 聚合）；kb API 增 GET /api/kb/entries、PUT/DELETE /api/kb/entry，kb-insights 改用 Insights；agent/planner 增加 SetExtraContextProvider 与 appendPlannerExtras，server/planner_extras.go 注入 KB 三档统计与 CVE 语料量；情报页 KB 增加「全部条目」分页浏览、编辑（复用入库表单）、删除与统计。
+- 结果：Go 单测（分页/分类过滤/更新/删除/insights/注入 helper）通过；fresh DB 下 kb/db/server/agent 全绿；API 集成 13 项（分页、category、更新、insights、删除、非法参数）全过；Playwright 5 项（统计 25、20/5 分页、翻页、编辑保存、删除至 24）全过、0 console error；截图 /tmp/artex-ui-p18-shots/kb-browse.png。
+- 下一步：P1-9 代理池增强（mihomo 适配器、统一出站、UI 健康展示）。

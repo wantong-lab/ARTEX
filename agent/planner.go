@@ -35,6 +35,7 @@ type Planner struct {
 	webSearch         WebSearchOpts                          // web_search tool backend selection (off by default)
 	workDir           string                                 // shared work dir (surfaced in prompt as artifact-output target)
 	injectConstraints func() bool                            // resolver: inject task operation constraints into system prompt? (nil = yes)
+	extraContext      func() string                          // 平台注入的动态知识弹药（KB/CVE 统计；nil = 不注入）
 	nonStreamingFn    func() bool                            // resolver: use non-streaming (Complete) path? (nil = streaming)
 	noaEnabledFn      func() bool                            // resolver: use experimental noa compaction? (nil = off)
 	maxTokensFn       func() int                             // resolver: per-reply output cap (nil/0 = send no cap)
@@ -47,6 +48,9 @@ type Planner struct {
 	todoMu sync.Mutex
 	todos  map[int64]*actool.TodoStore
 }
+
+// SetExtraContextProvider 注入动态上下文（KB/CVE 统计等），每轮规划实时调用。
+func (p *Planner) SetExtraContextProvider(fn func() string) { p.extraContext = fn }
 
 func NewPlanner(prov llm.Provider, model, workDir string, tx *transcript.Store, window, maxTurns int) *Planner {
 	return &Planner{prov: prov, model: model, workDir: workDir, tx: tx, window: window, maxTurns: maxTurns, todos: map[int64]*actool.TodoStore{}}
@@ -394,6 +398,7 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 	if p.wantConstraints() {
 		sysBody += constraintBlock(ts) // 操作约束(若有)注入系统提示,框定探索边界
 	}
+	sysBody = appendPlannerExtras(sysBody, p.extraContext)
 	system, boundary := deferredSystem(sysBody, def)
 	// planner 无自身墙钟预算;有 deadline 时把 MaxDuration 夹逼到剩余,让在跑的规划轮在
 	// 任务到点时进收尾(因超时→任务超时词,因步数→per-run 词)。
@@ -470,4 +475,16 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 			}
 		})
 	return tsx.GoalMet, tsx.Reason, err
+}
+
+// appendPlannerExtras 把动态上下文追加到 planner system prompt（空/未配置时原样返回）。
+func appendPlannerExtras(sysBody string, extra func() string) string {
+	if extra == nil {
+		return sysBody
+	}
+	text := strings.TrimSpace(extra())
+	if text == "" {
+		return sysBody
+	}
+	return sysBody + "\n\n## 平台知识弹药（自动注入，仅作线索）\n" + text
 }
