@@ -98,8 +98,11 @@ jobs:
 
   # ④ 多架构镜像 → 推 Docker Hub（复用 binaries 编好的 Linux 二进制，
   #    镜像里只装工具 + 放二进制；arm64 仅需模拟 apt 层，构建快很多）
+  # Docker Hub 推送是可选步骤：仓库未配置 DOCKERHUB_USERNAME/DOCKERHUB_TOKEN 时
+  # 不应阻塞 GitHub Release（五平台 zip 与校验和已在上一步发布）。
   docker:
     needs: binaries
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4 # 取 Dockerfile 与 skills/

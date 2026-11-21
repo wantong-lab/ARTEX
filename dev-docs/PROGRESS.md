@@ -142,3 +142,7 @@
 - 动作：M5-03。CHANGELOG 增补 0.4.0 全量变更（M0–M5 分组、安全默认值、已知限制）；README 新增二开能力与默认开关表；新增 `docs/deploy-v0.4.0.md`（升级步骤、0004–0009 迁移、设置键、C2 启用流程、代理池/清理运维、回滚与排障）。核对 `.github/workflows/ci.yml`（go build/vet + 迁移 + 全量测试、web build）与 `release.yml`（五平台交叉编译 + GitHub Release + Docker 多架构）。
 - 结果：全部 24 个 PR 完成，记录三处一致（completed=24 / pending=0）；本地 CI 等脚本全绿；打 **v0.4.0** tag 并推送，触发 release workflow。
 - 下一步：总目标达成，goal 标记 complete。
+
+## 发布验证 · 2026-11-21
+- main push 触发 `ci` workflow：**success**（go build/vet + 迁移 + 全量 24 包测试 + web build）。
+- v0.4.0 tag 触发 `release` workflow：frontend、五平台 binaries、GitHub Release 全部 **success**；docker 推送因仓库未配置 DOCKERHUB secrets 失败 → 已把 docker job 改为 `continue-on-error`（可选步骤，不阻塞发布），重打 tag 复验。
