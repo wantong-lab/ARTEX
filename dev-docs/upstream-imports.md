@@ -9,6 +9,7 @@
 | 2026-11-21 | 二开版（自有资产） | `backend/session/`、`stage/`、`tunnel/`、`kb/` | 同名顶层包 | 无 | 含 `ldpreload_x86_64.so`（8.3K）与 `shelltpl/*.tpl` 三个模板；生成器在 `session/ldpreloadgen/` |
 | 2026-11-21 | 二开版（自有资产） | `backend/db/{sessions,tunnels,credentials,host_ledger}.go` | `db/` | 仅补 `itoa64` 助手 | 表结构同步进迁移 `0004_inner_net.sql` |
 | 2026-11-21 | 二开版（自有资产） | `backend/memory/memory.go` | `memory/` | 补 pgvector 缺失降级（vecOK）、修复 Close 关队列导致 worker 空转 | 表由 ensure() 按 ARTEX_EMBED_DIM 建，迁移 `0006` 只装扩展 |
+| 2026-11-21 | 二开版（整包 Reconstructed） | `backend/c2/*.go`、`db/c2.go`、`server/c2_server.go` | `c2/`、`db/c2.go`、`server/c2_server.go` | **不拷贝**：按协议设计自研重写（帧/信封/管理器/台账/运行时/工具） | 迁移 `0007`；会话事件落库、token 加密存储 |
 
 ## 白名单
 

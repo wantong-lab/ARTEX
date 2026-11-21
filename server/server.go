@@ -61,6 +61,10 @@ type Server struct {
 	kbOnce bool
 	kbDB   *kb.Client
 
+	// C2 运行时（M4-01）：默认关闭，懒初始化。
+	c2Mu sync.Mutex
+	c2RT *c2Runtime
+
 	// CVE 语料库与同步状态（M3-03）。
 	cveMu         sync.Mutex
 	cveOnce       bool
@@ -278,6 +282,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	go s.reconcileConcurrency()
 	s.startTaskArchiveWorker()
 	s.wireInterceptReviewer() // LLM 兜底审批:未命中拦截规则的命令交给模型判定
+	s.startC2IfEnabled(ctx)   // C2 默认关闭；仅 c2_enabled=on 时按台账拉起监听器
 	return s
 }
 
@@ -675,6 +680,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerIntranetRoutes(mux)
 	s.registerKBRoutes(mux)
 	s.registerCVERoutes(mux)
+	s.registerC2Routes(mux)
 
 	// Auth routes — exempt from JWT check (handled in requireAuth)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
