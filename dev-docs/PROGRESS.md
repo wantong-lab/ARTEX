@@ -26,3 +26,8 @@
 - 动作：M0-04 测试基线。新增 `db/migrations/0002_llm_observability.sql` 收敛 `llm_records`/`llm_usage`；T-02 改为校验当前契约（company scope 行 + 覆盖度分母）；T-03 新增 `testTempDir` 并在 server 测试中统一替换；CI 改为按序应用全部迁移。
 - 结果：空库 + 应用全部迁移后，`go test -p 1 ./...` 连续两次 15 包全绿（0 失败）；`go build`/`go vet` 通过。提交 `5910df5`。
 - 下一步：M1-01 chainskel 链路骨架包。
+
+## 轮次 4 · 2026-11-21
+- 动作：M1-01 chainskel。从二开版逐字节复制 9 类骨架（web/ad/app/priv/pwn/recon/rev/pivot/meta）、meta 铁律、反证 checklist、转向建议；补包内 README 说明路由/降级/接线状态；导入登记表记录来源与 sha256。
+- 结果：15 个文件 sha256 与来源一致；`go build/vet` 通过；`go test ./agent/chainskel` 17 个用例全绿（骨架齐全、标签校验、8000 rune 截断、缺失静默降级）。提交 `7aed114`，分支 `feat/m1-01-chainskel`。
+- 下一步：M1-02 固定尾接入（worker/planner/mainagent/goals + 意图骨架注入）。

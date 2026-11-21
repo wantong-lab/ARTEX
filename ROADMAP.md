@@ -113,6 +113,7 @@
 | M0-02 | 已完成 | `7e192c8` | 迁移机制；全量套件基线红灯已登记 M0-04 |
 | M0-03 | 已完成 | `0a8374b` | AST 扫描 + 核心表列校验 |
 | M0-04 | 已完成 | `5910df5` | 空库可跑，全量套件连续两次全绿 |
+| M1-01 | 已完成 | `7aed114` | chainskel 包 + 17 用例 |
 | 其余 | 待开始 | — | 按第 10 节明细推进 |
 
 > 状态真相源：[dev-docs/TASKS.md](dev-docs/TASKS.md)；轮次流水：[dev-docs/PROGRESS.md](dev-docs/PROGRESS.md)；机器状态：[dev-docs/state.json](dev-docs/state.json)；目标定义与执行协议：[dev-docs/GOAL.md](dev-docs/GOAL.md)。

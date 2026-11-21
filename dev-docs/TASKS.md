@@ -10,7 +10,7 @@
 | M0-02 | M0 | `feat/m0-02-migrations` | 已完成 | `7e192c8` | build/vet 通过；db 包（含真实 PG 幂等用例）绿 |
 | M0-03 | M0 | `chore/m0-03-schema-check` | 已完成 | `0a8374b` | 纯逻辑扫描 + PG 表/列校验通过；漏表用例可检出 |
 | M0-04 | M0 | `chore/m0-04-test-baseline` | 已完成 | `5910df5` | 空库+全部迁移后 `go test -p 1 ./...` 连续两次 15 包全绿 |
-| M1-01 | M1 | `feat/m1-01-chainskel` | 待开始 | — | 见 ROADMAP 第 10 节 |
+| M1-01 | M1 | `feat/m1-01-chainskel` | 已完成 | `7aed114` | 逐字节复制 + sha256 一致；17 个用例通过（9 类骨架/标签/截断/静默降级） |
 | M1-02 | M1 | `feat/m1-02-prompt-tails` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M1-03 | M1 | `feat/m1-03-stuck` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M1-04 | M1 | `feat/m1-04-honeydetect` | 待开始 | — | 见 ROADMAP 第 10 节 |
