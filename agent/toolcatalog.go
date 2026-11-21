@@ -116,6 +116,12 @@ func BuiltinToolSeeds() []ToolSeed {
 		}
 		out = append(out, s)
 	}
+	for _, s := range CVEToolSeeds() {
+		if _, ok := m[s.Key]; ok {
+			continue
+		}
+		out = append(out, s)
+	}
 	return out
 }
 

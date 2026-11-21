@@ -61,6 +61,13 @@ type Server struct {
 	kbOnce bool
 	kbDB   *kb.Client
 
+	// CVE 语料库与同步状态（M3-03）。
+	cveMu         sync.Mutex
+	cveOnce       bool
+	cveDB         *kb.CVEClient
+	cveRunning    bool
+	cveSyncCancel context.CancelFunc
+
 	// concMu serializes concurrency-cap decisions (admission + reconcile) so a
 	// scheduler tick and an HTTP settings change / task creation can't both count
 	// free slots off the same snapshot and over-promote past the limit.
@@ -667,6 +674,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerSideRoutes(mux)
 	s.registerIntranetRoutes(mux)
 	s.registerKBRoutes(mux)
+	s.registerCVERoutes(mux)
 
 	// Auth routes — exempt from JWT check (handled in requireAuth)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)

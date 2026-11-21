@@ -563,6 +563,7 @@ func (s *Server) agentsForTask(t *Task) *taskAgentBundle {
 	window := workerRuntime.CompactionWindow()
 	extra := append(s.sessions().tools(), s.tunnels().tools()...)
 	extra = append(extra, s.kbTools()...)
+	extra = append(extra, s.cveTools()...)
 	wk := agent.NewWorker(workerRuntime, "task-router", s.m.dir, tx, window, s.agentMaxTurns("worker"), extra...)
 	wk.SetFindingRecorder(s.findingRecorder())
 	wk.SetCompactionWindowResolver(workerRuntime.CompactionWindow)
