@@ -25,8 +25,9 @@ __pycache__/
 *.swp
 *.swo
 
-# docs
-/docs/
+# docs（生成截图/本地材料忽略；Markdown 文档入库）
+/docs/*
+!/docs/*.md
 
 # os
 .DS_Store
