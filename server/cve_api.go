@@ -47,6 +47,7 @@ func (s *Server) registerCVERoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/cve/search", s.cveSearch)
 	mux.HandleFunc("GET /api/cve/sploitus", s.cveSploitus)
 	mux.HandleFunc("POST /api/cve/sync", s.cveSyncStart)
+	mux.HandleFunc("POST /api/cve/sync/stop", s.cveSyncStop)
 	mux.HandleFunc("POST /api/cve/autosync", s.cveAutosync)
 }
 
@@ -164,6 +165,32 @@ func (s *Server) cveSyncStart(w http.ResponseWriter, r *http.Request) {
 	}()
 	state := kb.LoadCVESyncState(dir)
 	writeJSON(w, http.StatusAccepted, map[string]any{"running": true, "sync": state})
+}
+
+// cveSyncStop 中断正在跑的同步：取消 ctx，已落库的页与断点保留（下次可续跑）。
+func (s *Server) cveSyncStop(w http.ResponseWriter, r *http.Request) {
+	s.cveMu.Lock()
+	cancel := s.cveSyncCancel
+	running := s.cveRunning
+	s.cveMu.Unlock()
+	if !running || cancel == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "running": false, "hint": "没有正在运行的同步"})
+		return
+	}
+	cancel()
+	// 等后台 goroutine 收尾（保存断点），最多 3s。
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		s.cveMu.Lock()
+		r := s.cveRunning
+		s.cveMu.Unlock()
+		if !r {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	st := kb.LoadCVESyncState(filepath.Join(s.m.dir, "cve"))
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "running": false, "sync": st})
 }
 
 // cveAutosync 记录自动同步开关（真正的调度由 M5 定时任务接管；这里只持久化意图）。

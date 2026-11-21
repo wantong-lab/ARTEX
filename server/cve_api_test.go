@@ -107,3 +107,42 @@ func TestCVEAutosyncRequiresSettingsStore(t *testing.T) {
 		t.Fatalf("code=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestKBAddHandler(t *testing.T) {
+	s := newKBTestServer(t)
+	rec := httptest.NewRecorder()
+	body := `{"title":"手工入库打法","category":"tactic","vuln_class":"ssrf","content":"内网 SSRF 探测步骤"}`
+	s.kbAdd(rec, httptest.NewRequest(http.MethodPost, "/api/kb/add", strings.NewReader(body)))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	res, err := s.kbClient().Search("手工入库", 10)
+	if err != nil || res.Total < 1 {
+		t.Fatalf("inserted entry not searchable: %v total=%d", err, res.Total)
+	}
+}
+
+func TestCVESyncStop(t *testing.T) {
+	s := newCVETestServer(t)
+	// 让 feed 在第二页前停住，确保 stop 时任务仍在运行。
+	feed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	defer feed.Close()
+	rec := httptest.NewRecorder()
+	s.cveSyncStart(rec, httptest.NewRequest(http.MethodPost, "/api/cve/sync?feed_url="+feed.URL, nil))
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("start code=%d", rec.Code)
+	}
+	rec2 := httptest.NewRecorder()
+	s.cveSyncStop(rec2, httptest.NewRequest(http.MethodPost, "/api/cve/sync/stop", nil))
+	if !strings.Contains(rec2.Body.String(), `"running":false`) {
+		t.Fatalf("stop body=%s", rec2.Body.String())
+	}
+	s.cveMu.Lock()
+	running := s.cveRunning
+	s.cveMu.Unlock()
+	if running {
+		t.Fatal("sync should be stopped")
+	}
+}

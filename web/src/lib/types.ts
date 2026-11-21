@@ -1602,6 +1602,79 @@ export interface UpdateProgress {
   error?: string;
 }
 
+// ---- 情报（M3-04）----
+
+export interface KBEntry {
+  id: string;
+  code?: string;
+  title: string;
+  kind?: string;
+  category: string;
+  vuln_class: string;
+  product?: string;
+  cve?: string;
+  description?: string;
+  content?: string;
+  verified: boolean;
+}
+
+export interface KBSearchResult {
+  total: number;
+  entries: KBEntry[];
+}
+
+export interface KBInsights {
+  total: number;
+  by_category: Record<string, number>;
+  by_vuln_class: Record<string, number>;
+  recent: { id: string; title: string; category: string; vuln_class: string }[];
+}
+
+export interface CVERecord {
+  id: string;
+  year: number;
+  vendor?: string;
+  products?: string;
+  published?: string;
+  description: string;
+  cwe?: string;
+  severity?: string;
+  has_exploit: boolean;
+  refs?: string;
+}
+
+export interface CVESyncState {
+  feed_url?: string;
+  start_index: number;
+  processed: number;
+  total: number;
+  done: boolean;
+  updated_at?: string;
+}
+
+export interface CVEStatus {
+  ok: boolean;
+  error?: string;
+  count?: number;
+  year_min?: number;
+  year_max?: number;
+  running?: boolean;
+  sync?: CVESyncState;
+  autosync?: string;
+}
+
+export interface SploitusItem {
+  id: string;
+  title: string;
+  type: string;
+  href: string;
+  download?: string;
+  score?: number;
+  published?: string;
+  source?: string;
+  language?: string;
+}
+
 // ---- 内网中枢（M2-05）----
 
 export interface IntranetSession {

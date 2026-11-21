@@ -42,6 +42,7 @@ func (s *Server) registerKBRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/kb/search", s.kbSearch)
 	mux.HandleFunc("GET /api/kb/entry", s.kbEntry)
 	mux.HandleFunc("POST /api/kb/backfill", s.kbBackfill)
+	mux.HandleFunc("POST /api/kb/add", s.kbAdd)
 	mux.HandleFunc("GET /api/v2/kb-insights", s.kbInsights)
 }
 
@@ -118,6 +119,43 @@ func (s *Server) kbBackfill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "indexed": n})
+}
+
+// kbAdd 手工入库（情报页「入库」区块）：幂等键可选（id）。
+func (s *Server) kbAdd(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID        string `json:"id"`
+		Title     string `json:"title"`
+		Category  string `json:"category"`
+		VulnClass string `json:"vuln_class"`
+		Product   string `json:"product"`
+		CVE       string `json:"cve"`
+		Content   string `json:"content"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
+		return
+	}
+	if strings.TrimSpace(body.Title) == "" || strings.TrimSpace(body.Content) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "title 与 content 为必填"})
+		return
+	}
+	c := s.kbClient()
+	if c == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "知识库不可用"})
+		return
+	}
+	id, err := c.Add(&kb.Entry{
+		ID: strings.TrimSpace(body.ID), Title: strings.TrimSpace(body.Title),
+		Category: strings.TrimSpace(body.Category), VulnClass: strings.TrimSpace(body.VulnClass),
+		Product: strings.TrimSpace(body.Product), CVE: strings.TrimSpace(body.CVE),
+		Content: body.Content, Verified: true,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "id": id})
 }
 
 // kbInsights 汇总：按 category / vuln_class 计数 + 最近条目摘要（取全量前 500 条聚合）。

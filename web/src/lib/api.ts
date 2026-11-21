@@ -50,9 +50,16 @@ import type {
   InterceptApprovalFilter,
   InterceptApprovalRow,
   InterceptDetail,
+  CVERecord,
+  CVEStatus,
+  CVESyncState,
   InterceptPending,
   InterceptRule,
   IntranetCredential,
+  KBEntry,
+  KBInsights,
+  KBSearchResult,
+  SploitusItem,
   IntranetHostOp,
   IntranetPendingScope,
   IntranetSession,
@@ -1355,4 +1362,23 @@ export const api = {
   intranetRejectScope: (id: number) => post<{ ok: boolean }>(`/intranet/pending-scope/${id}/reject`, {}),
   intranetHandoff: (body: { task_id?: number; session_id: number; goal?: string; description?: string }) =>
     post<{ task_id: string; session_id: number; scope_error?: string }>(`/intranet/handoff`, body),
+
+  // ---- 情报：知识库（M3-04）----
+  kbStatus: () => get<{ ok: boolean; dir: string; entries: number }>(`/kb/status`),
+  kbSearch: (q: string, limit = 50) =>
+    get<KBSearchResult>(`/kb/search?q=${encodeURIComponent(q)}&limit=${limit}`),
+  kbEntry: (id: string) => get<KBEntry>(`/kb/entry?id=${encodeURIComponent(id)}`),
+  kbAdd: (body: { id?: string; title: string; category?: string; vuln_class?: string; product?: string; cve?: string; content: string }) =>
+    post<{ ok: boolean; id: string }>(`/kb/add`, body),
+  kbBackfill: () => post<{ ok: boolean; indexed: number }>(`/kb/backfill`),
+  kbInsights: () => get<KBInsights>(`/v2/kb-insights`),
+
+  // ---- 情报：CVE / Sploitus（M3-04）----
+  cveStatus: () => get<CVEStatus>(`/cve/status`),
+  cveSearch: (q: string, limit = 20) =>
+    get<{ total: number; records: CVERecord[] }>(`/cve/search?q=${encodeURIComponent(q)}&limit=${limit}`),
+  cveSploitus: (q: string, type = "", limit = 20) =>
+    get<{ total: number; items: SploitusItem[] }>(`/cve/sploitus?q=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}&limit=${limit}`),
+  cveSyncStart: () => post<{ running: boolean; sync: CVESyncState }>(`/cve/sync`),
+  cveSyncStop: () => post<{ ok: boolean; running: boolean; sync?: CVESyncState }>(`/cve/sync/stop`),
 };
