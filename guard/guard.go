@@ -34,6 +34,7 @@ type Guard struct {
 	attrib      map[string]int // failure attribution counts (Observer / G5)
 	reg         *hook.Registry
 	interceptor *intercept.Interceptor // optional; nil disables user-configured rules
+	roe         *RoE                   // optional; nil disables scope enforcement (M2-04)
 }
 
 // New creates a Guard without user-configured intercept rules (used for pentest
@@ -54,11 +55,21 @@ func newGuard(ic *intercept.Interceptor) *Guard {
 // Hooks returns the hook registry to attach to an agent session.
 func (g *Guard) Hooks() *hook.Registry { return g.reg }
 
+// SetRoE attaches runtime scope enforcement (M2-04). nil disables it.
+func (g *Guard) SetRoE(r *RoE) { g.roe = r }
+
 func (g *Guard) preToolUse(ctx context.Context, ev hook.Event) hook.Result {
 	// Extract the shell-command surface for the audit log: Bash + the interactive-shell
 	// tools (shell_open's command, shell_send's text). Destructive/exfil gating is no
 	// longer hard-coded here — it now lives in the DB intercept rules, evaluated by
 	// applyIntercept below. Other tools record an empty command.
+	if g.roe != nil {
+		if block, note := g.roe.Evaluate(ctx, ev.ToolName, ev.Input); block {
+			return g.block(ev.ToolName, systemBlockMessage(note), "")
+		} else if note != "" {
+			g.record(ev.ToolName, "warn", note, "")
+		}
+	}
 	var cmd string
 	switch ev.ToolName {
 	case "Bash", "shell_open":

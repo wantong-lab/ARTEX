@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -850,6 +851,50 @@ func taskFromPG(pt *pgdb.Task, store *pgdb.ExplorationStore, ic *intercept.Inter
 	}
 }
 
+// attachRoE 给任务 Guard 挂上范围执行器（M2-04）：模式读 settings（默认 warn，
+// strict 需显式开启），scope 由 db.ListTaskScope 每轮重建——审批通过后下一次工具
+// 调用即生效。
+func (m *Manager) attachRoE(t *Task) {
+	if t == nil || t.Guard == nil || m.pg == nil {
+		return
+	}
+	mode := guard.ModeWarn
+	if v, ok, err := m.pg.GetSetting("roe_scope_mode"); err == nil && ok {
+		if n := guard.NormalizeMode(v); n != "" {
+			mode = n
+		}
+	}
+	tid, _ := strconv.ParseInt(t.ID, 10, 64)
+	t.Guard.SetRoE(guard.NewRoE(mode, func(ctx context.Context) (*guard.ScopeMatcher, error) {
+		if tid <= 0 {
+			return nil, nil
+		}
+		as := m.Assets()
+		if as == nil {
+			return nil, nil
+		}
+		rows, err := as.ListTaskScope(tid)
+		if err != nil {
+			return nil, err
+		}
+		rules := make([]guard.ScopeRule, 0, len(rows))
+		for _, r := range rows {
+			v := strings.TrimSpace(r.Net)
+			if v == "" {
+				v = strings.TrimSpace(r.Domain)
+			}
+			if v == "" {
+				v = strings.TrimSpace(r.Value)
+			}
+			if v == "" {
+				continue
+			}
+			rules = append(rules, guard.ScopeRule{Kind: r.Kind, Value: v})
+		}
+		return guard.NewScopeMatcher(rules), nil
+	}))
+}
+
 // UpdateTaskMetadata changes list-only task metadata without interrupting any
 // planner, main-agent, or worker call.
 func (m *Manager) UpdateTaskMetadata(taskID string, patch pgdb.TaskPatch) (*Task, error) {
@@ -898,6 +943,7 @@ func (m *Manager) CreateTaskWithOptions(description, goal string, opts pgdb.Task
 		return nil, err
 	}
 	t := taskFromPG(pt, m.pg.Exploration(pt.ExplorationID), m.interceptor)
+	m.attachRoE(t)
 	m.mu.Lock()
 	m.tasks[t.ID] = t
 	m.active = t.ID
@@ -1097,6 +1143,7 @@ func (m *Manager) LoadExisting() []*Task {
 			continue
 		}
 		t := taskFromPG(pt, m.pg.Exploration(pt.ExplorationID), m.interceptor)
+		m.attachRoE(t)
 		m.tasks[id] = t
 		loaded = append(loaded, t)
 	}

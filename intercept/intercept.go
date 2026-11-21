@@ -64,6 +64,12 @@ func WithTaskContext(ctx context.Context, taskID, agentName string, emit func(db
 	return ctx
 }
 
+// TaskIDFromContext returns the task id injected by WithTaskContext ("" when none).
+func TaskIDFromContext(ctx context.Context) string {
+	id, _ := taskInfoFromCtx(ctx)
+	return id
+}
+
 func taskInfoFromCtx(ctx context.Context) (taskID, agentName string) {
 	if v, ok := ctx.Value(taskInfoCtxKey).(taskCtxInfo); ok {
 		return v.taskID, v.agentName
