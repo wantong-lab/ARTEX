@@ -57,5 +57,6 @@
     "M1-01: 复制 chainskel 包并适配"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T10:33:00+08:00"
+  "updated_at": "2026-11-21T10:36:00+08:00",
+  "development_branch": "feat/m0-02-migrations"
 }
