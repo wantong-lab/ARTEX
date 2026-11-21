@@ -539,6 +539,11 @@ type steerHooks struct {
 	limit int
 	// label 形如 "worker-1 · #42"，只用于日志。
 	label string
+	// det 是停滞/死面/重复调用的确定性检测器（M1-03）：PostToolUse 喂观察，
+	// PreToolUse 拦下一次调用并把转向指令还给模型。nil = 关闭。
+	det *agent.DetectorSet
+	// onDetect 在检测器触发时回调（引擎接线：写 system 活动，便于事后核对）。
+	onDetect func(message string)
 }
 
 // 空转回合(只有思考、既无正文也无工具调用)续跑次数的默认值，与 SDK 空响应重试的
@@ -580,6 +585,15 @@ func (h steerHooks) PreToolUse(ctx context.Context, name string, input []byte) (
 		return true, "【规划者实时纠偏】" + msg +
 			"\n（这是规划者对本意图的即时指令；本次工具调用未执行，请据此调整下一步。若与你当前打算冲突，以此为准。）", nil
 	}
+	if h.det != nil {
+		if block, msg := h.det.PreCheck(name, input); block {
+			return true, msg, nil
+		}
+		if msgs := h.det.TakePending(); len(msgs) > 0 {
+			return true, "【检测器转向建议】\n" + strings.Join(msgs, "\n") +
+				"\n（本次工具调用未执行；请按上面的提示调整下一步，不要原样重试。）", nil
+		}
+	}
 	if h.inner != nil {
 		return h.inner.PreToolUse(ctx, name, input)
 	}
@@ -590,6 +604,28 @@ func (h steerHooks) PostToolUse(ctx context.Context, name string, input, result 
 	if h.inner != nil {
 		h.inner.PostToolUse(ctx, name, input, result, isErr)
 	}
+	if h.det == nil {
+		return
+	}
+	for _, msg := range h.det.Observe(name, input, result, isErr) {
+		log.Printf("[work %s] 检测器触发: %s", h.label, detectorSummary(msg))
+		if h.onDetect != nil {
+			h.onDetect(msg)
+		}
+	}
+}
+
+// detectorSummary 取消息首行并截断，供活动流/日志展示（完整消息仍交给模型）。
+func detectorSummary(msg string) string {
+	line := msg
+	if i := strings.IndexByte(line, '\n'); i >= 0 {
+		line = line[:i]
+	}
+	r := []rune(line)
+	if len(r) > 120 {
+		line = string(r[:120]) + "…"
+	}
+	return line
 }
 
 // Stop 在 guard 原有语义之上补一层「空转回合」续跑:模型只输出了思考、既没给正文
@@ -617,6 +653,14 @@ func (h steerHooks) Stop(ctx context.Context, messages []llm.Message) (bool, []s
 	}
 	log.Printf("[work %s] 空转回合(仅思考、无正文无工具)，注入续跑指令 (%d/%d)", h.label, n, h.limit)
 	return false, []string{emptyTurnNudge}, ""
+}
+
+// settingGetter 返回 settings 读取函数；DB 未就绪时返回 nil（检测器沿用默认开关）。
+func (e *Engine) settingGetter() func(key string) (string, bool, error) {
+	if e == nil || e.m == nil || e.m.pg == nil {
+		return nil
+	}
+	return e.m.pg.GetSetting
 }
 
 // KillWork cancels the in-flight work running intentID (planner's kill_work tool).
@@ -1012,6 +1056,10 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 		nudges: &atomic.Int64{},
 		limit:  e.emptyTurnNudgeLimit(),
 		label:  label,
+		det:    agent.NewDetectorSet(agent.DetectorConfigFromSettings(e.settingGetter())),
+		onDetect: func(msg string) {
+			taskEmit(db.Activity{Kind: "system", Tool: "detector", Summary: detectorSummary(msg), Detail: msg})
+		},
 	}
 	wTaskID, _ := strconv.ParseInt(t.ID, 10, 64)
 	e.BeginLLMCall(t.ID)
