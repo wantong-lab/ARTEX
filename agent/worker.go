@@ -58,13 +58,15 @@ type Worker struct {
 	model           string
 	workDir         string
 	proxyAddr       string
-	proxyCACert     string            // recording proxy's CA cert path (for WebFetch HTTPS verify)
-	uaPoolFn        func() []string   // per-run UA pool provider (nil = default pool, M1-05)
-	webSearch       WebSearchOpts     // web_search tool backend selection (off by default)
-	tx              *transcript.Store // raw LLM conversation persistence (nil = off)
-	window          int               // context window in tokens (for compaction)
-	windowFn        func() int        // optional dynamic task-chain minimum
-	maxTurns        int               // max agent turns per run (0 = unlimited)
+	proxyCACert     string          // recording proxy's CA cert path (for WebFetch HTTPS verify)
+	uaPoolFn        func() []string // per-run UA pool provider (nil = default pool, M1-05)
+	// memoryRecall 返回「历史相似经验」文本块（M3-01），注入 worker system；nil = 关闭。
+	memoryRecall func(ctx context.Context, query string) string
+	webSearch    WebSearchOpts     // web_search tool backend selection (off by default)
+	tx           *transcript.Store // raw LLM conversation persistence (nil = off)
+	window       int               // context window in tokens (for compaction)
+	windowFn     func() int        // optional dynamic task-chain minimum
+	maxTurns     int               // max agent turns per run (0 = unlimited)
 	// runTimeout is the wall-clock budget for the main exploration of one intent
 	// (0 = unlimited). When it fires, the run is cut and a settlement round is
 	// forced so already-identified facts get written back instead of being lost.
@@ -193,6 +195,11 @@ func (w *Worker) SetProxy(addr, caCert string) { w.proxyAddr, w.proxyCACert = ad
 // SetUAPoolFn 设置本任务的 UA 池提供者（每 run 读，支持运行时改 settings）。
 func (w *Worker) SetUAPoolFn(fn func() []string) { w.uaPoolFn = fn }
 
+// SetMemoryRecall 设置历史经验召回器（M3-01）；nil 或无结果时不注入。
+func (w *Worker) SetMemoryRecall(fn func(ctx context.Context, query string) string) {
+	w.memoryRecall = fn
+}
+
 // SetWebSearch selects the web_search backend for this worker (off by default).
 func (w *Worker) SetWebSearch(o WebSearchOpts) { w.webSearch = o }
 
@@ -316,6 +323,20 @@ func workerSystem(proxyAddr, caCert, dataDir, runDir string) string {
 	return body + workerTrafficBlock(caCert != "") + workerArtifactSpec(runDir) + workerFixedTails()
 }
 
+// intentPayloadSummary 取意图 payload 的 summary（用于记忆召回查询串）。
+func intentPayloadSummary(n *db.Node) string {
+	if n == nil || len(n.Payload) == 0 {
+		return ""
+	}
+	var p struct {
+		Summary string `json:"summary"`
+	}
+	if json.Unmarshal(n.Payload, &p) != nil {
+		return ""
+	}
+	return strings.TrimSpace(p.Summary)
+}
+
 // renderIntentTask formats the claimed intent for the worker's launch USER message:
 // the intent is the worker's whole job. It used to live in the system prompt; it now
 // rides in the first user turn (together with the situational overview) so the system
@@ -427,6 +448,11 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 	}
 	// 意图块 → 意图锚定资产块 → 启动指令，依次追加到 system 尾部（与 constraintBlock 同一套追加法）。
 	sysBody += renderIntentTask(intent)
+	if w.memoryRecall != nil {
+		if block := w.memoryRecall(ctx, intentPayloadSummary(intent)); block != "" {
+			sysBody += block // 历史相似经验：参考勿照抄，与意图块相邻
+		}
+	}
 	if as != nil {
 		if ids := intentAssetIDs(intent); len(ids) > 0 {
 			if assets, err := as.GetByIDs(ids); err == nil && len(assets) > 0 {

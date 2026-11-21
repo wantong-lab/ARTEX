@@ -20,6 +20,7 @@ import (
 	"github.com/Autumn-27/artex/enrich"
 	"github.com/Autumn-27/artex/guard"
 	"github.com/Autumn-27/artex/intercept"
+	"github.com/Autumn-27/artex/memory"
 	"github.com/Autumn-27/artex/traffic"
 	actool "github.com/Autumn-27/norma/tool"
 )
@@ -223,7 +224,10 @@ type Manager struct {
 	traffic     *traffic.Traffic       // process-wide recording proxy (may be nil)
 	enrich      *enrich.Engine         // engine-side asset auto-completion (DNS/HTTP)
 	interceptor *intercept.Interceptor // user-configured tool-call interception rules
-
+	// memOnce/mem：语义记忆层（M3-01）。懒初始化，embedder 不可达时内部静默降级；
+	// nil = 未初始化（DB 未就绪），调用方跳过。
+	memOnce   sync.Once
+	mem       *memory.Store
 	companyMu sync.Mutex // serializes task/company-scope commits with live handle registration
 	// taskStateMu preserves commit order between PostgreSQL lifecycle writes and
 	// their in-memory mirrors. lifecycleMu makes snapshots race-free, but without
@@ -849,6 +853,15 @@ func taskFromPG(pt *pgdb.Task, store *pgdb.ExplorationStore, ic *intercept.Inter
 		FirstRunAt:      unixOrZero(pt.FirstRunAt), DeadlineAt: unixOrZero(pt.DeadlineAt),
 		Store: store, Guard: guard.NewWithInterceptor(ic), notify: make(chan struct{}, 1),
 	}
+}
+
+// Memory 返回语义记忆层（懒初始化；DB 未就绪返回 nil，调用方静默降级）。
+func (m *Manager) Memory() *memory.Store {
+	if m == nil || m.pg == nil {
+		return nil
+	}
+	m.memOnce.Do(func() { m.mem = memory.New(m.pg) })
+	return m.mem
 }
 
 // attachRoE 给任务 Guard 挂上范围执行器（M2-04）：模式读 settings（默认 warn，

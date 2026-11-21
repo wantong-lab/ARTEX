@@ -585,6 +585,18 @@ func (s *Server) agentsForTask(t *Task) *taskAgentBundle {
 		raw, _, _ := s.m.pg.GetSetting("web_ua_pool")
 		return agent.UAPoolFromSetting(raw)
 	})
+	// 历史相似经验注入（M3-01）：memory 未启用/召回为空时返回空串，不注入。
+	wk.SetMemoryRecall(func(ctx context.Context, query string) string {
+		mem := s.m.Memory()
+		if mem == nil {
+			return ""
+		}
+		tid, err := strconv.ParseInt(t.ID, 10, 64)
+		if err != nil || tid <= 0 {
+			return ""
+		}
+		return mem.RecallBlock(ctx, query, tid)
+	})
 	wk.SetWebSearch(s.webSearchFor("worker"))
 	wk.SetConstraintInject(s.constraintInjectWorker) // 操作约束注入 worker(可配置,默认开)
 	pl := agent.NewPlanner(plannerRuntime, "task-router", s.m.dir, tx, plannerRuntime.CompactionWindow(), s.agentMaxTurns("planner"))
