@@ -129,6 +129,11 @@ type Engine struct {
 	workMu sync.Mutex
 	work   map[int64]*workExecution
 
+	// M5-01 分级路由：frontier 并发限制、角色接力幂等账本、同任务广播总线。
+	frontier *agent.FrontierLimiter
+	relay    *agent.RelayLedger
+	bus      *agent.TaskBus
+
 	// steerBox queues planner course-corrections for a running work (keyed by intent
 	// id). The worker's PreToolUse hook drains it before its next tool call and hands
 	// the message to the model (blocking that call) so it re-plans — no kill needed.
@@ -391,6 +396,8 @@ func NewEngine(m *Manager) *Engine {
 	return &Engine{m: m, debounce: 800 * time.Millisecond, bc: NewBroadcaster(),
 		execCancel: map[string]context.CancelCauseFunc{}, execCtx: map[string]context.Context{},
 		work: map[int64]*workExecution{}, steerBox: map[int64][]string{},
+		frontier: agent.NewFrontierLimiter(agent.FrontierMaxWorkers),
+		relay:    agent.NewRelayLedger(), bus: agent.NewTaskBus(),
 		runtimes: map[string]*taskRuntime{}}
 }
 
@@ -1030,6 +1037,13 @@ func (e *Engine) workerLoop(ctx context.Context, t *Task, name string) {
 // runIntent. Returns false when nothing was claimable. The pool worker loop is its
 // only caller.
 func (e *Engine) runWorkerStep(ctx context.Context, t *Task, name string, worker *agent.Worker) bool {
+	// frontier 上限（默认 8）：满了就拒派新 worker，不把意图领走后排队占位。
+	if e.frontier != nil {
+		if !e.frontier.TryAcquire() {
+			return false
+		}
+		defer e.frontier.Release()
+	}
 	intent := e.claimNext(t, name)
 	if intent == nil {
 		return false
@@ -1061,6 +1075,14 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 	// per-work child context so the planner's kill_work can stop just this work.
 	workCtx, workCancel := context.WithCancelCause(ectx)
 	e.registerWork(intent.ID, workCancel)
+	// M5-01 意图预算分档：按类别给本次 run 设置硬上限（recon 900s / enum 1800s /
+	// brute·exploit 2400s / general 1800s）。预算耗尽按 exhausted 收尾，可被重新派发。
+	budget := agent.ClassifyIntentBudget(intent.Payload)
+	execCtx := workCtx
+	var budgetCancel context.CancelFunc
+	if budget.Seconds > 0 {
+		execCtx, budgetCancel = context.WithTimeout(workCtx, time.Duration(budget.Seconds)*time.Second)
+	}
 	// wrap the guard hooks so steer_work can inject a mid-run course-correction
 	// for THIS intent (drained before the worker's next tool call).
 	iid := intent.ID
@@ -1091,9 +1113,9 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 	var wrote agent.WriteCounts
 	var err error
 	if hasChatMessage {
-		reason, wrote, err = worker.ExecuteWithMessage(workCtx, name, wTaskID, e.m.assets, t.Store, intent, hooks, emit, e.m.enrich, t.NotifyFinding, requestID, message)
+		reason, wrote, err = worker.ExecuteWithMessage(execCtx, name, wTaskID, e.m.assets, t.Store, intent, hooks, emit, e.m.enrich, t.NotifyFinding, requestID, message)
 	} else {
-		reason, wrote, err = worker.Execute(workCtx, name, wTaskID, e.m.assets, t.Store, intent, hooks, emit, e.m.enrich, t.NotifyFinding)
+		reason, wrote, err = worker.Execute(execCtx, name, wTaskID, e.m.assets, t.Store, intent, hooks, emit, e.m.enrich, t.NotifyFinding)
 	}
 	e.EndLLMCall(t.ID)
 	// model_error 收场 → 额外重跑几次（退避后再试）。仅在意图仍属本 work、任务
@@ -1110,11 +1132,15 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 		}
 		e.BeginLLMCall(t.ID)
 		if hasChatMessage {
-			reason, wrote, err = worker.ExecuteWithMessage(workCtx, name, wTaskID, e.m.assets, t.Store, intent, hooks, emit, e.m.enrich, t.NotifyFinding, requestID, message)
+			reason, wrote, err = worker.ExecuteWithMessage(execCtx, name, wTaskID, e.m.assets, t.Store, intent, hooks, emit, e.m.enrich, t.NotifyFinding, requestID, message)
 		} else {
-			reason, wrote, err = worker.Execute(workCtx, name, wTaskID, e.m.assets, t.Store, intent, hooks, emit, e.m.enrich, t.NotifyFinding)
+			reason, wrote, err = worker.Execute(execCtx, name, wTaskID, e.m.assets, t.Store, intent, hooks, emit, e.m.enrich, t.NotifyFinding)
 		}
 		e.EndLLMCall(t.ID)
+	}
+	budgetExceeded := budgetCancel != nil && errors.Is(execCtx.Err(), context.DeadlineExceeded)
+	if budgetCancel != nil {
+		budgetCancel()
 	}
 	// Capture kill state before detachWork cancels workCtx. kill = this work's
 	// ctx was cancelled (planner kill_work) while the TASK ctx kept running; a
@@ -1206,6 +1232,9 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 	// 试过但没真正做完、需换角度，而非当成已覆盖永久跳过）；出错→blocked；正常→done。
 	state := "done"
 	switch {
+	case budgetExceeded:
+		state = "exhausted"
+		log.Printf("[worker %s] intent %d 意图预算耗尽(%s/%ds, exhausted)，本次写回 %s", name, intent.ID, budget.Class, budget.Seconds, wrote)
 	case err != nil:
 		state = "blocked"
 	case reason == harness.ReasonMaxTurns:
@@ -1225,6 +1254,19 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 	log.Printf("[worker %s] task %s 意图 #%d 结束: %s (写回 %s)", name, t.ID, intent.ID, state, wrote)
 	// 终态沉淀到语义记忆（best-effort；memory 未启用时内部跳过）。
 	e.m.ReflectIntent(wTaskID, intent, state, wrote)
+	// M5-01：同任务广播 + 角色接力（幂等，只对产生新事实/资产的完成意图生效）。
+	if e.bus != nil {
+		e.bus.Publish(agent.TaskEvent{TaskID: wTaskID, Kind: "intent_done", Summary: "意图结束: " + state, Detail: "class=" + budget.Class + " wrote=" + wrote.String()})
+	}
+	if state == "done" && (wrote.Facts > 0 || wrote.Assets > 0) {
+		if to := agent.NextRelayRole(budget.Class); to != "" && e.relay != nil && e.relay.Claim(wTaskID, intent.ID, budget.Class, to) {
+			taskEmit(db.Activity{Kind: "system", Tool: "relay", Summary: "角色接力：" + budget.Class + " → " + to,
+				Detail: "意图已完成并产生新事实/资产，可派下一条 " + to + " 意图"})
+			if e.bus != nil {
+				e.bus.Publish(agent.TaskEvent{TaskID: wTaskID, Kind: "relay", Summary: budget.Class + " -> " + to})
+			}
+		}
+	}
 	e.touch(t.ID)
 	t.NotifyDone(intent.ID) // results changed the graph -> wake the planner (with the just-finished intent id)
 	return true

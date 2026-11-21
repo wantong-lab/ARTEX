@@ -363,7 +363,7 @@ func renderIntentTask(intent *db.Node) string {
 	}
 	base := fmt.Sprintf("\n\n【你领到的意图（本次唯一任务：只做这一条、只产生事实、做完即停）】：\n%s\n意图 id: %d（写回 record_fact / report_finding 时传它）", string(intent.Payload), intent.ID)
 	// L3 骨架按意图攻击面注入（chain_tags 优先，关键词回退）；匹配不中/骨架缺失静默为空。
-	return base + chainskel.ForIntent(intent.Payload) + chainskel.RefsGuideForIntent(intent.Payload)
+	return base + chainskel.ForIntent(intent.Payload) + chainskel.RefsGuideForIntent(intent.Payload) + ClassifyIntentBudget(intent.Payload).Note
 }
 
 // renderWorkerGraphOverview folds the global situational snapshot into the worker's
