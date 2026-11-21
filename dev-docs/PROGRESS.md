@@ -31,3 +31,9 @@
 - 动作：M1-01 chainskel。从二开版逐字节复制 9 类骨架（web/ad/app/priv/pwn/recon/rev/pivot/meta）、meta 铁律、反证 checklist、转向建议；补包内 README 说明路由/降级/接线状态；导入登记表记录来源与 sha256。
 - 结果：15 个文件 sha256 与来源一致；`go build/vet` 通过；`go test ./agent/chainskel` 17 个用例全绿（骨架齐全、标签校验、8000 rune 截断、缺失静默降级）。提交 `7aed114`，分支 `feat/m1-01-chainskel`。
 - 下一步：M1-02 固定尾接入（worker/planner/mainagent/goals + 意图骨架注入）。
+
+## 轮次 5 · 2026-11-21
+- 动作：M1-02 固定尾接入。新增 `agent/discipline.go`：worker 追加 meta 铁律/证据先行/里程碑收尾/反蜜罐红线；planner 追加 meta 铁律/痕迹清理纪律。`renderIntentTask` 按意图 `chain_tags` 注入 L3 骨架与 L4 指引。`add_intent` 增加 `chain_tags` 字段、枚举 schema 与规整校验。
+- 结果：5 个新用例全绿（固定尾不可被 DB 覆盖、骨架注入、无匹配静默、标签校验）；agent 包测试通过；全量 16 包全绿（EXIT=0）。提交 `c8d1747`。
+- 偏差：planner 的蜜罐处置纪律依赖 `honeypot_assets` 态势字段，延后到 M1-04 与评分一起落地。
+- 下一步：M1-03 停滞检测与死面熔断。
