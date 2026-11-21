@@ -123,8 +123,8 @@ func TestApplyMigrationsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first apply: %v", err)
 	}
-	if first != 2 {
-		t.Fatalf("first apply=%d, want 2 (baseline + llm observability)", first)
+	if first != 3 {
+		t.Fatalf("first apply=%d, want 3 (baseline + llm observability + asset honeypot)", first)
 	}
 	for _, table := range []string{"assets", "settings", "tasks"} {
 		var exists bool
@@ -139,8 +139,8 @@ func TestApplyMigrationsIdempotent(t *testing.T) {
 	if err := conn.QueryRowContext(ctx, `SELECT count(*) FROM schema_migrations`).Scan(&recorded); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	if recorded != 2 {
-		t.Fatalf("schema_migrations rows=%d, want 2", recorded)
+	if recorded != 3 {
+		t.Fatalf("schema_migrations rows=%d, want 3", recorded)
 	}
 
 	second, err := applyMigrations(ctx, conn, noSleep)

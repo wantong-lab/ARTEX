@@ -33,7 +33,7 @@ func TestPlannerFixedTailsSurviveOverride(t *testing.T) {
 	if !strings.HasPrefix(got, "PLANNER BODY") {
 		t.Fatalf("body not honored: %q", got)
 	}
-	for _, want := range []string{"meta 铁律", "收尾痕迹清理纪律"} {
+	for _, want := range []string{"meta 铁律", "收尾痕迹清理纪律", "蜜罐处置纪律"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("planner fixed tail missing %q", want)
 		}

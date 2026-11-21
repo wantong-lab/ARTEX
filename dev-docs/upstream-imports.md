@@ -5,6 +5,7 @@
 | 日期 | 来源仓库 | 来源路径 | 目标路径 | 是否改动 | 备注 |
 |---|---|---|---|---|---|
 | 2026-11-21 | 二开版（自有资产） | `backend/agent/chainskel/` | `agent/chainskel/` | 无（逐字节一致） | 15 个文件（4 go + 2 test + 9 md）；sha256 校验一致；仅新增 README |
+| 2026-11-21 | 二开版（自有资产） | `backend/honeydetect/` | `honeydetect/` | 无（逐字节一致） | 3 个文件（go + test + signatures.json）；sha256 校验一致 |
 
 ## 白名单
 

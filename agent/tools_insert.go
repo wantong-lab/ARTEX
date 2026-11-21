@@ -363,6 +363,10 @@ func (t *ToolSet) insertAssets() actool.CoreTool {
 					}
 					_ = t.as.AddAutoScope(taskID, typ, item.Domain, item.URL, svcIP)
 				}
+				// 服务资产落库后跑蜜罐静态签名评分（M1-04，best-effort，不影响登记）。
+				if typ == "service" && id > 0 {
+					t.evaluateHoneypot(id, item)
+				}
 			}
 
 			return jsonResult(map[string]any{

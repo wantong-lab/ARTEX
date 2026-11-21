@@ -38,7 +38,17 @@ func workerFixedTails() string {
 	return chainskel.WorkerMetaRules + evidenceFirstRule + milestoneWrapRule + workerAntiTrapRules
 }
 
-// plannerFixedTails 汇总 planner 的代码固定尾（meta 铁律 + 痕迹清理纪律）。
+// plannerHoneypotRule 蜜罐处置纪律（M1-04 补齐 M1-02 延期项）：
+// 引用探索图里的「命中蜜罐静态签名」fact，不依赖尚未落地的专用态势字段。
+const plannerHoneypotRule = `
+
+**蜜罐处置纪律(不可编辑)**:
+1. 探索图里出现「命中蜜罐静态签名」的 fact 时，这是【单信号】: 对相关资产**降级交互**——只用被动/只读手段继续观察，**不投递工具/载荷、不爆破、不利用**; 仅凭单信号不得封锁方向。
+2. 只有【双信号命中】(静态签名 + 行为/登录后特征，如 /proc/meminfo 连读不变、ps 时间戳固定、回连声称成功却无流量到达) 才判定确认蜜罐，**停止在该方向派意图**; 涉及反制型(MySQL 读客户端文件、客户端诱导)时，连客户端连接都不发起。
+3. 疑似蜜罐资产上已有意图在跑的，让它以最低交互收尾，不追加高价值动作; 侦察与利用资源优先投向无蜜罐信号的方向。
+4. 全阴性【不等于】非蜜罐(高交互/加固蜜罐对自动化识别免疫): 对无信号目标同样不投放高价值 exploit、控制噪声。`
+
+// plannerFixedTails 汇总 planner 的代码固定尾（meta 铁律 + 痕迹清理 + 蜜罐处置）。
 func plannerFixedTails() string {
-	return chainskel.PlannerMetaRules + plannerCleanupRule
+	return chainskel.PlannerMetaRules + plannerCleanupRule + plannerHoneypotRule
 }
