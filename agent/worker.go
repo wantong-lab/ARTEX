@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Autumn-27/artex/agent/chainskel"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/intercept"
 	"github.com/Autumn-27/norma/agentcore"
@@ -290,7 +291,7 @@ func workerSystem(proxyAddr, caCert, dataDir, runDir string) string {
 	// caCert is present only when the recording MITM is on, which is exactly when
 	// the traffic_* tools are registered — so it gates the traffic-tool note.
 	// Optional finding guidance is added for every role after tool resolution.
-	return body + workerTrafficBlock(caCert != "") + workerArtifactSpec(runDir)
+	return body + workerTrafficBlock(caCert != "") + workerArtifactSpec(runDir) + workerFixedTails()
 }
 
 // renderIntentTask formats the claimed intent for the worker's launch USER message:
@@ -314,7 +315,12 @@ func intentAssetIDs(intent *db.Node) []int64 {
 }
 
 func renderIntentTask(intent *db.Node) string {
-	return fmt.Sprintf("\n\n【你领到的意图（本次唯一任务：只做这一条、只产生事实、做完即停）】：\n%s\n意图 id: %d（写回 record_fact / report_finding 时传它）", string(intent.Payload), intent.ID)
+	if intent == nil {
+		return ""
+	}
+	base := fmt.Sprintf("\n\n【你领到的意图（本次唯一任务：只做这一条、只产生事实、做完即停）】：\n%s\n意图 id: %d（写回 record_fact / report_finding 时传它）", string(intent.Payload), intent.ID)
+	// L3 骨架按意图攻击面注入（chain_tags 优先，关键词回退）；匹配不中/骨架缺失静默为空。
+	return base + chainskel.ForIntent(intent.Payload) + chainskel.RefsGuideForIntent(intent.Payload)
 }
 
 // renderWorkerGraphOverview folds the global situational snapshot into the worker's
