@@ -5,6 +5,8 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -81,6 +83,7 @@ func (s *Server) proxyPool() *proxyPoolRuntime {
 		}
 	}
 	kb.SetSploitusHTTPClient(mgr.Client())
+	kb.SetCVEHTTPClient(mgr.Client()) // 统一出站：Sploitus + CVE 同步共用代理池回退链
 	s.proxyRT = rt
 	return rt
 }
@@ -93,6 +96,7 @@ func (s *Server) registerProxyPoolRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/proxy-pool/fallback", s.proxyPoolFallback)
 	mux.HandleFunc("PUT /api/proxy-pool/global", s.proxyPoolGlobal)
 	mux.HandleFunc("POST /api/proxy-pool/egress", s.proxyPoolEgress)
+	mux.HandleFunc("POST /api/proxy-pool/import-mihomo", s.proxyPoolImportMihomo)
 	mux.HandleFunc("DELETE /api/proxy-pool/{id}", s.proxyPoolDelete)
 }
 
@@ -108,16 +112,30 @@ func (s *Server) proxyPoolList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := make([]map[string]any, 0, len(rows))
+	healthy, failed := 0, 0
 	for _, e := range rows {
-		out = append(out, map[string]any{
-			"id": e.ID, "name": e.Name, "masked": e.Masked(), "scheme": e.Scheme,
+		auth := strings.Contains(e.URL, "@")
+		checked := !e.LastChecked.IsZero()
+		if e.Status == db.ProxyActive && checked {
+			healthy++
+		}
+		if e.Status == db.ProxyFailed {
+			failed++
+		}
+		row := map[string]any{
+			"id": e.ID, "name": e.Name, "masked": e.Masked(), "scheme": e.Scheme, "auth": auth,
 			"status": e.Status, "exit_ip": e.ExitIP, "latency_ms": e.LatencyMs,
-			"fail_count": e.FailCount, "last_checked": e.LastChecked, "last_error": e.LastError,
-		})
+			"fail_count": e.FailCount, "last_error": e.LastError,
+		}
+		if checked {
+			row["last_checked"] = e.LastChecked
+		}
+		out = append(out, row)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"entries": out, "active_id": rt.mgr.Active(), "global_set": rt.mgr.Global() != "",
-		"probe_url": rt.mgr.ProbeURL(),
+		"probe_url": rt.mgr.ProbeURL(), "healthy": healthy, "failed": failed,
+		"unified_outbound": []string{"sploitus", "cve_sync"},
 	})
 }
 
@@ -292,3 +310,85 @@ func (s *Server) proxyPoolDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 var _ sync.Mutex
+
+// proxyPoolImportMihomo 从 mihomo/Clash YAML（或订阅 URL）导入 http/socks5 代理。
+func (s *Server) proxyPoolImportMihomo(w http.ResponseWriter, r *http.Request) {
+	rt := s.proxyPool()
+	if rt == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "代理池不可用"})
+		return
+	}
+	var body struct {
+		YAML       string `json:"yaml"`
+		URL        string `json:"url"`
+		NamePrefix string `json:"name_prefix"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
+		return
+	}
+	raw := body.YAML
+	if strings.TrimSpace(raw) == "" {
+		subURL := strings.TrimSpace(body.URL)
+		if subURL == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "yaml 或 url 必填"})
+			return
+		}
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, subURL, nil)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+			return
+		}
+		req.Header.Set("User-Agent", "ARTEX-proxypool/1.0")
+		resp, err := rt.mgr.Client().Do(req)
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error": "订阅拉取失败：" + err.Error()})
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error": fmt.Sprintf("订阅返回 HTTP %d", resp.StatusCode)})
+			return
+		}
+		data, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+		if err != nil {
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		raw = string(data)
+	}
+	imp, err := proxypool.ParseMihomoConfig(raw)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	prefix := strings.TrimSpace(body.NamePrefix)
+	imported := make([]map[string]any, 0, len(imp.Proxies))
+	duplicates := 0
+	errorsOut := make([]map[string]any, 0)
+	for _, p := range imp.Proxies {
+		u, err := p.URL()
+		if err != nil {
+			errorsOut = append(errorsOut, map[string]any{"name": p.Name, "error": err.Error()})
+			continue
+		}
+		name := prefix + p.Name
+		if strings.TrimSpace(name) == "" {
+			name = strings.ToLower(p.Type) + "-" + p.Server
+		}
+		id, dup, err := rt.dbStore.Create(r.Context(), &db.ProxyEntry{Name: name, URL: u})
+		if err != nil {
+			errorsOut = append(errorsOut, map[string]any{"name": name, "error": err.Error()})
+			continue
+		}
+		if dup {
+			duplicates++
+			continue
+		}
+		imported = append(imported, map[string]any{"id": id, "name": name})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok": true, "imported": imported, "imported_count": len(imported),
+		"duplicates": duplicates, "skipped": imp.Skipped, "errors": errorsOut,
+	})
+}

@@ -129,6 +129,7 @@ import type {
   C2Task,
   WebshellCleanupResult,
   KBEntryPage,
+  MihomoImportResult,
 } from "@/lib/types";
 
 function getToken(): string | null {
@@ -1433,6 +1434,9 @@ export const api = {
   proxyPoolGlobal: (url: string) => put<{ ok: boolean; global_set: boolean }>(`/proxy-pool/global`, { url }),
   proxyPoolEgress: () => post<{ ok: boolean; exit_ip?: string; error?: string; active_id?: number }>(`/proxy-pool/egress`),
   proxyPoolDelete: (id: number) => del<{ ok: boolean }>(`/proxy-pool/${id}`),
+
+  proxyPoolImportMihomo: (body: { yaml?: string; url?: string; name_prefix?: string }) =>
+    post<MihomoImportResult>("/proxy-pool/import-mihomo", body),
 
   // ---- WebShell 生成与管理（M4-02）----
   webshellShells: () => get<{ shells: WebshellShell[] }>(`/webshell/shells`),

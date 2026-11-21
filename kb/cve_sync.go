@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -130,6 +131,19 @@ func (c *CVEClient) upsertRecord(r *CVERecord) error {
 
 // SyncCVEPaged 分页同步 NVD CVE：每页落库后保存断点；ctx 取消时返回已保存的状态与
 // ctx.Err()（调用方据此续跑）。返回 Done=true 表示已同步到末尾。
+// cveHTTPClient 是可注入的统一出站客户端（代理池）。
+var cveHTTPClient atomic.Pointer[http.Client]
+
+// SetCVEHTTPClient 注入 CVE 同步出站客户端（nil 恢复默认直连）。
+func SetCVEHTTPClient(c *http.Client) { cveHTTPClient.Store(c) }
+
+func cveSyncHTTPClient() *http.Client {
+	if c := cveHTTPClient.Load(); c != nil {
+		return c
+	}
+	return &http.Client{Timeout: 90 * time.Second}
+}
+
 func SyncCVEPaged(ctx context.Context, dir string, opts CVESyncOptions) (CVESyncState, error) {
 	if strings.TrimSpace(dir) == "" {
 		return CVESyncState{}, fmt.Errorf("dir 为空")
@@ -151,7 +165,7 @@ func SyncCVEPaged(ctx context.Context, dir string, opts CVESyncOptions) (CVESync
 	st := LoadCVESyncState(dir)
 	st.FeedURL = opts.FeedURL
 	st.Done = false
-	client := &http.Client{Timeout: 90 * time.Second}
+	client := cveSyncHTTPClient()
 	for {
 		if err := ctx.Err(); err != nil {
 			st.UpdatedAt = time.Now()

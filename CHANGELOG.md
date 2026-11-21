@@ -7,6 +7,7 @@
 ## [0.4.1] - 2026-11-21
 
 ### 新增的功能
+- 代理池增强（P1-9）：mihomo/Clash 配置适配器（`POST /api/proxy-pool/import-mihomo`，解析 proxies 列表导入 http/socks5、ss/vmess 如实跳过）；统一出站（Sploitus + CVE 同步共用代理池回退链）；代理池 UI 增加认证标识、健康/失败统计、最近探测时间、mihomo 导入与跳过原因展示。
 - 知识库补全（P1-8）：`/api/kb/entries` 服务端分页（offset/limit/category）、`PUT/DELETE /api/kb/entry` 条目编辑与删除（含 FTS 索引与正文文件清理）、`/api/v2/kb-insights` 改为 SQL GROUP BY 聚合；planner system prompt 自动注入 KB 三档统计与本地 CVE 语料量；情报页「全部条目」支持分页浏览、编辑、删除与统计展示。
 - WebShell/凭据闭环（P1-7）：登记可填目标侧绝对路径（迁移 0011 sessions.artifact_path），清理时先 rm 再校验文件不存在，失败保留会话并记 host_ledger；内网中枢「凭据」页支持手动新增、按需读取明文（服务端日志）、删除与复制复用。
 - C2 完善（P1-6）：新增 HTTP beacon 监听器（迁移 0010，kind 字段；POST /c2/beacon/<token> 心跳/领取任务/回传结果）与 Python/Bash/PowerShell 植入端模板（GET /api/c2/implant）；新增 DELETE /api/c2/listeners/{id} 与 POST /api/c2/sessions/{id}/tasks；前端新增 C2 管理页（启用开关、监听器/会话/任务、植入端生成），侧栏 C2 由 Soon 转为可用。

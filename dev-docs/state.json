@@ -2,10 +2,10 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "p1",
-  "round": 29,
-  "current_pr": "P1-09",
-  "current_branch": "feat/p1-09-proxypool",
-  "development_branch": "feat/p1-09-proxypool",
+  "round": 30,
+  "current_pr": "P1-10",
+  "current_branch": "feat/p1-10-ssh-smb-tunnel",
+  "development_branch": "feat/p1-10-ssh-smb-tunnel",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -206,13 +206,14 @@
     "p1_05_retention_ui": "web/src/app/(main)/system/retention/page.tsx; Playwright 7/7 pass 0 console error",
     "p1_06_c2": "migration 0010 http beacon; integration 13 checks; Playwright 11/11; db fresh tests ok",
     "p1_07_webshell_creds": "migration 0011; physical cleanup verified; Go tests + Playwright 6/6; full db/server/c2 green",
-    "p1_08_kb": "kb/manage.go pagination/update/delete/SQL insights; planner extras; API 13 checks + Playwright 5/5; tests green"
+    "p1_08_kb": "kb/manage.go pagination/update/delete/SQL insights; planner extras; API 13 checks + Playwright 5/5; tests green",
+    "p1_09_proxypool": "mihomo import adapter; unified outbound sploitus+cve; UI auth/health/latency; API 8 checks + Playwright 4/4"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T22:58:00+08:00",
+  "updated_at": "2026-11-21T23:15:00+08:00",
   "release": {
     "tag": "v0.4.1",
     "commit": "237a26f",
@@ -226,7 +227,7 @@
       "total": 3
     },
     "p1": {
-      "done": 5,
+      "done": 6,
       "total": 7
     },
     "p2": {

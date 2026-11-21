@@ -1609,6 +1609,7 @@ export interface ProxyEntry {
   name: string;
   masked: string;
   scheme: string;
+  auth?: boolean;
   status: string;
   exit_ip?: string;
   latency_ms: number;
@@ -1622,6 +1623,17 @@ export interface ProxyPoolState {
   active_id: number;
   global_set: boolean;
   probe_url: string;
+  healthy?: number;
+  failed?: number;
+  unified_outbound?: string[];
+}
+
+export interface MihomoImportResult {
+  ok: boolean;
+  imported_count: number;
+  duplicates: number;
+  skipped: { name: string; type: string; reason: string }[];
+  errors: { name: string; error: string }[];
 }
 
 // ---- WebShell 管理（M4-02）----

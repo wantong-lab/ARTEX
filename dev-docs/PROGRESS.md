@@ -184,3 +184,9 @@
 - 动作：新增 kb/manage.go（ListPage 服务端分页、Update、Delete 含 FTS/正文文件清理、Insights SQL 聚合）；kb API 增 GET /api/kb/entries、PUT/DELETE /api/kb/entry，kb-insights 改用 Insights；agent/planner 增加 SetExtraContextProvider 与 appendPlannerExtras，server/planner_extras.go 注入 KB 三档统计与 CVE 语料量；情报页 KB 增加「全部条目」分页浏览、编辑（复用入库表单）、删除与统计。
 - 结果：Go 单测（分页/分类过滤/更新/删除/insights/注入 helper）通过；fresh DB 下 kb/db/server/agent 全绿；API 集成 13 项（分页、category、更新、insights、删除、非法参数）全过；Playwright 5 项（统计 25、20/5 分页、翻页、编辑保存、删除至 24）全过、0 console error；截图 /tmp/artex-ui-p18-shots/kb-browse.png。
 - 下一步：P1-9 代理池增强（mihomo 适配器、统一出站、UI 健康展示）。
+
+
+## 轮次 30 · 2026-11-21（P1-9 代理池增强）
+- 动作：新增 proxypool/mihomo.go（Clash/mihomo proxies 列表解析，零 YAML 依赖；http/socks5 导入、ss/vmess 等如实跳过）与单测；kb 增加 SetCVEHTTPClient，server 代理池初始化时把 Sploitus + CVE 同步统一接入代理池回退链；新增 POST /api/proxy-pool/import-mihomo（支持 yaml 文本或订阅 URL）；列表返回认证标记、健康/失败统计、统一出站消费者与未探测时不返回 last_checked；内网中枢代理池 UI 增加导入卡、健康摘要、认证列、最近检查列与跳过原因。
+- 结果：proxypool 单测通过；fresh DB 下 proxypool/kb/db/server/agent 全绿；API 集成 8 项（导入 2 跳 1、重复 2、认证标记、健康/统一出站、探测失败状态回写、非法 YAML 400）全过；Playwright 4 项（导入、健康 0、认证/跳过原因、探测失败、删除）全过、0 console error；截图 /tmp/artex-ui-p19-shots/proxypool.png。
+- 下一步：P1-10 SSH/SMB 会话登记 + 隧道真机验证（chisel/suo5）。

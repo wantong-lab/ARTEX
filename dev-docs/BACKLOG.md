@@ -16,7 +16,7 @@
 - [x] P1-6 C2 完善：前端页（监听器/会话/任务）、listener 删除 API、HTTP beacon、多语言 implant（DNS 可拆）。
 - [x] P1-7 WebShell/凭据闭环：目标侧马体物理删除+校验；凭据注入/复用 UI。
 - [x] P1-8 知识库补全：服务端分页、条目编辑/删除、planner extras 注入 kb/cve、insights SQL 聚合。
-- [ ] P1-9 代理池增强：mihomo 适配器、其余出站统一接入、UI 认证延迟/健康度。
+- [x] P1-9 代理池增强：mihomo 适配器、其余出站统一接入、UI 认证延迟/健康度。
 - [ ] P1-10 SSH/SMB 会话登记 + 隧道真机验证（chisel/suo5）。
 
 ## P2 验证与安全加固
@@ -47,3 +47,5 @@
 - 2026-11-21：P1-7 完成（迁移 0011 artifact_path；清理先 rm 后 test ! -e 校验，失败保留会话；凭据 POST/GET secret/DELETE + UI 新增/显示/复制/删除）。Go 测试（物理删除删文件、相对路径拒绝）+ 全量 db/server/c2 全绿；Playwright 6/6（凭据增显删、WebShell 路径登记、物理清理校验）、0 console error。
 
 - 2026-11-21：P1-8 完成（kb/manage.go 分页/更新/删除/SQL Insights；kb API 三个新路由；planner extras 注入 KB/CVE；情报页全部条目分页+编辑+删除）。Go 单测 + kb/db/server/agent 全绿；API 集成 13 项、Playwright 5 项（分页 20/5、编辑、删除、统计）全过。
+
+- 2026-11-21：P1-9 完成（proxypool/mihomo.go 解析依赖零 YAML 库；import-mihomo API；Sploitus+CVE 统一出站；UI 认证/健康/延迟/最近探测 + 导入结果）。API 集成 8 项、Playwright 4 项、单测与全量测试全绿。
