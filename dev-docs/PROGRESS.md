@@ -147,3 +147,9 @@
 - main push 触发 `ci` workflow：**success**（go build/vet + 迁移 + 全量 24 包测试 + web build）。
 - v0.4.0 tag 触发 `release` workflow：frontend、五平台 binaries、GitHub Release 全部 **success**；docker 推送因仓库未配置 DOCKERHUB secrets 失败 → 已把 docker job 改为 `continue-on-error`（可选步骤，不阻塞发布）。
 - 复验（tag 移至 `9c48ba9`）：`ci` run 44866944144 **success**；`release` run 44866949571 **success**（frontend、linux/darwin amd64+arm64、windows amd64、GitHub Release 均 success；docker 失败但 continue-on-error 不阻塞）。**总目标达成。**
+
+## 轮次 24 · 2026-11-21（后续任务 P0 完成，v0.4.1）
+- 动作：P0-2/P0-3。新增 scripts/smoke/api_smoke.py（14 个无 LLM/无外网用例）与 ui_smoke.mjs；CI 增加 gofmt 与 API 冒烟步骤；未知路由改为 Go 静态服务返回 404 + 自定义中文 404 页；系统配置 6 个开关补 aria-label、任务页补 h1。新增 dev-docs/BACKLOG.md 作为后续任务唯一状态源。
+- 结果：tsc/build:static 通过；API 冒烟本地 14/14；404/开关/h1 用 Playwright 实测通过；CI run 44909962033 success（go+web 含新门禁）。
+- P0-1：CHANGELOG 定版 [0.4.1]，tag v0.4.1 → commit 237a26f；release run 44910352144 success（linux/darwin amd64+arm64、windows amd64、frontend、GitHub Release；产物含 SHA256SUMS）。提交 88c485a、237a26f。
+- 下一步：P1-4 统一定时调度器（retention 自动清理 / CVE autosync 调度 / 代理池健康巡检）。

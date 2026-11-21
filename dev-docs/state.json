@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "objective": "artex-product-parity",
-  "phase": "done",
-  "round": 23,
-  "current_pr": null,
-  "current_branch": "docs/m5-03-release",
-  "development_branch": "docs/m5-03-release",
+  "phase": "p1",
+  "round": 24,
+  "current_pr": "P1-04",
+  "current_branch": "feat/p1-04-scheduler",
+  "development_branch": "feat/p1-04-scheduler",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -200,17 +200,37 @@
     "m5_01": "分类五档与 chain_tags 优先、空 payload 落 general；frontier 默认 8 第 9 个拒派、释放后可再取；接力表与同键重复拒绝；广播多订阅者收发/退订/跨任务隔离；全新库 24 包全绿",
     "m5_02": "preview 只计到期行；dry-run 数据不变且不写审计；真实清理只删到期行（新行存活），审计含 actor/策略/删除数；非法策略回落默认并夹取；全新库 24 包全绿",
     "m5_03": "CHANGELOG/README/部署指南与代码一致；本地 CI 等脚本（go build/vet、迁移+全量测试、web build、release workflow 五平台矩阵）核对通过；v0.4.0 tag 推送触发 release workflow",
-    "release_ci": "ci run 44866944144 success；release run 44866949571 success（frontend + 五平台 binaries + GitHub Release success；docker continue-on-error）"
+    "release_ci": "ci run 44866944144 success；release run 44866949571 success（frontend + 五平台 binaries + GitHub Release success；docker continue-on-error）",
+    "p0_completion": "88c485a (smoke+CI+UI a11y/404/h1), 237a26f (v0.4.1); CI 44909962033 success; release 44910352144 success"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T18:45:00+08:00",
+  "updated_at": "2026-11-21T21:55:00+08:00",
   "release": {
-    "tag": "v0.4.0",
-    "branch": "docs/m5-03-release",
-    "changelog": "CHANGELOG.md 0.4.0",
-    "deploy_doc": "docs/deploy-v0.4.0.md"
+    "tag": "v0.4.1",
+    "commit": "237a26f",
+    "release_run": "44910352144",
+    "ci_run": "44909962033",
+    "assets": 6
+  },
+  "backlog_counts": {
+    "p0": {
+      "done": 3,
+      "total": 3
+    },
+    "p1": {
+      "done": 0,
+      "total": 7
+    },
+    "p2": {
+      "done": 0,
+      "total": 4
+    },
+    "p3": {
+      "done": 0,
+      "total": 3
+    }
   }
 }

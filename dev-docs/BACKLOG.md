@@ -5,7 +5,7 @@
 
 ## P0 发布收口与质量门
 
-- [ ] P0-1 v0.4.1 补丁发布：CHANGELOG 定版、打 tag、release 五平台构建与 Release 成功。
+- [x] P0-1 v0.4.1 补丁发布：CHANGELOG 定版、打 tag、release 五平台构建与 Release 成功。
 - [x] P0-2 验收脚本入仓 + CI 门禁：scripts/smoke/api_smoke.py（14 用例）、ui_smoke.mjs（手动）、CI 增加 gofmt 与 api smoke。
 - [x] P0-3 UI 小修：系统配置 6 个开关补 aria-label；任务页补 h1；未知路由返回 404（自定义中文 404 页 + Go 静态服务 404 语义）。
 
@@ -35,3 +35,5 @@
 ## 变更记录
 
 - 2026-11-21：建立任务板；P0-2、P0-3 完成（提交后回填 commit）。
+
+- 2026-11-21：P0 全部完成。提交：88c485a（P0-2/P0-3）、237a26f（v0.4.1 定版）。CI run 44909962033 success；release run 44910352144 success（五平台 zip + SHA256SUMS，非 draft/预发布）。下一步 P1-4 统一定时调度器。
