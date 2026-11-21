@@ -42,6 +42,7 @@
 | M0-01 | `chore/m0-01-governance` | 本文件、CONTRIBUTING、PR 模板、CI、导入登记表 | — | `git log` 可见、CI 绿 |
 | M0-02 | `feat/m0-02-migrations` | `db/migrations/0001_baseline.sql`、`schema_migrations`、加载器 | M0-01 | 空库启动幂等；重复启动零迁移 |
 | M0-03 | `chore/m0-03-schema-check` | schema 与代码期望一致性检查脚本 + CI 步骤 | M0-02 | 故意漏表时 CI 失败 |
+| M0-04 | `chore/m0-04-test-baseline` | 代码内建表收敛进迁移、修 2 个既有 flaky、CI 预置 schema | M0-03 | 空库上 `go test ./...` 全绿 |
 | M1-01 | `feat/m1-01-chainskel` | 9 类骨架、meta 铁律、反证 checklist、转向建议 + 单测 | M0-01 | `go test ./agent/chainskel` 绿 |
 | M1-02 | `feat/m1-02-prompt-tails` | 四个 agent 的代码固定尾接入 + 单测 | M1-01 | DB 正文改成任意内容，尾仍在 |
 | M1-03 | `feat/m1-03-stuck` | 停滞检测、死面熔断、重复调用拦截 + settings | M1-02 | 纯函数单测；阈值可配；默认开 |
@@ -109,7 +110,8 @@
 | ID | 状态 | commit | 备注 |
 |---|---|---|---|
 | M0-01 | 已完成 | `8deb132` | 路线图、协作规范、CI、导入登记表 |
-| M0-02 | 待开始 | — | 迁移机制 |
+| M0-02 | 已完成 | `7e192c8` | 迁移机制；全量套件基线红灯已登记 M0-04 |
+| M0-03 | 待开始 | — | schema 覆盖检查 |
 | 其余 | 待开始 | — | 按第 10 节明细推进 |
 
 > 状态真相源：[dev-docs/TASKS.md](dev-docs/TASKS.md)；轮次流水：[dev-docs/PROGRESS.md](dev-docs/PROGRESS.md)；机器状态：[dev-docs/state.json](dev-docs/state.json)；目标定义与执行协议：[dev-docs/GOAL.md](dev-docs/GOAL.md)。
@@ -139,6 +141,16 @@
 3. 在 CI 的 test 步骤中生效；缺失时打印缺失项并失败。
 **文件**：新增 `db/schema_required_test.go`；可选 `db/testdata/schema_expect.json`。
 **验收**：故意注释一张表 → CI 失败并指出表名。
+
+#### M0-04 测试基线与空库可跑 · `chore/m0-04-test-baseline` · 2 人日
+**目标**：空数据库上 `go test ./...` 全绿，CI 可信。
+**任务**
+1. 把 `llm_records`（`db/commands.go`）与 `llm_usage`（`db/llm_usage.go`）的代码内建表收敛为 `0002_lazy_tables.sql`。
+2. 修 `agent` 的 task scope 用例隔离问题（前序用例清理了 `task_scope` 行）。
+3. 修 `server` 的 TempDir 清理失败（异步写文件未结束即 RemoveAll）。
+4. CI 增加「应用迁移后再跑测试」步骤，并固定 `-p 1`。
+**文件**：`db/migrations/0002_*.sql`、两个测试文件、`.github/workflows/ci.yml`。
+**验收**：空库 → 应用迁移 → `go test -p 1 ./...` 全绿。
 
 ### M1 认知层（第 2–3 周）
 

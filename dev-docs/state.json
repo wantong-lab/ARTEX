@@ -8,7 +8,7 @@
   "status_counts": {
     "completed": 2,
     "in_progress": 0,
-    "pending": 21,
+    "pending": 22,
     "blocked": 0
   },
   "prs": {
@@ -25,10 +25,30 @@
       "commit": "7e192c8"
     }
   },
+  "known_issues": [
+    {
+      "id": "T-01",
+      "summary": "llm_usage/llm_records 由代码运行时建表，空库跑测试失败",
+      "owner": "M0-04"
+    },
+    {
+      "id": "T-02",
+      "summary": "agent task scope 用例缺少隔离",
+      "owner": "M0-04"
+    },
+    {
+      "id": "T-03",
+      "summary": "server TempDir 清理早于异步写入结束",
+      "owner": "M0-04"
+    }
+  ],
+  "evidence": {
+    "m0_02": "go build/vet 通过；真实 PG15+pgvector 首次应用 1、二次 0；db 包全量绿；A/B 对照确认全量套件失败为基线既有"
+  },
   "next_actions": [
     "M0-03: requiredTables 清单 + 临时 schema 校验测试 + CI 生效",
-    "M1-01: 复制 chainskel 包并适配"
+    "M0-04: 0002 迁移收敛代码内建表 + 修 T-02/T-03 + CI 预置 schema"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T10:20:00+08:00"
+  "updated_at": "2026-11-21T10:26:00+08:00"
 }

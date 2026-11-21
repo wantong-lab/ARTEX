@@ -7,6 +7,7 @@
 | M0-01 | M0 | `chore/m0-01-governance` | 已完成 | `8deb132` `77740cf` | 文档与 CI 入库 |
 | M0-02 | M0 | `feat/m0-02-migrations` | 已完成 | `7e192c8` | build/vet 通过；db 包（含真实 PG 幂等用例）绿 |
 | M0-03 | M0 | `chore/m0-03-schema-check` | 待开始 | — | 见 ROADMAP 第 10 节 |
+| M0-04 | M0 | `chore/m0-04-test-baseline` | 待开始 | — | 空库 `go test -p 1 ./...` 全绿 |
 | M1-01 | M1 | `feat/m1-01-chainskel` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M1-02 | M1 | `feat/m1-02-prompt-tails` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M1-03 | M1 | `feat/m1-03-stuck` | 待开始 | — | 见 ROADMAP 第 10 节 |
@@ -27,6 +28,16 @@
 | M5-01 | M5 | `feat/m5-01-agent-routing` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M5-02 | M5 | `feat/m5-02-cleanup` | 待开始 | — | 见 ROADMAP 第 10 节 |
 | M5-03 | M5 | `docs/m5-03-release` | 待开始 | — | 见 ROADMAP 第 10 节 |
+
+## 已知问题（基线测试债，M0-04 处理）
+
+| 编号 | 现象 | 证据 | 影响 |
+|---|---|---|---|
+| T-01 | 空库直接跑全量测试时 `llmrec` 报 `relation llm_usage does not exist` | 表由 `db/llm_usage.go` 运行时创建，不在 schema | 空库不可跑测试 |
+| T-02 | `agent` 的 `TestGraphOverviewExpandsAssociatedCompanyScope` 报 `task scope missing` | 前序用例清理了 `task_scope` 行，缺少隔离 | 基线红灯 |
+| T-03 | `server` 的 `TestTaskMetadataPatchReturnsRenameAndPin` 报 TempDir `directory not empty` | 异步写文件未结束即清理 | 基线红灯 |
+
+> A/B 对照：以上在基线 `0aa09d0` 上同样失败，与 M0-02 迁移改动无关。
 
 ## 阻塞登记
 
