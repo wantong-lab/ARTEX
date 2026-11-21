@@ -2,14 +2,14 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "M2",
-  "round": 9,
-  "current_pr": "M2-02",
-  "current_branch": "feat/m2-02-session-tools",
-  "development_branch": "feat/m2-01-import-session",
+  "round": 10,
+  "current_pr": "M2-03",
+  "current_branch": "feat/m2-03-tunnel",
+  "development_branch": "feat/m2-02-session-tools",
   "status_counts": {
-    "completed": 10,
+    "completed": 11,
     "in_progress": 0,
-    "pending": 14,
+    "pending": 13,
     "blocked": 0
   },
   "prs": {
@@ -72,6 +72,12 @@
       "branch": "feat/m2-01-import-session",
       "status": "completed",
       "commit": "8d2ca82"
+    },
+    "M2-02": {
+      "milestone": "M2",
+      "branch": "feat/m2-02-session-tools",
+      "status": "completed",
+      "commit": "2e74c05"
     }
   },
   "known_issues": [
@@ -101,12 +107,13 @@
     "m1_03": "归一化/签名与失败相似度、按 host 的传输失败与 5xx、出口代理熔断、同参数重复拦截共 10 个单测；steer 拦截走 PreToolUse、活动记账走 taskEmit；全量 16 包全绿",
     "m1_04": "honeydetect 包 sha256 一致；0003 迁移幂等；评分读写用例（取最高分）；planner 蜜罐纪律单测；全量 17 包全绿",
     "m1_05": "侦察提醒阈值/批量工具后沉默、军火库提醒上限、stderr 前缀不改语义、UA 按 taskID 稳定、settings 开关解析；全量 17 包全绿",
-    "m2_01": "session/stage/tunnel/kb 包测试全绿（session 3.7s）；0004 迁移在真实 PG 上应用成功（4 个迁移）；全量 21 包全绿"
+    "m2_01": "session/stage/tunnel/kb 包测试全绿（session 3.7s）；0004 迁移在真实 PG 上应用成功（4 个迁移）；全量 21 包全绿",
+    "m2_02": "httptest 假 phpcmd 马：register→exec→write→read 全通；exec 输出 16KB 截断；RoE 门拒绝路径；last_beat 超时探活置 dead；schema 与 BuiltinToolSeeds 目录不漂移；全量 21 包全绿"
   },
   "next_actions": [
-    "M2-02: 会话四工具（register_session/session_exec/session_read/session_write）+ 审批/审计接线",
-    "M2-03: 隧道工具与任务级 MITM 上游热切换"
+    "M2-03: 隧道工具（tunnel_deploy/tunnel_list/tunnel_stop）+ chisel 适配 + 任务级 MITM 上游热切换",
+    "M2-04: 凭据收割/复用与 host_ledger 查询界面"
   ],
   "blockers": [],
-  "updated_at": "2026-11-21T12:10:00+08:00"
+  "updated_at": "2026-11-21T12:28:00+08:00"
 }

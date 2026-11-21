@@ -57,3 +57,9 @@
 - 动作：M2-01。逐字节复制 `session`/`stage`/`tunnel`/`kb` 四个包（含 `ldpreload_x86_64.so` 与 `shelltpl/*.tpl` 三个模板、生成器）与 `db/{sessions,tunnels,credentials,host_ledger}.go`；新增 `0004_inner_net.sql` 建四张表与索引，迁移测试期望改为 4；补 `itoa64` 助手；登记导入来源。
 - 结果：`go build/vet` 通过；session/stage/tunnel/kb 包测试全绿（session 3.7s）；真实 PG 上 4 个迁移应用成功；全量 21 包全绿（EXIT=0）。提交 `8d2ca82`，分支 `feat/m2-01-import-session`。
 - 下一步：M2-02 会话工具与审批接线。
+
+## 轮次 10 · 2026-11-21
+- 动作：M2-02。新增 `server/session_tools.go`：会话中枢（注册表 + 落库 + 台账 + RoE 门）与四个工具 `register_session`/`session_exec`/`session_read`/`session_write`。秘密经 `SessionStore` gcm1 加密；执行/读/写逐次写 `host_ledger`（写文件记 artifact+cleanup）；`session_exec` 16KB 截断；`last_beat` 超时会话加载时探活并置 dead；元数据进 `BuiltinToolSeeds` 绑定 worker/pentest。
+- 结果：httptest 假 phpcmd 马跑通 register→exec→write→read；截断、RoE 拒绝、陈旧判死、schema 不漂移共 5 个用例全绿；全量 21 包全绿（EXIT=0）。提交 `2e74c05`。
+- 偏差：ssh/smb 会话登记与后台巡检扫器未纳入本 PR（延后 M2-04/M2-05）；活动流依赖 harness 既有 tool-call 记账，host_ledger 为显式台账。
+- 下一步：M2-03 隧道工具与任务级 MITM 热切换。
