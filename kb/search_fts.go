@@ -75,11 +75,11 @@ LIMIT ?`, q, fetch)
 	var out []*Entry
 	for rows.Next() {
 		var (
-			nid                          int64
-			code, title, kind, cat, cve  sql.NullString
-			comp, desc, tags             sql.NullString
-			ver, hits                    sql.NullInt64
-			rank                         sql.NullFloat64
+			nid                         int64
+			code, title, kind, cat, cve sql.NullString
+			comp, desc, tags            sql.NullString
+			ver, hits                   sql.NullInt64
+			rank                        sql.NullFloat64
 		)
 		if err := rows.Scan(&nid, &code, &title, &kind, &cat, &cve, &comp,
 			&desc, &tags, &ver, &hits, &rank); err != nil {

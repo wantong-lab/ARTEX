@@ -25,7 +25,7 @@ type SSHSecret struct {
 	Port     int    `json:"port,omitempty"`
 	User     string `json:"user"`
 	Password string `json:"password,omitempty"`
-	Key      string `json:"key,omitempty"`  // PEM 私钥正文
+	Key      string `json:"key,omitempty"`   // PEM 私钥正文
 	Proxy    string `json:"proxy,omitempty"` // socks5://host:port，内网/隧道出口
 	Platform string `json:"platform,omitempty"`
 }
@@ -100,9 +100,9 @@ func RestoreSSHShell(id int64, sec SSHSecret) (*SSHShell, error) {
 	return sh, nil
 }
 
-func (s *SSHShell) ID() int64      { return s.id }
-func (s *SSHShell) SetID(id int64) { s.id = id }
-func (s *SSHShell) Kind() string   { return "ssh" }
+func (s *SSHShell) ID() int64         { return s.id }
+func (s *SSHShell) SetID(id int64)    { s.id = id }
+func (s *SSHShell) Kind() string      { return "ssh" }
 func (s *SSHShell) Secret() SSHSecret { return s.sec }
 
 // Test 无害探针。

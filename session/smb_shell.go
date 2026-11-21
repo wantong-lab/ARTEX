@@ -19,7 +19,7 @@ import (
 // SMBSecret 是 smbexec 会话的连接参数（随 sessions.secret 落库）。
 type SMBSecret struct {
 	Host   string `json:"host"`
-	User   string `json:"user"`   // DOMAIN\user 或 user（本地账号无前缀）
+	User   string `json:"user"` // DOMAIN\user 或 user（本地账号无前缀）
 	Pass   string `json:"pass,omitempty"`
 	Hash   string `json:"hash,omitempty"` // NT hash（pass-the-hash）
 	ProxyC bool   `json:"proxychains,omitempty"`
@@ -58,9 +58,9 @@ func RestoreSMBShell(id int64, sec SMBSecret) (*SMBShell, error) {
 	return sh, nil
 }
 
-func (s *SMBShell) ID() int64       { return s.id }
-func (s *SMBShell) SetID(id int64)  { s.id = id }
-func (s *SMBShell) Kind() string    { return "smbexec" }
+func (s *SMBShell) ID() int64         { return s.id }
+func (s *SMBShell) SetID(id int64)    { s.id = id }
+func (s *SMBShell) Kind() string      { return "smbexec" }
 func (s *SMBShell) Secret() SMBSecret { return s.sec }
 
 // wmiArgs 组装调用：返回 (bin, args)。hash 优先于密码——hash 是收割直产物；

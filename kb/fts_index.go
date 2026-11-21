@@ -62,9 +62,9 @@ FROM poc`)
 	defer rows.Close()
 
 	type rec struct {
-		id                            int64
-		code, title, cve, comp, vers  sql.NullString
-		tags, desc, content           sql.NullString
+		id                           int64
+		code, title, cve, comp, vers sql.NullString
+		tags, desc, content          sql.NullString
 	}
 	var batch []rec
 	for rows.Next() {

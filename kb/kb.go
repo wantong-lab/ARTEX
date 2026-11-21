@@ -198,9 +198,9 @@ func (c *Client) Stats() (map[string]int, error) {
 		_ = c.db.QueryRow(`SELECT COUNT(*) FROM poc`).Scan(&total)
 		_ = c.db.QueryRow(`SELECT COUNT(*) FROM poc WHERE verified=1`).Scan(&ver)
 		_ = c.db.QueryRow(`SELECT COALESCE(SUM(hit_count),0) FROM poc`).Scan(&reused)
-		_ = c.db.QueryRow(`SELECT COUNT(*) FROM poc WHERE `+negativeWhere).Scan(&neg)
+		_ = c.db.QueryRow(`SELECT COUNT(*) FROM poc WHERE ` + negativeWhere).Scan(&neg)
 		var tac int
-		_ = c.db.QueryRow(`SELECT COUNT(*) FROM poc WHERE `+tacticWhere+` AND NOT `+negativeWhere).Scan(&tac)
+		_ = c.db.QueryRow(`SELECT COUNT(*) FROM poc WHERE ` + tacticWhere + ` AND NOT ` + negativeWhere).Scan(&tac)
 		out["tactic"] = tac
 		out["ammo"] = total - neg - tac
 		out["negative"] = neg
@@ -468,7 +468,7 @@ func (c *Client) ListTopHit(limit int) ([]*Entry, error) {
 			}
 			out = append(out, &Entry{
 				ID: code.String, Code: code.String, Title: title.String, Kind: kind.String,
-				Category: classifyPocBucket(kind.String, cat.String, title.String, "", desc.String),
+				Category:  classifyPocBucket(kind.String, cat.String, title.String, "", desc.String),
 				VulnClass: cat.String, Product: nz(comp.String, cve.String), CVE: cve.String,
 				Description: desc.String, Content: truncateRunes(body, 1500),
 				File: pth.String, Verified: ver.Int64 != 0, HitCount: int(hits.Int64),
