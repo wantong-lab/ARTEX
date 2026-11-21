@@ -28,7 +28,7 @@
 
 ## P3 体验与文档
 
-- [ ] P3-15 文档：LLM 配置（opencode-go + session_header_key）、C2/代理池/清理运维手册、FAQ。
+- [x] P3-15 文档：LLM 配置（opencode-go + session_header_key）、C2/代理池/清理运维手册、FAQ。
 - [ ] P3-16 前端打磨：C2 Soon 页替换、暗色对比、加载骨架/错误边界、401/403 体验、移动端细节。
 - [ ] P3-17 Docker 镜像发布启用（secrets）、demo seed 数据、安装体验。
 
@@ -59,3 +59,5 @@
 - 2026-11-22：P2-13 完成。① 静置加密复核 + master key 轮换 CLI（dry-run/正式在 artex_accept 上轮换 2 条代理 URL；重启后代理 URL 正常解密，迁移 12）；② C2 非回环默认 400 拒绝、开启 c2_allow_non_loopback 后放行并恢复默认；③ host_ledger 哈希链（0012 迁移）+ /api/security/audit/verify，篡改/并发单测通过；④ planner 工具调用接入 Guard：修复前 planner 直接执行 Bash 绕过拦截，修复后真实 LLM 治理任务由 planner 发起的 Bash 调用被打上 agent_name=planner 的 denied 记录且未执行；⑤ RoE/Scope 由 guard 既有三态单测覆盖（strict 拦截越界、loopback 放行）。安全验收脚本 security_audit.py 在轮换前后两次 EXIT=0。
 
 - 2026-11-22：P2-14 完成。新增 /metrics（HTTP 请求计数/耗时/在途、任务计数、DB 连接池、LLM 在途、维护调度任务 enabled/running/interval/last_run/last_error、Go runtime；默认回环抓取 + ARTEX_METRICS_TOKEN 跨机抓取）、/api/observability/status JSON 汇总、ARTEX_LOG_FORMAT=json 结构化访问日志与调度事件；observability_check.py 实跑 EXIT=0（计数 3→8、3 个调度任务指标、DB 连接、JSON http_request 日志命中）。
+
+- 2026-11-22：P3-15 完成。新增 docs/llm-config.md（205 行：三种格式、profile 全字段、4 个实战配方含 opencode-go+session_header_key+非流式、流式/非流式、失败转移/轮询/五层重试、用量记录、代理、排障表、安全边界）、docs/ops-manual.md（155 行：C2 启停/回环约束/植入与会话/排障、代理池录入探测切换/全局出口/mihomo 导入、保留清理 dry-run/cleanup-list/调度与监控、升级回滚密钥轮换、安全审计）、docs/faq.md（96 行/24 条实战问答）；README 与 deploy 文档补充索引。

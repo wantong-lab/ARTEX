@@ -222,3 +222,9 @@
 - 动作：新增 server/obs.go（手写 Prometheus 文本指标、HTTP 指标中间件含 SSE Flush 透传、回环/Token 抓取控制、JSON 结构化日志与访问日志、observability status handler）；Server 接入 metrics/startedAt 与 /metrics 路由；Manager.TaskStatusCounts、Engine.SumActiveLLMCalls；维护调度器接入结构化日志；新增 scripts/acceptance/observability_check.py。
 - 结果：go build/vet/gofmt 全绿、server 包测试通过（指标 handler/远程拒绝/Token 放行/中间件计数/JSON 日志/status 单测）；真实服务以 ARTEX_LOG_FORMAT=json 启动，验收脚本 EXIT=0：/metrics 基础/构建信息/Go runtime/计数增长（3→8）/任务总数/3 个调度任务指标/DB 连接池，observability-status 全字段，结构化 http_request 日志命中；/metrics 远程抓取含 Token 通过、无 Token 403。
 - 下一步：P3-15 LLM 配置文档 → P3-16 前端打磨 → P3-17 Docker 镜像与 demo seed，最终补丁 tag。
+
+
+## 轮次 36 · 2026-11-22（P3-15 LLM 配置 / 运维手册 / FAQ 文档）
+- 动作：编写 docs/llm-config.md、docs/ops-manual.md、docs/faq.md；README 与 docs/deploy-v0.4.0.md 增加文档索引与延伸阅读。内容基于真实运行经验（opencode-go zen 需 session_header_key + 非流式、/api/llm/test 需完整字段、C2 回环默认拒绝与开关、代理池/清理调度、master key 轮换、审计校验、/metrics 回环限制等）。
+- 结果：三份文档共 456 行；代码块与 token 占位符检查通过（无残留 @F@/@C@）；无代码改动。
+- 下一步：P3-16 前端打磨（C2 Soon 页替换、暗色对比、加载骨架/错误边界、401/403 体验、移动端细节）。

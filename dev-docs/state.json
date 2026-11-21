@@ -2,10 +2,10 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "p3",
-  "round": 35,
-  "current_pr": "P3-15",
-  "current_branch": "docs/p3-15-llm-config",
-  "development_branch": "docs/p3-15-llm-config",
+  "round": 36,
+  "current_pr": "P3-16",
+  "current_branch": "feat/p3-16-frontend-polish",
+  "development_branch": "feat/p3-16-frontend-polish",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -212,13 +212,14 @@
     "p2_11_llm_e2e": "scripts/acceptance/llm_e2e.py full run EXIT=0: task done, marker in plan+intent, 202535 tokens, intercept denied executed=false; planner guard gap filed to P2-13",
     "p2_12_race_soak_upgrade": "go vet + go test -race ./... PASS after fixing agent hook + memory races; upgrade_rollback.sh RESULT PASS 25 steps (v0.4.1 -> HEAD migrations 9->11, soak 13425 req 0 err, rollback+re-upgrade task visible)",
     "p2_13_security_audit": "C2 loopback reject + opt-in; master key rotation CLI rotated 2 proxy urls (server restart decrypts, migrations 12); host_ledger hash chain + /api/security/audit/verify; planner Guard wired (real LLM planner Bash denied executed=false); security_audit.py EXIT=0 before/after rotation",
-    "p2_14_observability": "/metrics Prometheus text + observability status + JSON structured logs; observability_check.py EXIT=0 (counter growth 3->8, 3 scheduler jobs, DB pool, JSON http_request); metrics remote denied w/o token, token allowed"
+    "p2_14_observability": "/metrics Prometheus text + observability status + JSON structured logs; observability_check.py EXIT=0 (counter growth 3->8, 3 scheduler jobs, DB pool, JSON http_request); metrics remote denied w/o token, token allowed",
+    "p3_15_docs": "docs/llm-config.md (205 lines), docs/ops-manual.md (155), docs/faq.md (96); README + deploy doc index updated"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-22T01:00:00+08:00",
+  "updated_at": "2026-11-22T01:05:00+08:00",
   "release": {
     "tag": "v0.4.1",
     "commit": "237a26f",
@@ -240,7 +241,7 @@
       "total": 4
     },
     "p3": {
-      "done": 0,
+      "done": 1,
       "total": 3
     }
   }

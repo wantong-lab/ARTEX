@@ -82,6 +82,7 @@ v0.4.0 在 0.3.15 基线上补齐二开能力，按里程碑组织；**默认关
 | 清理与保留 | /api/retention/*（dry-run 优先） | 手动触发 |
 
 升级部署与开关细节见 [docs/deploy-v0.4.0.md](docs/deploy-v0.4.0.md)。
+LLM 接入与失败转移见 [docs/llm-config.md](docs/llm-config.md)；C2 / 代理池 / 保留清理运维见 [docs/ops-manual.md](docs/ops-manual.md)；常见故障见 [docs/faq.md](docs/faq.md)。
 
 ## 安装
 

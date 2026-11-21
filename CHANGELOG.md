@@ -7,6 +7,8 @@
 ## [0.4.1] - 2026-11-21
 
 ### 新增的功能
+- 文档（P3-15）：新增 docs/llm-config.md（协议格式、profile 全字段、opencode-go + session_header_key 实战配方、流式/非流式、失败转移与五层重试、用量记录、排障速查与密钥管理）、docs/ops-manual.md（C2/代理池/保留清理/调度与监控运维手册）、docs/faq.md（24 条实战 FAQ）；README 与部署指南补充文档索引。
+
 - 可观测性（P2-14）：新增 Prometheus 文本 /metrics（HTTP 计数/耗时/在途、任务计数、DB 连接池、LLM 在途调用、维护调度任务状态、Go runtime；默认仅回环抓取，支持 ARTEX_METRICS_TOKEN）；新增 GET /api/observability/status 汇总接口；ARTEX_LOG_FORMAT=json 时输出结构化访问日志与调度任务事件（不含 query，避免 token 泄漏）；新增 scripts/acceptance/observability_check.py。
 
 - 安全审计与加固（P2-13）：C2 监听器默认只允许回环绑定（非回环需显式 settings.c2_allow_non_loopback）；新增 master key 轮换 CLI artex-rotate-key（事务内重加密 sessions/credentials/proxy_pool/c2_listeners，失败回滚，成功后原子替换 key）；host_ledger 增加 prev_hash/entry_hash 审计哈希链与 GET /api/security/audit/verify；planner 的工具调用接入任务 Guard（全局拦截规则/RoE/审计与 worker 同路径）；新增安全验收脚本 scripts/acceptance/security_audit.py；迁移 0012_audit_chain。
