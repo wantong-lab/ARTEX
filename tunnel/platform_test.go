@@ -86,8 +86,8 @@ func TestClientBinaryFor(t *testing.T) {
 	if err != nil || got != winBin {
 		t.Fatalf("windows client=%q err=%v", got, err)
 	}
-	if _, err := m.clientBinaryFor(&Plan{TargetOS: "linux", TargetArch: "amd64"}); err == nil {
-		t.Fatalf("linux should be missing when platform is %s/%s", runtime.GOOS, runtime.GOARCH)
+	if _, err := m.clientBinaryFor(&Plan{TargetOS: "linux", TargetArch: "mips"}); err == nil {
+		t.Fatalf("linux/mips should be missing when platform is %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 	same, err := m.clientBinaryFor(&Plan{TargetOS: runtime.GOOS, TargetArch: runtime.GOARCH})
 	if err != nil || same != "/platform/chisel" {
