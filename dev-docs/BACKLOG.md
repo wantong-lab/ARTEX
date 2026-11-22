@@ -69,3 +69,5 @@
 - 2026-11-22：**P0–P3 全部完成，v0.4.2 发布收口**。Release 工作流 44929501199 成功（frontend/5 平台 binaries/release/docker 全绿）；GitHub Release v0.4.2 非草稿，资产 artex-0.4.2-{darwin,linux}-{amd64,arm64}.zip + windows-amd64.zip + SHA256SUMS；GHCR 多架构镜像 ghcr.io/wantong-lab/artex:v0.4.2 与 :latest 可拉取（OCI index 含 amd64/arm64）；最终 go build/go vet/go test ./... 全绿；本地 docker build 与镜像内 artex -h、/app/seed_demo.py 验证通过。
 
 - 2026-11-22（v0.4.3 补测）：针对上轮测试审计的 6 项建议逐项落地：①v0.4.1→v0.4.2 升级脚本适配 0012 并重跑 25 步 PASS；②Docker Compose 全流程（setup/seed/UI/优雅停止）实测通过；③LLM 坏 provider 真实失败转移 + 流式/非流式探测 EXIT=0；④C2 HTTP beacon 真链路测试入库；SMB 真机测试在 192.168.112.133 通过（wmiexec RPC 不可达→atexec 自动回退，修复文件读写/复合命令/噪声过滤）；隧道跨主机因 chisel 单二进制绑定平台架构，macOS→Linux VPS 无法在同一路径同时运行 server/client，暂未验证（已知限制）；⑤UI 冒烟扩展（暗色/移动端/骨架/401/403/页签/404）并接入 CI `ui` job；⑥全仓 go test -race 重跑 RACE_EXIT=0。
+
+- 2026-11-22：**v0.4.3 发布收口**。CI 44990406383 全绿（go/web/新 ui job）；Release 工作流 44990610317 全绿（frontend、五平台 binaries、release、docker）；GitHub Release v0.4.3 非草稿：artex-0.4.3-{darwin,linux}-{amd64,arm64}.zip + windows-amd64.zip + SHA256SUMS；GHCR ghcr.io/wantong-lab/artex:v0.4.3 与 :latest 多架构镜像已推送（manifest 验证）。本轮 6 项补测建议完成 5 项，隧道跨主机列为已知限制。

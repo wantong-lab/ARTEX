@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "objective": "artex-product-parity",
-  "phase": "verify-patch",
-  "round": 40,
-  "current_pr": "v0.4.3",
-  "current_branch": "fix/v0.4.3-fixtures",
-  "development_branch": "fix/v0.4.3-fixtures",
+  "phase": "complete",
+  "round": 41,
+  "current_pr": "done",
+  "current_branch": "main",
+  "development_branch": "main",
   "status_counts": {
     "completed": 24,
     "in_progress": 0,
@@ -217,13 +217,14 @@
     "p3_16_frontend_polish": "error boundary + loading skeleton + api 401 next/403 toast/5xx toast + dark contrast + mobile no-overflow; Playwright 13 PASS; tsc and build:static pass",
     "p3_17_docker_demo": "release docker job -> GHCR via GITHUB_TOKEN (no DockerHub secrets), compose image ghcr, demo seed idempotent (2 paused DEMO tasks, 4 KB, 4 assets), README 5-min demo, YAML/compose valid, local docker build verified",
     "release_v0_4_2": "tag v0.4.2; release run 44929501199 success; assets 5 zips + SHA256SUMS; GHCR ghcr.io/wantong-lab/artex:v0.4.2 & latest (amd64/arm64 OCI index); final go build/vet/test all pass; local docker build + seed verified",
-    "v0_4_3_gap_tests": "upgrade PASS steps=25 (migrations 12); compose full flow PASS (setup/seed/UI/stop); LLM failover + streaming PASS EXIT=0; C2 beacon E2E PASS; SMB real Windows PASS (atexec fallback, file IO); full go test -race RACE_EXIT=0"
+    "v0_4_3_gap_tests": "upgrade PASS steps=25 (migrations 12); compose full flow PASS (setup/seed/UI/stop); LLM failover + streaming PASS EXIT=0; C2 beacon E2E PASS; SMB real Windows PASS (atexec fallback, file IO); full go test -race RACE_EXIT=0",
+    "release_v0_4_3": "CI 44990406383 success (go/web/ui); release 44990610317 success; assets 5 zips + SHA256SUMS; GHCR v0.4.3 & latest multi-arch"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
   ],
   "blockers": [],
-  "updated_at": "2026-11-22T14:10:00+08:00",
+  "updated_at": "2026-11-22T14:20:00+08:00",
   "release": {
     "tag": "v0.4.1",
     "commit": "237a26f",
@@ -249,5 +250,5 @@
       "total": 3
     }
   },
-  "status": "in_progress"
+  "status": "complete"
 }

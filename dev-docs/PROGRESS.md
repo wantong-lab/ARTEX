@@ -252,3 +252,8 @@
 - 补测：①升级脚本 0012 适配并重跑 upgrade_rollback.sh → RESULT PASS steps=25；②Docker Compose 全流程（本地镜像 + PG16 + /setup + 容器内 demo seed + Playwright 验证 [DEMO] 任务/KB + 优雅停止）；③llm_failover.py 坏 provider→好 provider 真实转移 + 流式 2.8s/非流式 3.3s；④C2 HTTP beacon 真链路测试；SMB 真机测试（Windows 192.168.112.133：自动回退 atexec、复合命令、文件读写删）；⑤UI 冒烟扩展并入 CI ui job；⑥全仓 go test -race。
 - 修复：SMB atexec 回退（RPC/DCOM 被拦场景）、atexec 复合命令引号、文件读写 PowerShell 化、impacket 噪声过滤；升级脚本迁移数 12；UI 冒烟路由延迟处理。
 - 结论：6 项建议中 5 项完成并有实测证据；隧道跨主机留作已知限制（chisel 单二进制需与平台同架构，macOS→Linux VPS 不适用）。下一步提交、CI 验证并打 v0.4.3。
+
+
+## 轮次 41 · 2026-11-22（v0.4.3 发布）
+- CI 44990406383 全绿（go/web/ui 三 job）；tag v0.4.3 → Release 44990610317 全绿，5 平台 zip + SHA256SUMS 已发布，GHCR ghcr.io/wantong-lab/artex:v0.4.3/:latest 多架构 manifest 验证通过。
+- 补测结论：升级（0012）PASS 25 步、Compose 全流程 PASS、LLM 失败转移+流式 PASS、C2 beacon E2E PASS、SMB 真机 PASS（atexec 回退）、UI 冒烟入 CI PASS、全仓 race PASS；隧道跨主机为已知限制。
