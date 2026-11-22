@@ -32,6 +32,10 @@
 - [x] P3-16 前端打磨：C2 Soon 页替换、暗色对比、加载骨架/错误边界、401/403 体验、移动端细节。
 - [x] P3-17 Docker 镜像发布启用（secrets）、demo seed 数据、安装体验。
 
+## P4 运营能力补强（v0.4.4）
+
+- [x] P4-18 隧道跨 OS/架构适配：平台/目标端 chisel 二进制分离（ARTEX_CHISEL_CLIENT_DIR/<os>-<arch>/chisel[.exe]）、目标 OS/架构自动探测、Windows 目标临时 HTTP 下载 + WMI 拉起 + 巡检/清理适配；单元测试 + Windows 真机 E2E（macOS 平台 → Windows 192.168.112.133，SOCKS5 经目标访问 LAN HTTP 成功）。
+
 ## 变更记录
 
 - 2026-11-21：建立任务板；P0-2、P0-3 完成（提交后回填 commit）。
@@ -71,3 +75,5 @@
 - 2026-11-22（v0.4.3 补测）：针对上轮测试审计的 6 项建议逐项落地：①v0.4.1→v0.4.2 升级脚本适配 0012 并重跑 25 步 PASS；②Docker Compose 全流程（setup/seed/UI/优雅停止）实测通过；③LLM 坏 provider 真实失败转移 + 流式/非流式探测 EXIT=0；④C2 HTTP beacon 真链路测试入库；SMB 真机测试在 192.168.112.133 通过（wmiexec RPC 不可达→atexec 自动回退，修复文件读写/复合命令/噪声过滤）；隧道跨主机因 chisel 单二进制绑定平台架构，macOS→Linux VPS 无法在同一路径同时运行 server/client，暂未验证（已知限制）；⑤UI 冒烟扩展（暗色/移动端/骨架/401/403/页签/404）并接入 CI `ui` job；⑥全仓 go test -race 重跑 RACE_EXIT=0。
 
 - 2026-11-22：**v0.4.3 发布收口**。CI 44990406383 全绿（go/web/新 ui job）；Release 工作流 44990610317 全绿（frontend、五平台 binaries、release、docker）；GitHub Release v0.4.3 非草稿：artex-0.4.3-{darwin,linux}-{amd64,arm64}.zip + windows-amd64.zip + SHA256SUMS；GHCR ghcr.io/wantong-lab/artex:v0.4.3 与 :latest 多架构镜像已推送（manifest 验证）。本轮 6 项补测建议完成 5 项，隧道跨主机列为已知限制。
+
+- 2026-11-22：P4-18 跨 OS/架构隧道完成（tunnel/platform.go、deploy/deliver/spawn 适配、server 配置、Windows 真机 E2E）。提交/发布后回填 commit 与 tag。

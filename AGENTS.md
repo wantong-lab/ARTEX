@@ -22,7 +22,7 @@
   - 不要跨仓库混用构建产物、`frontend/dist` 或 `deploy/skills`；不要把二开仓库的本地路径写死进生产代码。
   - 读二开仓库时以其实际代码为准，注意目录结构与本仓库不同（`backend/` vs 根目录）。
 
-## 当前进行中的方向（占位）
+## 当前进行中的方向
 
-- 跨 OS/跨架构隧道适配（Windows/Linux 目标，chisel 目标端独立二进制 + 启动/清理适配）。
-- C2 socks5 能力调研：二开版本为外部 C2 MCP 集成；主线如需内置，要走反向 SOCKS-over-C2 或外部 MCP 两种方案。
+- 跨 OS/跨架构隧道适配：v0.4.4 已完成（平台/目标端二进制分离、Windows 目标交付/拉起/清理、Windows 真机 E2E）。
+- C2 socks5 能力调研：二开版本为外部 C2 MCP（Supershell manage_socks5）集成；主线如需内置，走反向 SOCKS-over-C2 或外部 MCP 两种方案，待定。

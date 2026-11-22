@@ -109,3 +109,12 @@ v0.4.3 起 SMB 会话会自动回退到 `atexec.py`（只走 SMB 服务管理器
 atexec 由计划任务执行，外层会给命令追加 `> %windir%\Temp\...` 重定向，
 命令自身的 `>` 会被最后一个重定向覆盖。ARTEX 对 atexec 后端的文件读写改用
 PowerShell `-EncodedCommand`（无重定向、无嵌套引号），大文件分块写入。
+
+### Q27：跨 OS/架构隧道怎么配？Windows 目标为什么 SOCKS 出口在目标侧？
+平台侧 ARTEX_CHISEL_PATH 只负责 chisel server；目标侧按 <os>-<arch>/chisel[.exe] 放在 data/tools/chisel-clients/ 或 ARTEX_CHISEL_CLIENT_DIR。Deploy 用会话命令探测目标（Unix uname；Windows %OS%/%PROCESSOR_ARCHITECTURE%；smbexec 回退 Windows/amd64）并上传匹配二进制。
+SOCKS5 入口是目标侧反向 socks（R:127.0.0.1:<port>:socks），所以经它访问的流量从目标主机发出；验证时不要指向平台 Mac 的 127.0.0.1，应指向目标能访问的地址。
+Windows 目标的 --auth 会出现在目标进程命令行（WMI Create 无环境变量注入能力）；目标已是立足点，可接受，但不要复用高价值口令。
+
+### Q28：Windows 目标上下载 chisel 后文件消失 / 拉起失败？
+先确认目标机的 AV/EDR：实测火绒会在几秒内删除下载到 C:\Windows\Temp 的 chisel 官方二进制（.exe 或改名 .dat 都会删），导致随后 Test-Path 为 false、WMI 拉起报 The system cannot find the file specified。
+处理：使用可信来源/自行构建的 client 并加 AV 白名单；测试可用 -trimpath -ldflags "-s -w" 重新构建（本项目实测这样能在火绒环境下保留并跑通）。另外确认目标能访问 ARTEX_CALLBACK_ADDR 的回连地址与平台临时下载端口。

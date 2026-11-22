@@ -41,9 +41,12 @@ type Plan struct {
 	RemoteBin    string   `json:"remote_bin"`
 	RemoteLog    string   `json:"remote_log"`
 	RemotePID    int      `json:"remote_pid,omitempty"`
-	StageToken   string   `json:"stage_token,omitempty"` // 一次性投递条目（用完删）
-	VerifyAddr   string   `json:"verify_addr,omitempty"` // 决定性验证目标 host:port
-	ClientArgs   []string `json:"client_args"`           // chisel client 参数（不含 auth,auth 走 AUTH env)
+	StageToken   string   `json:"stage_token,omitempty"`   // 一次性投递条目（用完删）
+	VerifyAddr   string   `json:"verify_addr,omitempty"`   // 决定性验证目标 host:port
+	ClientArgs   []string `json:"client_args"`             // chisel client 参数（Unix 走 AUTH env；Windows 用 --auth 参数）
+	TargetOS     string   `json:"target_os,omitempty"`     // 目标 OS（linux/darwin/windows）
+	TargetArch   string   `json:"target_arch,omitempty"`   // 目标架构（amd64/arm64/386/arm）
+	ClientBinary string   `json:"client_binary,omitempty"` // 平台侧选定的目标端 chisel 二进制
 	// suo5 适配器字段（omitempty，向后兼容既有 chisel deploy_params):
 	PayloadFile string `json:"payload_file,omitempty"` // 平台侧 payloads 目录里的文件名（suo5.php 等）
 	PayloadName string `json:"payload_name,omitempty"` // 目标侧随机文件名

@@ -46,6 +46,20 @@ func resolveToolBinary(envKey, dataDir, name string) string {
 	return ""
 }
 
+// resolveToolDir 解析外部工具目录：环境变量优先，其次 dataDir/tools/<name>；不存在返回空。
+func resolveToolDir(envKey, dataDir, name string) string {
+	if d := strings.TrimSpace(os.Getenv(envKey)); d != "" {
+		if st, err := os.Stat(d); err == nil && st.IsDir() {
+			return d
+		}
+	}
+	d := filepath.Join(dataDir, "tools", name)
+	if st, err := os.Stat(d); err == nil && st.IsDir() {
+		return d
+	}
+	return ""
+}
+
 // tunnels 惰性初始化隧道运行时（台账 + 部署器 + 健康巡检 + 状态变更回调）。
 func (s *Server) tunnels() *tunnelRuntime {
 	s.tunnelMu.Lock()
@@ -61,6 +75,7 @@ func (s *Server) tunnels() *tunnelRuntime {
 	mgr, err := tunnel.NewManager(tunnel.Options{
 		Store: store, Stage: stageMgr, Sessions: s.sessions().reg,
 		ChiselPath:      resolveToolBinary("ARTEX_CHISEL_PATH", s.m.dir, "chisel"),
+		ChiselClientDir: resolveToolDir("ARTEX_CHISEL_CLIENT_DIR", s.m.dir, "chisel-clients"),
 		Suo5Path:        resolveToolBinary("ARTEX_SUO5_PATH", s.m.dir, "suo5"),
 		Suo5PayloadsDir: filepath.Join(s.m.dir, "tools", "suo5-payloads"),
 		DataDir:         s.m.dir,

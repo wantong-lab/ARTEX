@@ -102,3 +102,19 @@ ARTEX_SMB_TEST_HOST=192.168.112.133 ARTEX_SMB_TEST_USER=artexsmb \
 目标侧准备（本地管理员账号、允许 ADMIN$ 管理共享）与 RPC/DCOM 被防火墙拦截时的 atexec 回退说明见 docs/faq.md。
 
 升级脚本已适配 0012 迁移：`EXPECTED_MIGRATIONS=12`，实跑 25 步 PASS。
+
+## 跨 OS 隧道真机测试（v0.4.4）
+
+tunnel/chisel_windows_e2e_test.go 默认跳过；验证 平台 macOS → Windows 目标的跨 OS/架构隧道：
+SMB 会话探测 Windows、上传/拉起目标端 chisel.exe、平台 SOCKS5 经 Windows 访问 LAN HTTP 服务。
+
+    # 平台侧 server 二进制；目标侧客户端布局 <os>-<arch>/chisel[.exe]
+    export ARTEX_CHISEL_PATH=/tmp/artex-chisel/darwin-arm64/chisel
+    export ARTEX_CHISEL_CLIENT_DIR=/tmp/artex-chisel/clients
+    export ARTEX_WIN_SMB_HOST=192.168.112.133 ARTEX_WIN_SMB_USER=artexsmb ARTEX_WIN_SMB_PASS='...'
+    export ARTEX_TUNNEL_CALLBACK_HOST=192.168.112.55   # 平台 LAN IP，目标可达
+    export ARTEX_PG_DSN='postgres://artex:artex@127.0.0.1:55432/artex_tunnel?sslmode=disable'
+    go test ./tunnel -run TestChiselWindowsRealE2E -v -timeout 300s
+
+Windows 目标需要本地管理员账号（SMB 会话）与 ADMIN$ 共享；测试后清理账号/注册表/临时目录。
+目标机有火绒等 AV 时，官方 chisel 可能被秒删；用 -ldflags "-s -w" 构建的 client 或加白名单。

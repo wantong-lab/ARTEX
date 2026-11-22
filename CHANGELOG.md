@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-11-22
+
+### 新增的功能
+- 隧道跨 OS/架构支持：平台侧 chisel server 继续用 ARTEX_CHISEL_PATH（或 data/tools/chisel），目标侧按 <os>-<arch>/chisel[.exe] 布局从 ARTEX_CHISEL_CLIENT_DIR（默认 data/tools/chisel-clients）选择并上传对应二进制；Deploy 自动探测目标 OS/架构（Unix uname；Windows %OS% + %PROCESSOR_ARCHITECTURE%；smbexec 回退 Windows/amd64），Plan 记录 target_os/target_arch/client_binary。同平台同架构仍可回退单一 ChiselPath，向后兼容旧部署。
+- 目标端交付统一改为平台临时 HTTP 一次性下载（Unix curl/wget、Windows PowerShell），不依赖 stage 路由；Windows 拉起改用 WMI Win32_Process.Create（避免 atexec 等待子进程句柄/输出到超时）；目录创建、巡检、清理、taskkill 全部按 Windows 适配，路径落在 C:\Windows\Temp\.artex-<tag>（无空格）。
+
+### 测试与验收
+- 新增单元测试：OS/架构归一化、目标探测、client 二进制选择与同平台回退、Windows 路径改写、Windows 命令构造（无危险重定向）、WMI 拉起命令。
+- 新增 env 门控真机测试 tunnel/chisel_windows_e2e_test.go：平台 macOS/arm64 起 chisel server，经 SMB 会话在 Windows 目标（192.168.112.133）下载并拉起 chisel.exe，从平台 SOCKS5 经 Windows 访问平台 LAN HTTP 目标——实测 PASS；旧同机 loopback chisel E2E 回归 PASS。
+- 实测注意：目标机火绒会拦截 chisel 官方二进制（下载后秒删）；测试用 -ldflags "-s -w" 重新构建的客户端；生产需可信构建或加白名单，见 FAQ Q28。
+
+
 ## [0.4.3] - 2026-11-22
 
 ### 修复
