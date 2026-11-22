@@ -278,4 +278,4 @@
 - 实现：tunnel_deploy 新增 c2_session_id；server/c2_session_adapter.go 把 C2 TCP/HTTP 会话包装为 session.Session（TCP 走 Manager.Dispatch，HTTP 走 c2_tasks 队列）；tunnel.Manager 新增 DeployWithSession；新增固定 listen_port；C2 分块上传兜底（gzip + 64KiB 分块）。
 - 验证：公网 VPS 仅 C2 TCP 上线（无 SSH），C2 任务上传/拉起 chisel，平台 SOCKS 访问 VPS 本地 HTTP 200；上传 11MB 客户端约 29s，整链路 47.7s PASS；测试后清理监听器/目标进程。
 - 限制：HTTP beacon 的 C2 分块上传明显更慢；公网目标需要两个映射端口（C2 控制 + chisel listen_port）。
-- 下一步：提交/CI → tag v0.4.6 → Release/GHCR 校验。
+- 发布：提交 eadca3a；CI 45032012302 全绿；tag v0.4.6 → Release 45032289276 成功，5 平台 zip + SHA256SUMS、GHCR v0.4.6 index 校验通过。
