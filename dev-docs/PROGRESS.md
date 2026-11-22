@@ -246,3 +246,9 @@
 - 发布：tag v0.4.2 → Release 工作流 44929501199 全绿（frontend、darwin/linux/windows 五平台 binaries、release、docker）；Release 资产 5 个 zip + SHA256SUMS；docker job 改用 GITHUB_TOKEN 推 GHCR 成功，ghcr.io/wantong-lab/artex:v0.4.2 / :latest 为多架构 OCI index（本地 docker manifest inspect 验证）。
 - 最终验证：go build/vet/test ./... 全绿（全新 artex_final 库）；本地 docker build 成功，镜像内 artex -h 与 /app/seed_demo.py --help 可执行；demo seed 在全新库两次运行均 EXIT=0（幂等）。
 - 结论：P0（发布收口）、P1（7 项能力）、P2（4 项验证加固）、P3（3 项体验文档）全部完成，BACKLOG 17/17 勾选；目标完成。
+
+
+## 轮次 40 · 2026-11-22（v0.4.3 补测与修复）
+- 补测：①升级脚本 0012 适配并重跑 upgrade_rollback.sh → RESULT PASS steps=25；②Docker Compose 全流程（本地镜像 + PG16 + /setup + 容器内 demo seed + Playwright 验证 [DEMO] 任务/KB + 优雅停止）；③llm_failover.py 坏 provider→好 provider 真实转移 + 流式 2.8s/非流式 3.3s；④C2 HTTP beacon 真链路测试；SMB 真机测试（Windows 192.168.112.133：自动回退 atexec、复合命令、文件读写删）；⑤UI 冒烟扩展并入 CI ui job；⑥全仓 go test -race。
+- 修复：SMB atexec 回退（RPC/DCOM 被拦场景）、atexec 复合命令引号、文件读写 PowerShell 化、impacket 噪声过滤；升级脚本迁移数 12；UI 冒烟路由延迟处理。
+- 结论：6 项建议中 5 项完成并有实测证据；隧道跨主机留作已知限制（chisel 单二进制需与平台同架构，macOS→Linux VPS 不适用）。下一步提交、CI 验证并打 v0.4.3。

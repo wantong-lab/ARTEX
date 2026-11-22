@@ -140,6 +140,8 @@ POST /api/llm/retry-policy
 - `streaming=false`：单次 JSON 响应，规避网关 SSE 断流、重复包、压缩/代理缓冲问题；缺点是运行中看不到增量输出，只能等整轮结束。
 - 切换只影响该 profile 之后的调用；任务运行中保存 profile 会重建该任务的 provider。
 - 如果出现“请求发出后长时间无输出”“只收到一半就中断”“测试通过但任务卡住”，先把该 profile 改为非流式复测。
+- 实测记录（v0.4.3 补测）：opencode-go hy4-flash-free 在 `streaming=true` 下测试连接 2.8s 正常返回，非流式 3.3s；
+  流式可用性仍受网关/网络影响，非流式保留为兜底。
 
 ## 7. 失败转移、轮询与重试
 

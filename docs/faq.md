@@ -94,3 +94,18 @@ broken_at 指向第一条断链行：该行或更早的行被修改/删除。保
 
 ### Q24：RoE strict 模式误拦内网目标？
 scope 为空/未审批时按 unknown 处理（不拦）；strict 只拦明确越界目标，loopback 永不拦。把资产加入 scope 或走 pending_scope 审批后生效。
+
+
+## SMB / Windows 会话
+
+### Q25：Windows 目标 SMB 会话一直失败，或 wmiexec 报 Connection reset？
+wmiexec 依赖 SMB（445）+ RPC/DCOM（135 + 高位动态端口）。很多加固后的 Windows 只放行 445，
+RPC 动态端口被防火墙拦掉，表现为 SMB 协议握手正常、随后 connection reset。
+v0.4.3 起 SMB 会话会自动回退到 `atexec.py`（只走 SMB 服务管理器 + 计划任务），
+首次失败后同一条会话后续命令直接走 atexec；也可设 `ARTEX_SMB_BACKEND=atexec` 强制使用。
+测试回退逻辑见 `session/smb_real_host_test.go`（默认跳过，需显式提供 Windows 目标）。
+
+### Q26：为什么 wmiexec 已能连上，文件读写仍失败？
+atexec 由计划任务执行，外层会给命令追加 `> %windir%\Temp\...` 重定向，
+命令自身的 `>` 会被最后一个重定向覆盖。ARTEX 对 atexec 后端的文件读写改用
+PowerShell `-EncodedCommand`（无重定向、无嵌套引号），大文件分块写入。

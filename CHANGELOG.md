@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-11-22
+
+### 修复
+- Windows SMB 会话兼容性：wmiexec 依赖的 RPC/DCOM 动态端口被目标防火墙拦截时，自动回退到只依赖 SMB 的 atexec；atexec 后端修正复合命令引号包装（`&` 不再只执行最后一段）、文件读写改用 PowerShell -EncodedCommand（规避计划任务外层重定向吃掉命令自身重定向）、过滤 impacket/Python 告警噪声。
+- 升级验收脚本适配 0012 迁移（EXPECTED_MIGRATIONS=12），重新跑通 v0.4.1→v0.4.2 升级/回滚/备份恢复/soak。
+
+### 测试与验收
+- 新增 C2 HTTP beacon 真链路测试（真实监听器：上线→领取任务→回传结果→停止不可达）。
+- 新增真机 Windows SMB 测试（env 门控）：自动回退 atexec、复合命令、文件写入/读取/删除，在 192.168.112.133 实测通过。
+- 新增 LLM 失败转移验收脚本：坏 provider 链自动切换到好 provider 并真实执行，流式/非流式探测均通过；实测 opencode-go 流式 2.8s、非流式 3.3s。
+- UI 冒烟扩展并接入 CI：静态导出 + 内嵌二进制 + Chromium，覆盖暗色/移动端无溢出、加载骨架、401 回跳、403 toast、内网 7 页签、404；CI 新增 `ui` job。
+- Docker Compose 全流程实测：镜像 + PostgreSQL 启动、/setup 初始化、镜像内 demo seed、2 个已暂停 [DEMO] 任务 + 4 条 KB 在 UI 可见、优雅停止。
+- 全仓 `go test -race ./...` 在新增代码后重新跑通（RACE_EXIT=0）。
+
 ## [0.4.2] - 2026-11-22
 
 ### 新增的功能
