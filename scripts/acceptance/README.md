@@ -75,3 +75,30 @@ observability_check.py
 对运行中的服务校验 /metrics 指标集合与请求计数增长、/api/observability/status JSON、以及 ARTEX_LOG_FORMAT=json 时的结构化访问日志；服务需以 JSON 日志模式启动并传入 --log-file。
 
 python3 scripts/acceptance/observability_check.py --base http://127.0.0.1:18907 --log-file /tmp/artex-obs.log
+
+
+## LLM 失败转移 + 流式探测（v0.4.3 补测）
+
+`llm_failover.py` 在真实服务上创建一条坏 provider（不可达 base_url），用任务级 profile 链
+[坏配置, 好配置] 验证建连失败后自动切到好配置并真实执行命令；随后探测流式 SSE 与非流式。
+需要数据库里已有可用激活 profile。
+
+```bash
+python3 scripts/acceptance/llm_failover.py --base http://127.0.0.1:18911 --password 'Accept-Artex-2026!'
+```
+
+## SMB 真机测试（v0.4.3 补测）
+
+`session/smb_real_host_test.go` 默认跳过；设置 Windows 目标后验证 wmiexec→atexec 自动回退、
+复合 cmd 命令、文件写入/读取/删除：
+
+```bash
+export PATH="$HOME/anaconda3/bin:$PATH"   # 需要 impacket wmiexec.py/atexec.py
+ARTEX_SMB_TEST_HOST=192.168.112.133 ARTEX_SMB_TEST_USER=artexsmb \
+  ARTEX_SMB_TEST_PASS='...' \
+  go test ./session -run TestSMBRealWindows -v -timeout 240s
+```
+
+目标侧准备（本地管理员账号、允许 ADMIN$ 管理共享）与 RPC/DCOM 被防火墙拦截时的 atexec 回退说明见 docs/faq.md。
+
+升级脚本已适配 0012 迁移：`EXPECTED_MIGRATIONS=12`，实跑 25 步 PASS。
