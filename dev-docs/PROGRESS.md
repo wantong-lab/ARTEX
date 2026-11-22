@@ -267,4 +267,4 @@
 - 问题：公网 VPS 目标无法访问平台随机 bootstrap 端口（NAT 只映射 39443/39444）；SSH Exec 等后台 chisel 子进程导致拉起 20s 超时（客户端实际已回连）。
 - 修复：新增 ARTEX_TUNNEL_STAGE_PORT 固定下载端口；Unix spawn 改为后台块 stdout/stderr 全量重定向 + pid 文件回读。
 - 验证：公网 VPS E2E PASS（macOS 平台 → 39.89.211.55:39444 → Linux VPS 113.20.3.124；SOCKS5 经 VPS 访问本地 HTTP，公网出口 IP=113.20.3.124）；loopback E2E 回归 PASS；VPS 临时进程/目录已清理。
-- 下一步：提交推送 → CI → tag v0.4.5 → Release/GHCR 校验。
+- 发布：提交 10faddf；CI 45025109590 全绿；tag v0.4.5 → Release 45025422076 成功，5 平台 zip + SHA256SUMS 已发布，GHCR ghcr.io/wantong-lab/artex:v0.4.5 OCI index 校验通过。
