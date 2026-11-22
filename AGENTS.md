@@ -24,5 +24,5 @@
 
 ## 当前进行中的方向
 
-- 跨 OS/跨架构隧道适配：v0.4.4 已完成（平台/目标端二进制分离、Windows 目标交付/拉起/清理、Windows 真机 E2E）。
+- 跨 OS/跨架构隧道适配：v0.4.4 已完成（Windows 真机 E2E）；v0.4.5 补公网 VPS 验证（固定 bootstrap 端口 + SSH 拉起修复，VPS E2E PASS）。
 - C2 socks5 能力调研：二开版本为外部 C2 MCP（Supershell manage_socks5）集成；主线如需内置，走反向 SOCKS-over-C2 或外部 MCP 两种方案，待定。

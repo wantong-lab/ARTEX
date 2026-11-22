@@ -314,7 +314,11 @@ func (m *Manager) killRemoteWindows(ctx context.Context, sess session.Session, p
 // serveBinaryOnce 在平台侧临时起一个单次下载服务（目标回连地址可达的端口），
 // 供目标用 PowerShell 拉取 bootstrap 二进制，下载完成或超时即关闭。
 func (m *Manager) serveBinaryOnce(ctx context.Context, p *Plan, data []byte, filename string) (string, func(), error) {
-	ln, err := net.Listen("tcp", "0.0.0.0:0")
+	addr := "0.0.0.0:0"
+	if m.stagePort > 0 {
+		addr = "0.0.0.0:" + strconv.Itoa(m.stagePort)
+	}
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return "", nil, fmt.Errorf("临时下载服务监听失败: %w", err)
 	}

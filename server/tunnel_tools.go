@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -60,6 +61,20 @@ func resolveToolDir(envKey, dataDir, name string) string {
 	return ""
 }
 
+// resolveStagePort 解析 bootstrap 固定下载端口（ARTEX_TUNNEL_STAGE_PORT）；非法/未设返回 0。
+func resolveStagePort() int {
+	v := strings.TrimSpace(os.Getenv("ARTEX_TUNNEL_STAGE_PORT"))
+	if v == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 || n > 65535 {
+		log.Printf("[tunnel] ARTEX_TUNNEL_STAGE_PORT 非法（%q)，使用随机端口", v)
+		return 0
+	}
+	return n
+}
+
 // tunnels 惰性初始化隧道运行时（台账 + 部署器 + 健康巡检 + 状态变更回调）。
 func (s *Server) tunnels() *tunnelRuntime {
 	s.tunnelMu.Lock()
@@ -76,6 +91,7 @@ func (s *Server) tunnels() *tunnelRuntime {
 		Store: store, Stage: stageMgr, Sessions: s.sessions().reg,
 		ChiselPath:      resolveToolBinary("ARTEX_CHISEL_PATH", s.m.dir, "chisel"),
 		ChiselClientDir: resolveToolDir("ARTEX_CHISEL_CLIENT_DIR", s.m.dir, "chisel-clients"),
+		StagePort:       resolveStagePort(),
 		Suo5Path:        resolveToolBinary("ARTEX_SUO5_PATH", s.m.dir, "suo5"),
 		Suo5PayloadsDir: filepath.Join(s.m.dir, "tools", "suo5-payloads"),
 		DataDir:         s.m.dir,

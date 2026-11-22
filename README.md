@@ -97,6 +97,8 @@ LLM 接入与失败转移见 [docs/llm-config.md](docs/llm-config.md)；C2 / 代
 
 Deploy 时会话探测目标 OS/架构并自动选择对应 client；Plan 记录 target_os/target_arch，同平台同架构仍回退单一 ChiselPath。Windows 目标通过临时 HTTP 下载 + WMI 拉起，SOCKS5 入口在目标侧，因此目标内网/出口流量从 Windows 立足点发出；--auth 会出现在 Windows 进程命令行（Windows 环境限制，见 FAQ Q27）。若目标机有 AV/EDR（如火绒）拦截 chisel，需使用可信构建/加白名单，见 FAQ Q28。
 
+公网/NAT 平台需要把 bootstrap 下载端口映射到平台并设 `ARTEX_TUNNEL_STAGE_PORT`（默认随机端口在 NAT 后目标不可达）；Unix/SSH 目标的后台拉起用 pid 文件回读，避免 SSH 通道等待子进程。
+
 ## 安装
 
 > 依赖数据库 **PostgreSQL**；探索需配置 **LLM**（`ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY`，也可在 UI 里配）。

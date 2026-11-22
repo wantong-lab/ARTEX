@@ -118,3 +118,21 @@ SMB 会话探测 Windows、上传/拉起目标端 chisel.exe、平台 SOCKS5 经
 
 Windows 目标需要本地管理员账号（SMB 会话）与 ADMIN$ 共享；测试后清理账号/注册表/临时目录。
 目标机有火绒等 AV 时，官方 chisel 可能被秒删；用 -ldflags "-s -w" 构建的 client 或加白名单。
+
+## 公网 VPS 跨主机隧道（v0.4.5）
+
+tunnel/chisel_vps_e2e_test.go 默认跳过；验证 平台 macOS → 公网 Linux VPS 的 chisel 隧道：
+平台 chisel server 绑 0.0.0.0:39444（公网映射 39.89.211.55:39444 -> 平台:39444），
+经 SSH 会话上传/拉起 linux client，平台 SOCKS5 经 VPS 访问 VPS 本地 HTTP 并校验公网出口 IP。
+
+```bash
+export ARTEX_VPS_SSH_HOST=113.20.3.124 ARTEX_VPS_SSH_USER=root
+export ARTEX_VPS_SSH_KEY_PATH=$HOME/.ssh/id_ed25519_113.20.3.124
+export ARTEX_CHISEL_PATH=/tmp/artex-chisel/darwin-arm64/chisel
+export ARTEX_CHISEL_CLIENT_DIR=/tmp/artex-chisel/clients
+export ARTEX_TUNNEL_CALLBACK_HOST=39.89.211.55
+export ARTEX_PG_DSN='postgres://artex:artex@127.0.0.1:55432/artex_vps?sslmode=disable'
+go test ./tunnel -run TestChiselVPSRealE2E -v -timeout 320s
+```
+
+平台需设 ARTEX_TUNNEL_STAGE_PORT=39443（映射到平台的固定 bootstrap 端口）；测试结束会清理 VPS 上的 chisel 进程/临时目录。

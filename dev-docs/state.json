@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 42,
+  "round": 43,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -219,7 +219,8 @@
     "release_v0_4_2": "tag v0.4.2; release run 44929501199 success; assets 5 zips + SHA256SUMS; GHCR ghcr.io/wantong-lab/artex:v0.4.2 & latest (amd64/arm64 OCI index); final go build/vet/test all pass; local docker build + seed verified",
     "v0_4_3_gap_tests": "upgrade PASS steps=25 (migrations 12); compose full flow PASS (setup/seed/UI/stop); LLM failover + streaming PASS EXIT=0; C2 beacon E2E PASS; SMB real Windows PASS (atexec fallback, file IO); full go test -race RACE_EXIT=0",
     "release_v0_4_3": "CI 44990406383 success (go/web/ui); release 44990610317 success; assets 5 zips + SHA256SUMS; GHCR v0.4.3 & latest multi-arch",
-    "v0_4_4_cross_os_tunnel": "提交 148bb81（CI 修复 3e95efb），CI 45000922837 全绿；tag v0.4.4，Release 45001123212 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.4/latest OCI index）；Windows 真机 E2E + loopback E2E PASS；目标机火绒拦截官方 chisel，测试用 -ldflags -s -w 构建 client。"
+    "v0_4_4_cross_os_tunnel": "提交 148bb81（CI 修复 3e95efb），CI 45000922837 全绿；tag v0.4.4，Release 45001123212 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.4/latest OCI index）；Windows 真机 E2E + loopback E2E PASS；目标机火绒拦截官方 chisel，测试用 -ldflags -s -w 构建 client。",
+    "v0_4_5_public_vps_tunnel": "公网 VPS E2E PASS：macOS/arm64 平台 chisel server 0.0.0.0:39444（公网映射 39.89.211.55:39444），经 SSH 会话在 Linux VPS 113.20.3.124 拉起 linux/amd64 client；平台 SOCKS5 访问 VPS 本地 HTTP 成功，公网出口 IP 返回 113.20.3.124；loopback E2E 回归 PASS。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
