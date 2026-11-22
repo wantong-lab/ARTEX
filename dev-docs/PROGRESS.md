@@ -261,4 +261,4 @@
 ## 轮次 42 · 2026-11-22（跨 OS/架构隧道 + v0.4.4）
 - 实现：Plan 增 target_os/target_arch/client_binary（向后兼容）；Manager 增 chiselClientDir（ARTEX_CHISEL_CLIENT_DIR 或 data/tools/chisel-clients）；Deploy 前探测目标平台并选目标端二进制；Linux 保持 setsid/nohup/AUTH env；Windows 走平台临时 HTTP 下载 + WMI Win32_Process.Create 拉起（atexec 下 Start-Process 会等到超时）、目录/巡检/taskkill 适配、SOCKS 入口在目标侧；server/tunnel_tools.go 注入 client 目录。
 - 验证：单元测试（平台名/架构、探测、二进制选择、Windows 命令、路径改写）通过；旧同机 loopback chisel E2E PASS；新 Windows 真机 E2E PASS（platform macOS/arm64 → Windows 192.168.112.133，SMB 会话，SOCKS5 经 Windows 访问平台 LAN HTTP 返回 marker）；go build/vet/gofmt 通过。目标机火绒会秒删 chisel 官方二进制，测试改用 -trimpath -ldflags "-s -w" 重新构建的 client；目标账号/临时目录/进程已清理。
-- 下一步：提交推送 → CI 验证 → tag v0.4.4 → Release/GHCR 校验。
+- 发布：提交 148bb81 + CI 修复 3e95efb；CI 45000922837 全绿（go/web/ui）；tag v0.4.4 → Release 45001123212 成功，Release 资产 5 平台 zip + SHA256SUMS 非 draft，GHCR ghcr.io/wantong-lab/artex:v0.4.4 / :latest 多架构 OCI index 验证通过。

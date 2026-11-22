@@ -219,7 +219,7 @@
     "release_v0_4_2": "tag v0.4.2; release run 44929501199 success; assets 5 zips + SHA256SUMS; GHCR ghcr.io/wantong-lab/artex:v0.4.2 & latest (amd64/arm64 OCI index); final go build/vet/test all pass; local docker build + seed verified",
     "v0_4_3_gap_tests": "upgrade PASS steps=25 (migrations 12); compose full flow PASS (setup/seed/UI/stop); LLM failover + streaming PASS EXIT=0; C2 beacon E2E PASS; SMB real Windows PASS (atexec fallback, file IO); full go test -race RACE_EXIT=0",
     "release_v0_4_3": "CI 44990406383 success (go/web/ui); release 44990610317 success; assets 5 zips + SHA256SUMS; GHCR v0.4.3 & latest multi-arch",
-    "v0_4_4_cross_os_tunnel": "平台 macOS/arm64 + Windows 192.168.112.133 真机：SMB 会话探测 windows/amd64、下载/拉起 chisel.exe、平台 SOCKS5 经 Windows 访问 LAN HTTP marker PASS；旧 loopback E2E 回归 PASS；目标机火绒拦截官方 chisel，测试用 -ldflags -s -w 构建 client。"
+    "v0_4_4_cross_os_tunnel": "提交 148bb81（CI 修复 3e95efb），CI 45000922837 全绿；tag v0.4.4，Release 45001123212 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.4/latest OCI index）；Windows 真机 E2E + loopback E2E PASS；目标机火绒拦截官方 chisel，测试用 -ldflags -s -w 构建 client。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"

@@ -34,7 +34,7 @@
 
 ## P4 运营能力补强（v0.4.4）
 
-- [x] P4-18 隧道跨 OS/架构适配：平台/目标端 chisel 二进制分离（ARTEX_CHISEL_CLIENT_DIR/<os>-<arch>/chisel[.exe]）、目标 OS/架构自动探测、Windows 目标临时 HTTP 下载 + WMI 拉起 + 巡检/清理适配；单元测试 + Windows 真机 E2E（macOS 平台 → Windows 192.168.112.133，SOCKS5 经目标访问 LAN HTTP 成功）。
+- [x] P4-18 隧道跨 OS/架构适配：平台/目标端 chisel 二进制分离（ARTEX_CHISEL_CLIENT_DIR/<os>-<arch>/chisel[.exe]）、目标 OS/架构自动探测、Windows 目标临时 HTTP 下载 + WMI 拉起 + 巡检/清理适配；单元测试 + Windows 真机 E2E（macOS 平台 → Windows 192.168.112.133，SOCKS5 经目标访问 LAN HTTP 成功）。提交 148bb81（CI 修复 3e95efb），tag v0.4.4。
 
 ## 变更记录
 
@@ -76,4 +76,4 @@
 
 - 2026-11-22：**v0.4.3 发布收口**。CI 44990406383 全绿（go/web/新 ui job）；Release 工作流 44990610317 全绿（frontend、五平台 binaries、release、docker）；GitHub Release v0.4.3 非草稿：artex-0.4.3-{darwin,linux}-{amd64,arm64}.zip + windows-amd64.zip + SHA256SUMS；GHCR ghcr.io/wantong-lab/artex:v0.4.3 与 :latest 多架构镜像已推送（manifest 验证）。本轮 6 项补测建议完成 5 项，隧道跨主机列为已知限制。
 
-- 2026-11-22：P4-18 跨 OS/架构隧道完成（tunnel/platform.go、deploy/deliver/spawn 适配、server 配置、Windows 真机 E2E）。提交/发布后回填 commit 与 tag。
+- 2026-11-22：P4-18 跨 OS/架构隧道完成（tunnel/platform.go、deploy/deliver/spawn 适配、server 配置、Windows 真机 E2E）。提交 148bb81；CI 45000922837 全绿；tag v0.4.4，Release 45001123212 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.4/latest 多架构 index 校验通过）。
