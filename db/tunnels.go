@@ -27,7 +27,7 @@ const (
 type TunnelRecord struct {
 	ID           int64           `json:"id"`
 	TaskID       int64           `json:"task_id"`
-	Kind         string          `json:"kind"` // socks | portfwd
+	Kind         string          `json:"kind"` // socks | portfwd | ingress
 	Adapter      string          `json:"adapter"`
 	ListenHost   string          `json:"listen_host"`
 	ListenPort   int             `json:"listen_port"`
@@ -54,8 +54,8 @@ func NewTunnelStore(d *DB) *TunnelStore {
 
 // Create 插入一条隧道（初始 state 通常为 deploying）并返回主键。
 func (s *TunnelStore) Create(ctx context.Context, rec *TunnelRecord) (int64, error) {
-	if rec.Kind != "socks" && rec.Kind != "portfwd" {
-		return 0, fmt.Errorf("非法隧道类型 %q（socks|portfwd)", rec.Kind)
+	if rec.Kind != "socks" && rec.Kind != "portfwd" && rec.Kind != "ingress" {
+		return 0, fmt.Errorf("非法隧道类型 %q（socks|portfwd|ingress)", rec.Kind)
 	}
 	adapter := rec.Adapter
 	if adapter == "" {

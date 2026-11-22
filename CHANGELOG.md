@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-11-22
+
+### 新增
+- C2 入站回调中继（设计稿 dev-docs/design/2026-11-22-c2-ingress-relay.md）：新增 c2_ingress_deploy / c2_ingress_teardown；平台 C2 listener 只绑 127.0.0.1，VPS 侧用 chisel 客户端本地转发监听 vps_port，目标植入端只回连 VPS 地址；自动创建/启动 loopback C2 listener，并返回 HTTP（PowerShell/Python/Bash）或 TCP Python 植入端内容。
+- tunnel 新增 ingress 计划类型与迁移 0013（tunnels.kind 允许 ingress）；复用了固定 listen_port 与 C2→隧道部署基础。
+- c2_ingress_teardown 停隧道并停止关联 loopback listener，幂等清理。
+
+### 测试
+- 真机 E2E（用户指定拓扑）：ARTEX 平台 → VPS 113.20.3.124（ingress 443）→ Windows 192.168.112.133；Windows HTTP PowerShell 植入端只回连 VPS 地址，C2 会话经 chisel 到达平台 127.0.0.1 listener，remote=127.0.0.1 中继，whoami/hostname 任务成功，整链路 20.6s PASS。
+- 环境限制：VPS 云防火墙只放行 22/80/443，39444 入站被拦；测试临时停用 1Panel openresty 使用 443，测试后已恢复。生产需放行回调端口或用 80/443 前置代理。
+
+
 ## [0.4.6] - 2026-11-22
 
 ### 新增

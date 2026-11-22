@@ -24,6 +24,7 @@ import (
 const (
 	KindSocks     = "socks"
 	KindPortfwd   = "portfwd"
+	KindIngress   = "ingress"
 	AdapterChisel = "chisel"
 )
 

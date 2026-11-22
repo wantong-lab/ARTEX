@@ -1,7 +1,7 @@
 # 设计稿：C2 入站回调中继（C2 Ingress Relay）
 
 - 日期：2026-11-22
-- 状态：已评审（P0 实施中）
+- 状态：已实施（P0，v0.4.7）
 - 关联：v0.4.6 C2→chisel 数据面、v0.4.5 公网 VPS 隧道、v0.4.4 跨 OS 隧道
 - 关键词：C2 ingress、reverse callback、chisel local forward、VPS 节点、Windows 目标
 
@@ -244,3 +244,11 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 
 - chisel client 本地转发语法（本机 --help 实测）：local-host:local-port:remote-host:remote-port
 - v0.4.6 C2→tunnel 设计：server/c2_session_adapter.go、server/c2_tunnel_e2e_test.go
+
+## 11. 实施记录（P0）
+
+- 提交：feature 提交待回填；迁移 0013（tunnels.kind 增加 ingress）。
+- 代码：tunnel.PlanIngress、Manager 部署/校验/回滚支持；server/c2_ingress_tools.go（c2_ingress_deploy / c2_ingress_teardown）；C2 listener 强制 loopback；HTTP PowerShell/TCP Python 植入端回调地址由 ingress 生成。
+- 验证：Windows 133 目标（HTTP PowerShell 植入端）经 VPS 公网回调到平台 loopback C2 listener；C2 会话 active（remote=127.0.0.1 中继），whoami/hostname 任务成功；整链路 20.6s PASS。
+- 环境说明：测试 VPS（113.20.3.124）云防火墙只放行 22/80/443，39444 入站不可达；测试临时停 1Panel openresty 使用 443 完成验证，测试后已恢复。生产需在 VPS 放行所选回调端口，或用 80/443 前置代理。
+

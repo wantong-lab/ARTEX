@@ -228,6 +228,9 @@ func (m *Manager) validateChiselPlan(p *Plan) error {
 	if p.Kind == KindSocks && p.SocksPort <= 0 || p.Kind == KindPortfwd && p.LocalPort <= 0 {
 		return fmt.Errorf("计划缺收入口端口（socks_port/local_port)")
 	}
+	if p.Kind == KindIngress && (p.ListenPort <= 0 || p.PlatformChiselPort <= 0 || p.TargetPort <= 0) {
+		return fmt.Errorf("ingress 计划缺 VPS 监听端口/平台 chisel 端口/C2 回环端口")
+	}
 	return nil
 }
 
@@ -442,6 +445,9 @@ func (m *Manager) spawnRemote(ctx context.Context, sess session.Session, p *Plan
 
 // verify 等回连入口起来后做决定性验证。
 func (m *Manager) verify(ctx context.Context, sess session.Session, p *Plan) error {
+	if p.Kind == KindIngress {
+		return m.verifyIngress(ctx, sess, p)
+	}
 	entry := m.entryAddr(p)
 	// 等反向入口监听起来（= 目标已回连）。
 	deadline := time.Now().Add(callbackWait)
@@ -517,8 +523,37 @@ func (m *Manager) verify(ctx context.Context, sess session.Session, p *Plan) err
 	return nil
 }
 
+// verifyIngress 等 VPS 侧监听起来。平台可达 VPS 时直接拨 VPS 回调端口；
+// 不可达时回退到会话内 ss/netstat 检查 listener。
+func (m *Manager) verifyIngress(ctx context.Context, sess session.Session, p *Plan) error {
+	entry := m.entryAddr(p)
+	deadline := time.Now().Add(callbackWait)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", entry, dialProbeEvery)
+		if err == nil {
+			_ = conn.Close()
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(dialProbeEvery):
+		}
+	}
+	// 平台直接拨 VPS 公网失败（家庭出口/防火墙）时，退到会话内检查监听。
+	cmd := fmt.Sprintf("(ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | grep -E '[:.]%d[[:space:]]' | head -1", p.ListenPort)
+	if out, _, err := sess.Exec(ctx, cmd, probeTimeout); err == nil && strings.TrimSpace(out) != "" {
+		log.Printf("[tunnel] ingress 平台侧拨 %s 失败，但目标侧已监听 %d（%s）", entry, p.ListenPort, detailOf(out))
+		return nil
+	}
+	return fmt.Errorf("等待 VPS 入站监听超时（%v 内 %s 不可连且目标侧未监听 %d）", callbackWait, entry, p.ListenPort)
+}
+
 // entryAddr 是平台回环上的隧道入口（socks5 或转发口）。
 func (m *Manager) entryAddr(p *Plan) string {
+	if p.Kind == KindIngress {
+		return net.JoinHostPort(p.C2CallbackHost, strconv.Itoa(p.ListenPort))
+	}
 	port := p.SocksPort
 	if p.Kind == KindPortfwd {
 		port = p.LocalPort

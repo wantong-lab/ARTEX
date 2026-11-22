@@ -174,3 +174,25 @@ go test ./server -run TestC2TunnelPublicVPS -v -timeout 420s
 ```
 
 端口：C2 TCP 监听 39444，chisel server 固定 39443；测试会清理 C2 监听器、目标端进程/目录。
+
+## C2 入站回调中继 E2E（v0.4.7）
+
+server/c2_ingress_e2e_test.go 默认 skip；验证 平台 → VPS ingress → Windows 133 目标只回连 VPS 的 C2 HTTP 上线链路。
+
+```bash
+export ARTEX_PG_DSN='postgres://artex:artex@127.0.0.1:55432/artex_ingress?sslmode=disable'
+export ARTEX_C2_INGRESS_PLATFORM_HOST=39.89.211.55
+export ARTEX_C2_INGRESS_PLATFORM_PORT=39443
+export ARTEX_C2_INGRESS_VPS_SSH=root@113.20.3.124
+export ARTEX_C2_INGRESS_VPS_KEY=$HOME/.ssh/id_ed25519_113.20.3.124
+export ARTEX_C2_INGRESS_VPS_PUBLIC=113.20.3.124
+export ARTEX_C2_INGRESS_VPS_PORT=443
+export ARTEX_C2_INGRESS_WIN_SSH=wantong@192.168.112.133
+export ARTEX_C2_INGRESS_WIN_KEY=$HOME/.ssh/id_ed25519_192.168.112.133
+export ARTEX_CHISEL_PATH=/tmp/artex-chisel/darwin-arm64/chisel
+export ARTEX_CHISEL_CLIENT_DIR=/tmp/artex-chisel/clients
+export ARTEX_TUNNEL_STAGE_PORT=39444
+go test ./server -run TestC2IngressWindowsE2E -v -timeout 420s
+```
+
+端口：VPS 回调端口需云防火墙放行；测试环境 39444 被 VPS 云防火墙拦截，实际使用 443（临时停 1Panel openresty，测试后恢复）。测试 Windows 植入端用本地 SSH 前台会话保持，不依赖 Start-Process/WMI。

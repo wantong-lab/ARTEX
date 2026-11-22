@@ -279,3 +279,10 @@
 - 验证：公网 VPS 仅 C2 TCP 上线（无 SSH），C2 任务上传/拉起 chisel，平台 SOCKS 访问 VPS 本地 HTTP 200；上传 11MB 客户端约 29s，整链路 47.7s PASS；测试后清理监听器/目标进程。
 - 限制：HTTP beacon 的 C2 分块上传明显更慢；公网目标需要两个映射端口（C2 控制 + chisel listen_port）。
 - 发布：提交 eadca3a；CI 45032012302 全绿；tag v0.4.6 → Release 45032289276 成功，5 平台 zip + SHA256SUMS、GHCR v0.4.6 index 校验通过。
+
+## 轮次 46 · 2026-11-22（C2 入站回调中继 P0）
+- 设计稿：dev-docs/design/2026-11-22-c2-ingress-relay.md；AGENTS.md 增加“设计稿先行”强制约束。
+- 实现：tunnel kind=ingress + PlanIngress（迁移 0013）；平台 C2 listener 强制 loopback；VPS chisel client 本地转发；c2_ingress_deploy 自动建 listener/返回植入端；c2_ingress_teardown 清理。
+- 真机：Windows 133 目标（HTTP PowerShell）只回连 VPS，经 chisel 到平台 loopback C2，会话 active、whoami/hostname 任务成功，20.6s PASS。
+- 环境：VPS 云防火墙仅放行 22/80/443，39444 被拦；测试临时停 1Panel openresty 用 443，测试后已恢复。
+- 后续：提交/CI → tag → Release/GHCR；P1 UI/多 VPS 台账。
