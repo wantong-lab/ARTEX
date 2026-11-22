@@ -8,6 +8,14 @@
 - 状态源与记录：`dev-docs/BACKLOG.md`（唯一状态源）、`CHANGELOG.md`、`dev-docs/PROGRESS.md`、`dev-docs/state.json`。
 - 验收/冒烟：`scripts/acceptance/`；`scripts/smoke/`（`ui_smoke.mjs` 已接入 CI 的 `ui` job）。
 
+## 设计稿先行约束（强制）
+
+- 任何功能逻辑修改或新增（包括隧道、C2、会话、工具/API、数据结构、数据库迁移、生命周期/健康逻辑）必须先落地设计稿，再进入实现。
+- 设计稿目录：dev-docs/design/；命名 YYYY-MM-DD-<slug>.md；必须包含：背景/问题、目标与非目标、总体方案、数据模型、接口/工具、生命周期与健康、安全与 OPSEC、兼容性、测试计划、实施阶段、风险与验收标准。
+- 实现提交/PR 必须引用对应设计稿路径；未落设计稿不得实现或合并。
+- 纯文档/纯测试补充且不改变功能语义时可不新稿；一旦改变行为、接口、数据结构或安全边界，必须新增或更新设计稿。
+- 设计稿随功能演进同步修订，过期设计稿要标注被取代/废弃。
+
 ## 关联仓库：ARTEX 二开版本
 
 - 本地路径：`/Users/jiangshoubao/Desktop/学习/1111/artex`
