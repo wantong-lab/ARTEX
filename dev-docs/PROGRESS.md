@@ -292,4 +292,4 @@
 - 后端：node_label、TunnelStore.ListIngress、c2_ingress_service.go（共享部署/停止服务）、REST GET/POST /api/c2/ingress、teardown。
 - 前端：C2 页“入站中继”卡片（创建/列表/停止/复制植入端、健康状态）。
 - 校验：go build ./...、go vet、web npm run build 通过。
-- 后续：提交/CI → tag v0.4.8；P2 TLS/ACL/故障转移。
+- 发布：提交 2da92c0；CI 45040387113 全绿；tag v0.4.8 → Release 45040620312 成功，5 平台 zip + SHA256SUMS、GHCR v0.4.8 index 校验通过。P2 TLS/ACL/故障转移待做。

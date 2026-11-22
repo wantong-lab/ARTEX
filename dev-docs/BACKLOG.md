@@ -44,7 +44,7 @@
 
 - [x] P4-22 C2 入站回调中继：新增 ingress 隧道类型（迁移 0013）、PlanIngress、c2_ingress_deploy/teardown；平台 C2 listener loopback + VPS chisel local forward；Windows 133 HTTP PowerShell 真机 E2E PASS（VPS 443，20.6s）。提交 2a5fe54，tag v0.4.7。
 
-- [x] P4-23 C2 入站中继 P1：C2 页入站中继卡片 + REST（GET/POST /api/c2/ingress、teardown）+ node_label 多 VPS 归属 + healthy 列表；web/后端构建通过。
+- [x] P4-23 C2 入站中继 P1：C2 页入站中继卡片 + REST（GET/POST /api/c2/ingress、teardown）+ node_label 多 VPS 归属 + healthy 列表；web/后端构建通过。提交 2da92c0，tag v0.4.8。
 
 ## 变更记录
 
@@ -91,4 +91,4 @@
 - 2026-11-22：P4-20 公网 C2 HTTP/TCP 真机测试完成；HTTP 任务回传与 TCP 加密信封 exec 均 PASS，测试后清理监听器/VPS 植入端。
 - 2026-11-22：P4-21 C2→隧道适配完成；公网 C2 TCP 无 SSH 真机 E2E PASS（SOCKS 访问 VPS 本地 HTTP 200，47.7s）。提交 eadca3a；CI 45032012302 全绿；tag v0.4.6，Release 45032289276 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.6 index）。
 - 2026-11-22：P4-22 C2 入站回调中继实现并真机验证；VPS 云防火墙 39444 被拦，测试用 443 并恢复 openresty。提交 2a5fe54；CI 45037375661 全绿；tag v0.4.7，Release 45037673828 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.7 index）。
-- 2026-11-22：P4-23 C2 入站中继 P1（UI/REST/node_label）完成；go build/vet、web build 通过。
+- 2026-11-22：P4-23 C2 入站中继 P1（UI/REST/node_label）完成；go build/vet、web build 通过。提交 2da92c0；CI 45040387113 全绿；tag v0.4.8，Release 45040620312 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.8 index）。
