@@ -156,3 +156,21 @@ go test ./c2 -run TestTCPPublicVPS -v -timeout 180s
 ```
 
 实测（2026-11-22）：HTTP 上线→任务回传成功；TCP 上线→加密信封 exec 返回 uid=0(root)/hostname=wantong/root，均走公网映射；测试后清理监听器与 VPS 植入端。
+
+## C2 会话 → 隧道公网 E2E（v0.4.6）
+
+server/c2_tunnel_e2e_test.go 默认 skip；验证只有 C2 TCP（无 SSH）时，经 C2 任务上传/拉起 chisel 并建 SOCKS5 数据面。
+
+```bash
+export ARTEX_PG_DSN='postgres://artex:artex@127.0.0.1:55432/artex_c2tunnel?sslmode=disable'
+export ARTEX_C2_TOKEN='<C2 runtime token>'
+export ARTEX_C2_PUBLIC_VPS_ADDR=39.89.211.55:39444
+export ARTEX_C2_VPS_SSH=root@113.20.3.124
+export ARTEX_C2_VPS_KEY=$HOME/.ssh/id_ed25519_113.20.3.124
+export ARTEX_CHISEL_PATH=/tmp/artex-chisel/darwin-arm64/chisel
+export ARTEX_CHISEL_CLIENT_DIR=/tmp/artex-chisel/clients
+export ARTEX_TUNNEL_CALLBACK_HOST=39.89.211.55
+go test ./server -run TestC2TunnelPublicVPS -v -timeout 420s
+```
+
+端口：C2 TCP 监听 39444，chisel server 固定 39443；测试会清理 C2 监听器、目标端进程/目录。

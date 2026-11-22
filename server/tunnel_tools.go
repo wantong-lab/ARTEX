@@ -31,6 +31,7 @@ const (
 type tunnelRuntime struct {
 	store *db.TunnelStore
 	mgr   *tunnel.Manager
+	srv   *Server
 }
 
 // resolveToolBinary 解析外部工具：环境变量优先，其次 dataDir/tools/<name>；不存在返回空。
@@ -107,7 +108,7 @@ func (s *Server) tunnels() *tunnelRuntime {
 	if s.ctx != nil {
 		mgr.StartHealth(s.ctx)
 	}
-	s.tunnelRT = &tunnelRuntime{store: store, mgr: mgr}
+	s.tunnelRT = &tunnelRuntime{store: store, mgr: mgr, srv: s}
 	return s.tunnelRT
 }
 
@@ -142,24 +143,28 @@ func (s *Server) syncTaskProxyToAgents(taskID int64) {
 
 func (h *tunnelRuntime) deployTool() actool.CoreTool {
 	return tunnelTool("tunnel_deploy",
-		"经已登记会话部署一条隧道并登记台账。kind=socks 建 socks5 入口（后续任务 MITM 上游自动切到它）；kind=portfwd 建内网端口转发。"+
+		"经已登记会话或 C2 会话（c2_session_id）部署一条隧道并登记台账。kind=socks 建 socks5 入口（后续任务 MITM 上游自动切到它）；kind=portfwd 建内网端口转发。"+
 			"计划（含认证凭据/远端路径/进程 id）整体存 deploy_params，重拉/巡检都靠它。chisel 二进制缺失时返回明确错误。",
 		map[string]any{
-			"kind":        map[string]any{"type": "string", "enum": []any{"socks", "portfwd"}, "description": "隧道类型（必填）"},
-			"session_id":  map[string]any{"type": "integer", "description": "经哪个立足点会话部署（register_session 返回）"},
-			"adapter":     map[string]any{"type": "string", "description": "适配器：chisel（默认）/ suo5"},
-			"listen_host": map[string]any{"type": "string", "description": "平台侧监听地址（默认 0.0.0.0）"},
-			"target_host": map[string]any{"type": "string", "description": "portfwd：经隧道访问的内网目标 host"},
-			"target_port": map[string]any{"type": "integer", "description": "portfwd：内网目标端口"},
-		}, []string{"kind", "session_id"}, false,
+			"kind":          map[string]any{"type": "string", "enum": []any{"socks", "portfwd"}, "description": "隧道类型（必填）"},
+			"session_id":    map[string]any{"type": "integer", "description": "经哪个立足点会话部署（register_session 返回）"},
+			"c2_session_id": map[string]any{"type": "integer", "description": "经哪个 C2 会话部署（c2_list_sessions 返回；与 session_id 二选一）"},
+			"adapter":       map[string]any{"type": "string", "description": "适配器：chisel（默认）/ suo5"},
+			"listen_host":   map[string]any{"type": "string", "description": "平台侧监听地址（默认 0.0.0.0）"},
+			"listen_port":   map[string]any{"type": "integer", "description": "平台侧固定监听端口（NAT/公网映射时必填；0=自动分配）"},
+			"target_host":   map[string]any{"type": "string", "description": "portfwd：经隧道访问的内网目标 host"},
+			"target_port":   map[string]any{"type": "integer", "description": "portfwd：内网目标端口"},
+		}, []string{"kind"}, false,
 		func(ctx context.Context, in json.RawMessage) (actool.Result, error) {
 			var a struct {
-				Kind       string `json:"kind"`
-				SessionID  int64  `json:"session_id"`
-				Adapter    string `json:"adapter"`
-				ListenHost string `json:"listen_host"`
-				TargetHost string `json:"target_host"`
-				TargetPort int    `json:"target_port"`
+				Kind        string `json:"kind"`
+				SessionID   int64  `json:"session_id"`
+				C2SessionID int64  `json:"c2_session_id"`
+				Adapter     string `json:"adapter"`
+				ListenHost  string `json:"listen_host"`
+				ListenPort  int    `json:"listen_port"`
+				TargetHost  string `json:"target_host"`
+				TargetPort  int    `json:"target_port"`
 			}
 			_ = json.Unmarshal(in, &a)
 			if h.mgr == nil {
@@ -168,8 +173,11 @@ func (h *tunnelRuntime) deployTool() actool.CoreTool {
 			if a.Kind != "socks" && a.Kind != "portfwd" {
 				return actool.Errorf("kind 必须是 socks 或 portfwd"), nil
 			}
-			if a.SessionID <= 0 {
-				return actool.Errorf("session_id 为必填参数"), nil
+			if a.SessionID <= 0 && a.C2SessionID <= 0 {
+				return actool.Errorf("session_id 或 c2_session_id 至少一个必填"), nil
+			}
+			if a.SessionID > 0 && a.C2SessionID > 0 {
+				return actool.Errorf("session_id 与 c2_session_id 只能二选一"), nil
 			}
 			if a.Adapter == "" {
 				a.Adapter = tunnel.AdapterChisel
@@ -180,7 +188,7 @@ func (h *tunnelRuntime) deployTool() actool.CoreTool {
 			}
 			ri := agent.RunInfoFrom(ctx)
 			opts := &tunnel.PlanOpts{
-				TaskID: ri.TaskID, ViaSessionID: a.SessionID, ListenHost: a.ListenHost,
+				TaskID: ri.TaskID, ViaSessionID: a.SessionID, ListenHost: a.ListenHost, ListenPort: a.ListenPort,
 				TargetHost: a.TargetHost, TargetPort: a.TargetPort,
 				PortMin: tunnelPortMin, PortMax: tunnelPortMax,
 				UsedPorts: used, CanListen: tunnel.CanListen,
@@ -199,7 +207,17 @@ func (h *tunnelRuntime) deployTool() actool.CoreTool {
 				return actool.Errorf("计划生成失败：" + err.Error()), nil
 			}
 			plan.Adapter = a.Adapter
-			rec, err := h.mgr.Deploy(ctx, plan)
+			plan.ViaC2SessionID = a.C2SessionID
+			var rec *db.TunnelRecord
+			if a.C2SessionID > 0 {
+				sess, serr := h.srv.c2TunnelSession(ctx, a.C2SessionID)
+				if serr != nil {
+					return actool.Errorf("C2 会话适配失败：" + serr.Error()), nil
+				}
+				rec, err = h.mgr.DeployWithSession(ctx, plan, sess)
+			} else {
+				rec, err = h.mgr.Deploy(ctx, plan)
+			}
 			if err != nil {
 				return actool.Errorf("部署失败：" + err.Error()), nil
 			}
@@ -207,7 +225,7 @@ func (h *tunnelRuntime) deployTool() actool.CoreTool {
 				"tunnel_id": rec.ID, "kind": rec.Kind, "adapter": rec.Adapter,
 				"state": rec.State, "listen_port": rec.ListenPort,
 				"socks_port": plan.SocksPort, "local_port": plan.LocalPort,
-				"entry": h.mgr.EntryAddr(plan),
+				"entry": h.mgr.EntryAddr(plan), "via_c2_session_id": a.C2SessionID,
 			})
 			return actool.Text(string(out)), nil
 		})

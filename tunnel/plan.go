@@ -20,33 +20,34 @@ import (
 // Plan 是完整部署计划 = deploy_params 持久化内容。所有进程台账（server_pid/
 // remote_pid/stage_token/远端路径）也回写进来，满足受管资源原则。
 type Plan struct {
-	Kind         string   `json:"kind"`                 // socks | portfwd
-	Adapter      string   `json:"adapter"`              // chisel
-	TaskID       int64    `json:"task_id"`              // 归属任务
-	ViaSessionID int64    `json:"via_session_id"`       // 经哪个立足点部署
-	ListenHost   string   `json:"listen_host"`          // 平台侧 server 绑定地址
-	ListenPort   int      `json:"listen_port"`          // 平台侧 server 端口（目标回连口）
-	SocksPort    int      `json:"socks_port,omitempty"` // socks：平台回环上的 socks5 入口
-	LocalPort    int      `json:"local_port,omitempty"` // portfwd：平台回环上的转发入口
-	TargetHost   string   `json:"target_host,omitempty"`
-	TargetPort   int      `json:"target_port,omitempty"`
-	PlatformAddr string   `json:"platform_addr"` // 目标回连地址 host:port(callback host + listen port)
-	AuthUser     string   `json:"auth_user"`
-	AuthPass     string   `json:"auth_pass"`   // crypto/rand 16 字节 hex；只在此处与 authfile，不进命令行
-	AuthFile     string   `json:"auth_file"`   // 平台侧 --authfile 路径（0600)
-	ServerArgs   []string `json:"server_args"` // chisel server 参数（不含 auth)
-	ServerPID    int      `json:"server_pid,omitempty"`
-	ServerLog    string   `json:"server_log"`
-	RemoteDir    string   `json:"remote_dir"` // 目标侧 /tmp/.artex-<rand>
-	RemoteBin    string   `json:"remote_bin"`
-	RemoteLog    string   `json:"remote_log"`
-	RemotePID    int      `json:"remote_pid,omitempty"`
-	StageToken   string   `json:"stage_token,omitempty"`   // 一次性投递条目（用完删）
-	VerifyAddr   string   `json:"verify_addr,omitempty"`   // 决定性验证目标 host:port
-	ClientArgs   []string `json:"client_args"`             // chisel client 参数（Unix 走 AUTH env；Windows 用 --auth 参数）
-	TargetOS     string   `json:"target_os,omitempty"`     // 目标 OS（linux/darwin/windows）
-	TargetArch   string   `json:"target_arch,omitempty"`   // 目标架构（amd64/arm64/386/arm）
-	ClientBinary string   `json:"client_binary,omitempty"` // 平台侧选定的目标端 chisel 二进制
+	Kind           string   `json:"kind"`                        // socks | portfwd
+	Adapter        string   `json:"adapter"`                     // chisel
+	TaskID         int64    `json:"task_id"`                     // 归属任务
+	ViaSessionID   int64    `json:"via_session_id"`              // 经哪个立足点部署
+	ViaC2SessionID int64    `json:"via_c2_session_id,omitempty"` // C2 会话 id（与 ViaSessionID 二选一）
+	ListenHost     string   `json:"listen_host"`                 // 平台侧 server 绑定地址
+	ListenPort     int      `json:"listen_port"`                 // 平台侧 server 端口（目标回连口）
+	SocksPort      int      `json:"socks_port,omitempty"`        // socks：平台回环上的 socks5 入口
+	LocalPort      int      `json:"local_port,omitempty"`        // portfwd：平台回环上的转发入口
+	TargetHost     string   `json:"target_host,omitempty"`
+	TargetPort     int      `json:"target_port,omitempty"`
+	PlatformAddr   string   `json:"platform_addr"` // 目标回连地址 host:port(callback host + listen port)
+	AuthUser       string   `json:"auth_user"`
+	AuthPass       string   `json:"auth_pass"`   // crypto/rand 16 字节 hex；只在此处与 authfile，不进命令行
+	AuthFile       string   `json:"auth_file"`   // 平台侧 --authfile 路径（0600)
+	ServerArgs     []string `json:"server_args"` // chisel server 参数（不含 auth)
+	ServerPID      int      `json:"server_pid,omitempty"`
+	ServerLog      string   `json:"server_log"`
+	RemoteDir      string   `json:"remote_dir"` // 目标侧 /tmp/.artex-<rand>
+	RemoteBin      string   `json:"remote_bin"`
+	RemoteLog      string   `json:"remote_log"`
+	RemotePID      int      `json:"remote_pid,omitempty"`
+	StageToken     string   `json:"stage_token,omitempty"`   // 一次性投递条目（用完删）
+	VerifyAddr     string   `json:"verify_addr,omitempty"`   // 决定性验证目标 host:port
+	ClientArgs     []string `json:"client_args"`             // chisel client 参数（Unix 走 AUTH env；Windows 用 --auth 参数）
+	TargetOS       string   `json:"target_os,omitempty"`     // 目标 OS（linux/darwin/windows）
+	TargetArch     string   `json:"target_arch,omitempty"`   // 目标架构（amd64/arm64/386/arm）
+	ClientBinary   string   `json:"client_binary,omitempty"` // 平台侧选定的目标端 chisel 二进制
 	// suo5 适配器字段（omitempty，向后兼容既有 chisel deploy_params):
 	PayloadFile string `json:"payload_file,omitempty"` // 平台侧 payloads 目录里的文件名（suo5.php 等）
 	PayloadName string `json:"payload_name,omitempty"` // 目标侧随机文件名
@@ -60,6 +61,7 @@ type PlanOpts struct {
 	TaskID       int64
 	ViaSessionID int64
 	ListenHost   string // 空 = 0.0.0.0
+	ListenPort   int    // >0 = 固定平台侧监听端口（NAT/公网映射；0=自动分配）
 	CallbackHost string // 目标回连平台用的主机地址（config.CallbackAddr 的 host 部分）
 	TargetHost   string // portfwd 必填
 	TargetPort   int    // portfwd 必填
@@ -102,9 +104,20 @@ func (o *PlanOpts) base(kind string) (*Plan, error) {
 	if listenHost == "" {
 		listenHost = "0.0.0.0"
 	}
-	listenPort, err := AllocatePort(o.PortMin, o.PortMax, o.UsedPorts, o.CanListen)
-	if err != nil {
-		return nil, err
+	listenPort := o.ListenPort
+	if listenPort > 0 {
+		if o.UsedPorts != nil && o.UsedPorts[listenPort] {
+			return nil, fmt.Errorf("固定监听端口 %d 已被占用", listenPort)
+		}
+		if o.CanListen != nil && !o.CanListen(listenPort) {
+			return nil, fmt.Errorf("固定监听端口 %d 无法绑定（被占用或权限不足）", listenPort)
+		}
+	} else {
+		var err error
+		listenPort, err = AllocatePort(o.PortMin, o.PortMax, o.UsedPorts, o.CanListen)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if o.UsedPorts == nil {
 		o.UsedPorts = map[int]bool{}

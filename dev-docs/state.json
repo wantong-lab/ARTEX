@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 44,
+  "round": 45,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -221,7 +221,8 @@
     "release_v0_4_3": "CI 44990406383 success (go/web/ui); release 44990610317 success; assets 5 zips + SHA256SUMS; GHCR v0.4.3 & latest multi-arch",
     "v0_4_4_cross_os_tunnel": "提交 148bb81（CI 修复 3e95efb），CI 45000922837 全绿；tag v0.4.4，Release 45001123212 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.4/latest OCI index）；Windows 真机 E2E + loopback E2E PASS；目标机火绒拦截官方 chisel，测试用 -ldflags -s -w 构建 client。",
     "v0_4_5_public_vps_tunnel": "提交 10faddf；CI 45025109590 全绿；tag v0.4.5，Release 45025422076 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.5 index）；公网 VPS E2E：macOS 平台 → 39.89.211.55:39444 → Linux VPS 113.20.3.124，SOCKS5 本地 HTTP + 公网出口 IP=113.20.3.124 PASS；loopback E2E 回归 PASS。",
-    "v0_4_5_public_c2_http_tcp": "公网 C2 E2E PASS：HTTP 监听器 39443 + VPS Python beacon 上线，任务回传 uid=0(root)/wantong/root；TCP 监听器 39444 + VPS 植入端上线，Manager 加密信封 exec 同一组结果；测试后监听器与 VPS 植入端已清理。"
+    "v0_4_5_public_c2_http_tcp": "公网 C2 E2E PASS：HTTP 监听器 39443 + VPS Python beacon 上线，任务回传 uid=0(root)/wantong/root；TCP 监听器 39444 + VPS 植入端上线，Manager 加密信封 exec 同一组结果；测试后监听器与 VPS 植入端已清理。",
+    "v0_4_6_c2_tunnel": "C2→隧道 E2E PASS：公网 VPS 仅 C2 TCP 上线（无 SSH），C2 任务分块上传/拉起 chisel，平台 SOCKS 127.0.0.1:20000 访问 VPS 本地 HTTP 200；11MB 客户端 gzip 分块上传约 29s，整链路 47.7s；新增 c2_session_id/listen_port/C2 adapter。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"

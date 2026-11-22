@@ -193,16 +193,45 @@ func (m *Manager) Deploy(ctx context.Context, p *Plan) (*db.TunnelRecord, error)
 	if p.Adapter == AdapterSuo5 {
 		return m.deploySuo5(ctx, p)
 	}
-	if m.chiselPath == "" {
-		return nil, fmt.Errorf("chisel 二进制缺失：把对应平台的 chisel 放到 data/tools/chisel 或设 ARTEX_CHISEL_PATH 后重试")
-	}
-	if p.Kind == KindSocks && p.SocksPort <= 0 || p.Kind == KindPortfwd && p.LocalPort <= 0 {
-		return nil, fmt.Errorf("计划缺收入口端口（socks_port/local_port)")
+	if err := m.validateChiselPlan(p); err != nil {
+		return nil, err
 	}
 	sess, ok := m.sessions.Get(p.ViaSessionID)
 	if !ok {
 		return nil, fmt.Errorf("会话 %d 不在注册表，无法部署", p.ViaSessionID)
 	}
+	return m.deployWithSession(ctx, p, sess)
+}
+
+// DeployWithSession 使用调用方提供的会话部署（用于 C2 会话适配器，不要求
+// session.Registry；C2 会话通过 c2_exec/C2 任务队列执行命令）。
+func (m *Manager) DeployWithSession(ctx context.Context, p *Plan, sess session.Session) (*db.TunnelRecord, error) {
+	if sess == nil {
+		return nil, fmt.Errorf("DeployWithSession 需要非空会话")
+	}
+	if p.Adapter == AdapterSuo5 {
+		return nil, fmt.Errorf("C2 会话隧道仅支持 chisel 适配器")
+	}
+	if err := m.validateChiselPlan(p); err != nil {
+		return nil, err
+	}
+	return m.deployWithSession(ctx, p, sess)
+}
+
+func (m *Manager) validateChiselPlan(p *Plan) error {
+	if p.Adapter == "" {
+		p.Adapter = AdapterChisel
+	}
+	if m.chiselPath == "" {
+		return fmt.Errorf("chisel 二进制缺失：把对应平台的 chisel 放到 data/tools/chisel 或设 ARTEX_CHISEL_PATH 后重试")
+	}
+	if p.Kind == KindSocks && p.SocksPort <= 0 || p.Kind == KindPortfwd && p.LocalPort <= 0 {
+		return fmt.Errorf("计划缺收入口端口（socks_port/local_port)")
+	}
+	return nil
+}
+
+func (m *Manager) deployWithSession(ctx context.Context, p *Plan, sess session.Session) (*db.TunnelRecord, error) {
 	if err := m.prepareTarget(ctx, sess, p); err != nil {
 		return nil, err
 	}
@@ -230,7 +259,6 @@ func (m *Manager) Deploy(ctx context.Context, p *Plan) (*db.TunnelRecord, error)
 	return rec, nil
 }
 
-// notifyState 触发状态变化钩子（server 层据此热切换任务 MITM 上游）。
 func (m *Manager) notifyState(taskID int64) {
 	if m.OnStateChange != nil && taskID > 0 {
 		m.OnStateChange(taskID)
@@ -526,10 +554,13 @@ func (m *Manager) TaskRecords(ctx context.Context, taskID int64) ([]*db.TunnelRe
 // rollback 按 RollbackSteps 逐层回滚（best-effort，每层失败只记日志继续收）。
 func (m *Manager) rollback(ctx context.Context, id int64, sess session.Session, p *Plan) {
 	log.Printf("[tunnel] 部署失败逐层回滚(id=%d)", id)
-	if p.RemotePID > 0 {
+	keepRemote := os.Getenv("ARTEX_TUNNEL_KEEP_REMOTE") == "1"
+	if p.RemotePID > 0 && !keepRemote {
 		m.killRemote(ctx, sess, p)
 	}
-	if p.TargetOS == "windows" {
+	if keepRemote {
+		log.Printf("[tunnel] ARTEX_TUNNEL_KEEP_REMOTE=1，保留目标侧目录/进程用于排查: %s pid=%d", p.RemoteDir, p.RemotePID)
+	} else if p.TargetOS == "windows" {
 		_, _, _ = sess.Exec(ctx, windowsRemoveDirCommand(p.RemoteDir), probeTimeout)
 	} else if p.RemoteDir != "" {
 		_, _, _ = sess.Exec(ctx, "rm -rf "+p.RemoteDir, probeTimeout)

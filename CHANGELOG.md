@@ -4,8 +4,16 @@
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-11-22
+
+### 新增
+- C2 会话作为隧道部署入口：tunnel_deploy 新增 c2_session_id，C2 TCP/HTTP 会话经适配器执行探测、分块上传、远端拉起与清理，不再要求 SSH/WebShell 等 session.Registry 会话。
+- 隧道固定监听端口：tunnel_deploy 新增 listen_port，NAT/公网映射场景可让 chisel server 固定监听映射端口（默认仍自动分配）。
+- C2 控制面投递兜底：平台 HTTP stage 不可达时，经 C2 任务分块写入目标端二进制（>1MiB 自动 gzip，64KiB 分块），纯 C2 上线也能部署数据面。
+
 ### 测试
-- 公网 C2 真机 E2E（HTTP/TCP）：HTTP 监听器 0.0.0.0:39443（公网映射 39.89.211.55:39443），VPS 113.20.3.124 运行 Python beacon 植入端上线，平台下发 id/hostname/whoami 返回 uid=0(root) / wantong / root；TCP 监听器 0.0.0.0:39444（公网映射 39.89.211.55:39444），VPS 运行 TCP 植入端上线，加密信封任务下发/结果回传返回同一组证据。两轮均为真实公网回连，测试后已停止监听器并清理 VPS 植入端。
+- 公网 C2 TCP → chisel SOCKS 真机 E2E PASS：VPS 仅通过 C2 TCP 上线（无 SSH），C2 任务上传/拉起 chisel 客户端，平台 127.0.0.1:20000 SOCKS 访问 VPS 本地 HTTP 返回 200；上传 11MB 客户端经 C2 分块/gzip 约 29s，整链路 47.7s。
+- 公网 C2 HTTP beacon / TCP 监听器上线验证：两种监听器均经公网映射在 VPS 上线，HTTP 任务回传与 TCP 加密信封 exec 均通过。
 
 ## [0.4.5] - 2026-11-22
 

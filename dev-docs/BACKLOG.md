@@ -40,6 +40,8 @@
 
 - [x] P4-20 公网 C2 真机验证：HTTP beacon（39443）与 TCP（39444）两种监听器经公网映射在 Linux VPS 113.20.3.124 上线；HTTP 任务回传、TCP 加密信封 exec 均 PASS；新增 scripts/acceptance/c2_public_http.py 与 c2/c2_tcp_public_vps_test.go（env 门控）。
 
+- [x] P4-21 C2 会话作为隧道部署入口：tunnel_deploy 支持 c2_session_id；新增 C2 session adapter（TCP Manager Dispatch / HTTP c2_tasks 队列）、固定 listen_port、gzip 分块上传兜底；公网 C2 TCP（无 SSH）→ chisel SOCKS E2E PASS。
+
 ## 变更记录
 
 - 2026-11-21：建立任务板；P0-2、P0-3 完成（提交后回填 commit）。
@@ -83,3 +85,4 @@
 - 2026-11-22：P4-18 跨 OS/架构隧道完成（tunnel/platform.go、deploy/deliver/spawn 适配、server 配置、Windows 真机 E2E）。提交 148bb81；CI 45000922837 全绿；tag v0.4.4，Release 45001123212 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.4/latest 多架构 index 校验通过）。
 - 2026-11-22：P4-19 公网 VPS 隧道验证完成（固定 bootstrap 端口 + SSH 拉起修复）；VPS E2E PASS，公网出口 IP 113.20.3.124 经隧道返回。提交 10faddf；CI 45025109590 全绿；tag v0.4.5，Release 45025422076 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.5 index 校验通过）。
 - 2026-11-22：P4-20 公网 C2 HTTP/TCP 真机测试完成；HTTP 任务回传与 TCP 加密信封 exec 均 PASS，测试后清理监听器/VPS 植入端。
+- 2026-11-22：P4-21 C2→隧道适配完成；公网 C2 TCP 无 SSH 真机 E2E PASS（SOCKS 访问 VPS 本地 HTTP 200，47.7s）。

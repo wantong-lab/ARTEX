@@ -124,3 +124,6 @@ Windows 目标的 --auth 会出现在目标进程命令行（WMI Create 无环�
 1. bootstrap 下载：平台在 NAT 后时，目标无法访问平台随机临时端口。把公网端口映射到平台（如 39444 -> 平台:39444）并设 `ARTEX_TUNNEL_STAGE_PORT` 为对应内网端口，目标是公网 VPS 时即可下载目标端二进制。
 2. SSH 通道等待：早期拉起命令的后台 chisel 子进程可能继承 SSH 通道 fd，导致命令等到超时。v0.4.5 起改为后台块整体重定向到 /dev/null、PID 落文件再读；若仍超时，检查目标 shell 是否支持 setsid/nohup 或改用手工预置二进制。
 公网 VPS 实测：macOS 平台 → 39.89.211.55:39444（映射到平台）→ Linux VPS 113.20.3.124，SOCKS5 经 VPS 访问本地 HTTP 与公网出口 IP 校验均通过。
+
+### Q30：只有 C2 会话时怎么开隧道？
+v0.4.6 起 `tunnel_deploy` 支持 `c2_session_id`：平台经 C2 任务在目标端探测、分块上传 chisel、拉起 client，再走现有 tunnel.Manager。公网目标需要两个映射端口：C2 监听器（如 39444）和 chisel server 固定监听端口（`listen_port`，如 39443）；平台 HTTP stage 不可达时自动回退 C2 分块上传。

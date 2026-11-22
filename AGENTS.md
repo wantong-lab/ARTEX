@@ -25,4 +25,5 @@
 ## 当前进行中的方向
 
 - 跨 OS/跨架构隧道适配：v0.4.4 已完成（Windows 真机 E2E）；v0.4.5 补公网 VPS 验证（固定 bootstrap 端口 + SSH 拉起修复，VPS E2E PASS）。
-- C2 公网真机：HTTP beacon + TCP 两种监听器已在公网 VPS 上线验证（2026-11-22）；C2 socks5 仍未内置，二开为外部 C2 MCP（Supershell manage_socks5）集成，主线如需内置走反向 SOCKS-over-C2 或外部 MCP，待定。
+- C2→隧道：v0.4.6 已支持 c2_session_id（C2 TCP/HTTP 适配器 + 固定 listen_port + 分块/gzip 上传）；公网 VPS 仅 C2 TCP 上线 → chisel SOCKS 真机 E2E PASS（2026-11-22）。
+- C2 socks5 仍未内置；二开为外部 C2 MCP（Supershell manage_socks5）集成，主线如需内置走反向 SOCKS-over-C2 或外部 MCP，待定。

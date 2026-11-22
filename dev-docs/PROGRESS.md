@@ -273,3 +273,9 @@
 - HTTP：服务启用 C2（c2_allow_non_loopback=true），HTTP 监听器 0.0.0.0:39443（公网映射 39.89.211.55:39443）；VPS 113.20.3.124 运行 Python beacon 植入端上线，平台下发 id/hostname/whoami，结果 uid=0(root)/wantong/root；测试后停止/删除监听器并清理植入端。
 - TCP：服务 TCP 监听器 0.0.0.0:39444（公网映射 39.89.211.55:39444）用 settings c2_token 生成植入端，VPS 上线会话 active；另以 c2.Manager 公网 E2E 验证加密信封 exec 返回同一组证据。
 - 记录：新增 scripts/acceptance/c2_public_http.py、c2/c2_tcp_public_vps_test.go；未改产品代码。
+
+## 轮次 45 · 2026-11-22（C2 会话作为隧道控制面）
+- 实现：tunnel_deploy 新增 c2_session_id；server/c2_session_adapter.go 把 C2 TCP/HTTP 会话包装为 session.Session（TCP 走 Manager.Dispatch，HTTP 走 c2_tasks 队列）；tunnel.Manager 新增 DeployWithSession；新增固定 listen_port；C2 分块上传兜底（gzip + 64KiB 分块）。
+- 验证：公网 VPS 仅 C2 TCP 上线（无 SSH），C2 任务上传/拉起 chisel，平台 SOCKS 访问 VPS 本地 HTTP 200；上传 11MB 客户端约 29s，整链路 47.7s PASS；测试后清理监听器/目标进程。
+- 限制：HTTP beacon 的 C2 分块上传明显更慢；公网目标需要两个映射端口（C2 控制 + chisel listen_port）。
+- 下一步：提交/CI → tag v0.4.6 → Release/GHCR 校验。

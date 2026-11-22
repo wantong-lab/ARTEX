@@ -99,6 +99,22 @@ Deploy 时会话探测目标 OS/架构并自动选择对应 client；Plan 记录
 
 公网/NAT 平台需要把 bootstrap 下载端口映射到平台并设 `ARTEX_TUNNEL_STAGE_PORT`（默认随机端口在 NAT 后目标不可达）；Unix/SSH 目标的后台拉起用 pid 文件回读，避免 SSH 通道等待子进程。
 
+### C2 会话作为隧道控制面（v0.4.6）
+
+只有 C2 会话、没有 SSH/WebShell 时，也可以让平台经 C2 任务部署隧道：
+
+```text
+tunnel_deploy(kind="socks", c2_session_id=<C2 会话 id>, listen_port=39443)
+```
+
+- `c2_session_id` 与 `session_id` 二选一；C2 TCP/HTTP 会话均支持。
+- 公网/VPS 目标必须给 chisel server 一个映射端口（`listen_port`，如 39443），同时 C2 监听器占另一个映射端口（如 39444）。
+- 平台 HTTP stage 不可达时自动回退 C2 分块上传（>1MiB 自动 gzip；11MB chisel 约 30s，HTTP beacon 会话会明显更慢）。
+- 成功后仍由现有 tunnel.Manager 管理 SOCKS/巡检/清理，任务 MITM 上游自动切换。
+
+公网实测：VPS 仅 C2 TCP 上线，无 SSH；C2 任务上传并拉起 chisel，平台 SOCKS 访问 VPS 本地 HTTP 返回 200。
+
+
 ## 安装
 
 > 依赖数据库 **PostgreSQL**；探索需配置 **LLM**（`ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY`，也可在 UI 里配）。
