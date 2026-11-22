@@ -69,3 +69,62 @@ jobs:
       - name: build
         working-directory: web
         run: npm run build
+
+  # UI 冒烟：静态导出 + 内嵌二进制 + 真实浏览器验证关键页面/暗色/移动端/
+  # 加载骨架/401 next/403 toast。与 go job 的 postgres service 相互独立。
+  ui:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: artex
+          POSTGRES_PASSWORD: artex
+          POSTGRES_DB: artex_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U artex"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      ARTEX_PG_DSN: postgres://artex:artex@127.0.0.1:5432/artex_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: install web deps
+        working-directory: web
+        run: npm ci
+      - name: install ui smoke deps
+        working-directory: scripts/smoke
+        run: npm ci
+      - name: build static ui
+        working-directory: web
+        run: npm run build:static
+      - name: embed ui and build backend
+        run: |
+          mkdir -p server/webui/dist
+          cp -R web/out/. server/webui/dist/
+          go build -tags embedui -o /tmp/artex ./cmd/artex
+      - name: install chromium
+        working-directory: scripts/smoke
+        run: npx playwright install --with-deps chromium
+      - name: start server and run ui smoke
+        env:
+          SMOKE_BASE: http://127.0.0.1:18892
+          SMOKE_PASSWORD: Smoke-Artex-2026!
+          NODE_PATH: scripts/smoke/node_modules
+        run: |
+          /tmp/artex -addr 127.0.0.1:18892 -data /tmp/artex-ui -proxy "" > /tmp/artex-ui.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:18892/api/health >/dev/null && break; sleep 1; done
+          curl -sf -X POST http://127.0.0.1:18892/api/auth/init -H "Content-Type: application/json" -d '{"username":"ARTEX","password":"Smoke-Artex-2026!"}' >/dev/null
+          node scripts/smoke/ui_smoke.mjs

@@ -1,0 +1,8 @@
+{
+  "name": "artex-ui-smoke",
+  "private": true,
+  "description": "ARTEX UI smoke dependencies (Playwright)",
+  "devDependencies": {
+    "playwright": "1.65.1"
+  }
+}
