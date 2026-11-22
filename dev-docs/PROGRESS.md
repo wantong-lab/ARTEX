@@ -268,3 +268,8 @@
 - 修复：新增 ARTEX_TUNNEL_STAGE_PORT 固定下载端口；Unix spawn 改为后台块 stdout/stderr 全量重定向 + pid 文件回读。
 - 验证：公网 VPS E2E PASS（macOS 平台 → 39.89.211.55:39444 → Linux VPS 113.20.3.124；SOCKS5 经 VPS 访问本地 HTTP，公网出口 IP=113.20.3.124）；loopback E2E 回归 PASS；VPS 临时进程/目录已清理。
 - 发布：提交 10faddf；CI 45025109590 全绿；tag v0.4.5 → Release 45025422076 成功，5 平台 zip + SHA256SUMS 已发布，GHCR ghcr.io/wantong-lab/artex:v0.4.5 OCI index 校验通过。
+
+## 轮次 44 · 2026-11-22（公网 C2 HTTP/TCP 真机验证）
+- HTTP：服务启用 C2（c2_allow_non_loopback=true），HTTP 监听器 0.0.0.0:39443（公网映射 39.89.211.55:39443）；VPS 113.20.3.124 运行 Python beacon 植入端上线，平台下发 id/hostname/whoami，结果 uid=0(root)/wantong/root；测试后停止/删除监听器并清理植入端。
+- TCP：服务 TCP 监听器 0.0.0.0:39444（公网映射 39.89.211.55:39444）用 settings c2_token 生成植入端，VPS 上线会话 active；另以 c2.Manager 公网 E2E 验证加密信封 exec 返回同一组证据。
+- 记录：新增 scripts/acceptance/c2_public_http.py、c2/c2_tcp_public_vps_test.go；未改产品代码。

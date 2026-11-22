@@ -136,3 +136,23 @@ go test ./tunnel -run TestChiselVPSRealE2E -v -timeout 320s
 ```
 
 平台需设 ARTEX_TUNNEL_STAGE_PORT=39443（映射到平台的固定 bootstrap 端口）；测试结束会清理 VPS 上的 chisel 进程/临时目录。
+
+## 公网 C2 真机测试（HTTP/TCP，2026-11-22）
+
+HTTP 监听器：scripts/acceptance/c2_public_http.py（服务需已启动并允许非回环监听；目标为授权 VPS）。
+
+```bash
+C2_BASE=http://127.0.0.1:18930 C2_PASSWORD='...' C2_PUBLIC_HOST=39.89.211.55 C2_HTTP_PORT=39443 C2_VPS_SSH=root@113.20.3.124 C2_VPS_KEY=$HOME/.ssh/id_ed25519_113.20.3.124 python3 scripts/acceptance/c2_public_http.py
+```
+
+TCP 监听器：c2/c2_tcp_public_vps_test.go（env 门控，默认 skip）。需要先从 settings 的 `c2_token` 取运行时 token：
+
+```bash
+export ARTEX_C2_TOKEN='<settings c2_token>'
+export ARTEX_C2_PUBLIC_VPS_ADDR=39.89.211.55:39444
+export ARTEX_C2_VPS_SSH=root@113.20.3.124
+export ARTEX_C2_VPS_KEY=$HOME/.ssh/id_ed25519_113.20.3.124
+go test ./c2 -run TestTCPPublicVPS -v -timeout 180s
+```
+
+实测（2026-11-22）：HTTP 上线→任务回传成功；TCP 上线→加密信封 exec 返回 uid=0(root)/hostname=wantong/root，均走公网映射；测试后清理监听器与 VPS 植入端。
