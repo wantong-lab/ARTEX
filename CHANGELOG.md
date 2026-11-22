@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.4.8] - 2026-11-22
+
+### 新增
+- C2 入站中继 P1：C2 管理页新增“入站中继”卡片，可创建/查看/停止；展示回调地址、节点标签、listener 状态、健康状态。
+- REST：GET/POST /api/c2/ingress、POST /api/c2/ingress/{id}/teardown；列表联查 C2 listener 并返回 healthy。
+- 多 VPS 归属：Plan/PlanOpts 增加 node_label；tunnels 台账按 ingress 查询。
+
+### 测试
+- go build ./... / go vet 通过；web npm run build 通过（Next.js 类型检查与静态生成）。
+- P0 公网 Windows 133 → VPS ingress → 平台 loopback C2 真机 E2E 保持 PASS。
+
+
 ## [0.4.7] - 2026-11-22
 
 ### 新增

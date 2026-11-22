@@ -286,3 +286,10 @@
 - 真机：Windows 133 目标（HTTP PowerShell）只回连 VPS，经 chisel 到平台 loopback C2，会话 active、whoami/hostname 任务成功，20.6s PASS。
 - 环境：VPS 云防火墙仅放行 22/80/443，39444 被拦；测试临时停 1Panel openresty 用 443，测试后已恢复。
 - 发布：提交 2a5fe54；CI 45037375661 全绿；tag v0.4.7 → Release 45037673828 成功，5 平台 zip + SHA256SUMS、GHCR v0.4.7 index 校验通过。P1 UI/多 VPS 台账待做。
+
+## 轮次 47 · 2026-11-22（C2 入站中继 P1）
+- 设计稿补充 P1 章节。
+- 后端：node_label、TunnelStore.ListIngress、c2_ingress_service.go（共享部署/停止服务）、REST GET/POST /api/c2/ingress、teardown。
+- 前端：C2 页“入站中继”卡片（创建/列表/停止/复制植入端、健康状态）。
+- 校验：go build ./...、go vet、web npm run build 通过。
+- 后续：提交/CI → tag v0.4.8；P2 TLS/ACL/故障转移。

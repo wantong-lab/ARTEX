@@ -52,6 +52,7 @@ type Plan struct {
 	PlatformChiselPort int    `json:"platform_chisel_port,omitempty"` // 平台 chisel server 端口
 	C2ListenerID       int64  `json:"c2_listener_id,omitempty"`       // 关联 C2 listener
 	C2CallbackHost     string `json:"c2_callback_host,omitempty"`     // 植入端回调的 VPS 公网 host
+	NodeLabel          string `json:"node_label,omitempty"`           // 多 VPS 节点标签（归属/展示）
 	// suo5 适配器字段（omitempty，向后兼容既有 chisel deploy_params):
 	PayloadFile string `json:"payload_file,omitempty"` // 平台侧 payloads 目录里的文件名（suo5.php 等）
 	PayloadName string `json:"payload_name,omitempty"` // 目标侧随机文件名
@@ -72,6 +73,7 @@ type PlanOpts struct {
 	PlatformChiselPort int    // ingress：平台 chisel server 端口
 	C2ListenerID       int64  // ingress：关联 C2 listener
 	C2CallbackHost     string // ingress：VPS 公网 host
+	NodeLabel          string // ingress：节点标签
 	VerifyAddr         string // socks 决定性验证目标（通常立足点 webshell 的 host:port)
 	PortMin            int
 	PortMax            int

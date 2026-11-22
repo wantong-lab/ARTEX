@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
-import type { C2Listener, C2Session, C2Task } from "@/lib/types";
+import type { C2Ingress, C2Listener, C2Session, C2Task } from "@/lib/types";
 
 function fmtTime(v?: string): string {
   if (!v) return "—";
@@ -25,6 +25,8 @@ const STATUS_LABEL: Record<string, string> = {
   active: "在线",
   dead: "失联",
   killed: "已终止",
+  alive: "在线",
+  deploying: "部署中",
   queued: "排队",
   sent: "已下发",
   success: "成功",
@@ -51,12 +53,24 @@ export default function C2Page() {
   const [implantLang, setImplantLang] = useState("python");
   const [implantContent, setImplantContent] = useState("");
 
+  const [ingress, setIngress] = useState<C2Ingress[]>([]);
+  const [ingSession, setIngSession] = useState("");
+  const [ingVpsHost, setIngVpsHost] = useState("");
+  const [ingVpsPort, setIngVpsPort] = useState("443");
+  const [ingKind, setIngKind] = useState("http");
+  const [ingNodeLabel, setIngNodeLabel] = useState("");
+  const [ingPlatformHost, setIngPlatformHost] = useState("");
+  const [ingPlatformPort, setIngPlatformPort] = useState("39443");
+  const [ingImplantLang, setIngImplantLang] = useState("powershell");
+  const [ingImplantContent, setIngImplantContent] = useState("");
+
   const refresh = useCallback(async () => {
-    const [st, ls, ss, ts] = await Promise.all([
+    const [st, ls, ss, ts, ing] = await Promise.all([
       api.c2Status(),
       api.c2Listeners(),
       api.c2Sessions(),
       api.c2Tasks(),
+      api.c2Ingress(),
     ]);
     setEnabled(st.enabled);
     setListeners(ls.listeners ?? []);
@@ -172,6 +186,42 @@ export default function C2Page() {
     } finally {
       setBusy("");
     }
+  }
+
+
+  async function createIngress() {
+    const sid = Number(ingSession);
+    const port = Number(ingVpsPort);
+    const pp = Number(ingPlatformPort);
+    if (!sid) { toast.error("VPS 会话 id 必填"); return; }
+    if (!ingVpsHost.trim()) { toast.error("VPS 公网 host 必填"); return; }
+    if (!Number.isInteger(port) || port < 1 || port > 65535) { toast.error("VPS 回调端口非法"); return; }
+    setBusy("ingress");
+    try {
+      const r = await api.c2CreateIngress({
+        session_id: sid, vps_host: ingVpsHost.trim(), vps_port: port,
+        c2_listener_kind: ingKind, node_label: ingNodeLabel.trim(),
+        platform_host: ingPlatformHost.trim(), platform_chisel_port: pp || undefined,
+        implant_lang: ingImplantLang,
+      });
+      setIngImplantContent(r.implant || "");
+      toast.success("入站中继已部署 tunnel=" + r.tunnel_id + " callback=" + r.callback_addr);
+      await refresh();
+    } catch (e) {
+      toast.error("创建失败：" + (e as Error).message);
+    } finally { setBusy(""); }
+  }
+
+  async function teardownIngress(id: number) {
+    if (!window.confirm("停止中继会停隧道并关闭关联 C2 listener，确认？")) return;
+    setBusy("ingress:" + id);
+    try {
+      await api.c2TeardownIngress(id);
+      toast.success("入站中继已停止");
+      await refresh();
+    } catch (e) {
+      toast.error("停止失败：" + (e as Error).message);
+    } finally { setBusy(""); }
   }
 
   const httpListeners = listeners.filter((l) => l.kind === "http");

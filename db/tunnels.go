@@ -95,6 +95,24 @@ func scanTunnel(row interface{ Scan(...any) error }) (*TunnelRecord, error) {
 	return &r, nil
 }
 
+// ListIngress 返回全部 ingress 隧道（按 id 倒序，供 C2 入站中继列表）。
+func (s *TunnelStore) ListIngress(ctx context.Context) ([]*TunnelRecord, error) {
+	rows, err := s.d.QueryContext(ctx, `SELECT `+tunnelCols+` FROM tunnels WHERE kind='ingress' ORDER BY id DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*TunnelRecord
+	for rows.Next() {
+		r, serr := scanTunnel(rows)
+		if serr != nil {
+			return nil, serr
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
 // Get 取一条；不存在返回 (nil, nil)。
 func (s *TunnelStore) Get(ctx context.Context, id int64) (*TunnelRecord, error) {
 	r, err := scanTunnel(s.d.QueryRowContext(ctx,

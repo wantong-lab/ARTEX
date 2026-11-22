@@ -34,6 +34,7 @@ func (h *tunnelRuntime) c2IngressDeployTool() actool.CoreTool {
 			"platform_host":        map[string]any{"type": "string", "description": "VPS 回连平台 chisel server 的公网 host（默认 ARTEX_CALLBACK_ADDR）"},
 			"platform_chisel_port": map[string]any{"type": "integer", "description": "平台 chisel server 端口（默认 ARTEX_TUNNEL_PLATFORM_PORT）"},
 			"implant_lang":         map[string]any{"type": "string", "enum": []any{"powershell", "python", "bash"}, "description": "HTTP 植入端语言（默认 powershell）；TCP 固定 python"},
+			"node_label":           map[string]any{"type": "string", "description": "VPS 节点标签（多节点归属/展示，可选）"},
 		}, []string{"session_id", "vps_host", "vps_port"}, false,
 		func(ctx context.Context, in json.RawMessage) (actool.Result, error) {
 			var a struct {
@@ -45,6 +46,7 @@ func (h *tunnelRuntime) c2IngressDeployTool() actool.CoreTool {
 				PlatformHost       string `json:"platform_host"`
 				PlatformChiselPort int    `json:"platform_chisel_port"`
 				ImplantLang        string `json:"implant_lang"`
+				NodeLabel          string `json:"node_label"`
 			}
 			_ = json.Unmarshal(in, &a)
 			if h == nil || h.mgr == nil || h.srv == nil {
@@ -117,7 +119,7 @@ func (h *tunnelRuntime) c2IngressDeployTool() actool.CoreTool {
 				TaskID: ri.TaskID, ViaSessionID: a.SessionID,
 				ListenHost: "0.0.0.0", ListenPort: a.VPSPort,
 				CallbackHost: platformHost, PlatformChiselPort: platformPort,
-				C2CallbackHost: strings.TrimSpace(a.VPSHost), C2ListenerID: listenerID,
+				C2CallbackHost: strings.TrimSpace(a.VPSHost), C2ListenerID: listenerID, NodeLabel: strings.TrimSpace(a.NodeLabel),
 				TargetHost: "127.0.0.1", TargetPort: l.BindPort,
 				DataDir: h.mgr.PlanDataDir(),
 			})

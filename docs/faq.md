@@ -130,3 +130,6 @@ v0.4.6 起 `tunnel_deploy` 支持 `c2_session_id`：平台经 C2 任务在目标
 
 ### Q31：目标必须回连 VPS、不能回连平台，怎么部署 C2？
 用 v0.4.7 的 C2 入站回调中继：平台建/自动建 127.0.0.1 的 C2 listener，VPS 侧 chisel client 本地监听回调端口（如 443/39444）并转发到平台 loopback listener。用 c2_ingress_deploy 返回的植入端（HTTP PowerShell 等）在目标执行即可，目标配置里只有 VPS 地址。注意 VPS 云防火墙要放行回调端口；若只允许 80/443，优先用 443 或前置代理。设计见 dev-docs/design/2026-11-22-c2-ingress-relay.md。
+
+### Q32：C2 入站中继在页面上怎么管？
+C2 管理页的“入站中继”卡片可填写 VPS 会话 id、VPS 公网 host/回调端口、listener 类型和节点标签，创建后返回回调地址和植入端；列表显示 listener 状态与健康状态，可直接停止。对应 REST 为 GET/POST /api/c2/ingress 和 POST /api/c2/ingress/{id}/teardown。

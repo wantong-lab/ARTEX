@@ -129,6 +129,9 @@ c2_ingress_deploy(session_id=<VPS 会话>, vps_host=<VPS 公网 IP>, vps_port=44
 
 真机实测：Windows 133 目标经 VPS ingress 回连平台 loopback C2，任务 whoami/hostname 成功（20.6s）。
 
+v0.4.8 起 C2 管理页提供“入站中继”卡片：选择 VPS 会话 id、填写 VPS 公网 host/端口、listener 类型和节点标签即可创建；列表展示回调地址、listener 状态与健康状态，可直接停止。REST 对应 `GET/POST /api/c2/ingress` 与 `POST /api/c2/ingress/{id}/teardown`。
+
+
 
 
 ## 安装

@@ -1,7 +1,7 @@
 # 设计稿：C2 入站回调中继（C2 Ingress Relay）
 
 - 日期：2026-11-22
-- 状态：已实施（P0，v0.4.7）
+- 状态：已实施（P0 v0.4.7 / P1 v0.4.8）
 - 关联：v0.4.6 C2→chisel 数据面、v0.4.5 公网 VPS 隧道、v0.4.4 跨 OS 隧道
 - 关键词：C2 ingress、reverse callback、chisel local forward、VPS 节点、Windows 目标
 
@@ -251,4 +251,21 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 - 代码：tunnel.PlanIngress、Manager 部署/校验/回滚支持；server/c2_ingress_tools.go（c2_ingress_deploy / c2_ingress_teardown）；C2 listener 强制 loopback；HTTP PowerShell/TCP Python 植入端回调地址由 ingress 生成。
 - 验证：Windows 133 目标（HTTP PowerShell 植入端）经 VPS 公网回调到平台 loopback C2 listener；C2 会话 active（remote=127.0.0.1 中继），whoami/hostname 任务成功；整链路 20.6s PASS。发布：tag v0.4.7，Release 45037673828 成功；CI 45037375661 全绿。
 - 环境说明：测试 VPS（113.20.3.124）云防火墙只放行 22/80/443，39444 入站不可达；测试临时停 1Panel openresty 使用 443 完成验证，测试后已恢复。生产需在 VPS 放行所选回调端口，或用 80/443 前置代理。
+
+## 12. P1 设计（v0.4.8）
+
+- 节点标签：tunnel.Plan/PlanOpts 增加 node_label，随 deploy_params 持久化，列表/UI 展示，用于多 VPS 归属。
+- 列表 API：GET /api/c2/ingress，按 tunnels.kind=ingress 查询，联表读取 C2 listener 状态；返回 callback_addr、listener_id/status、tunnel state、node_label、last_check、healthy。
+- 创建 API：POST /api/c2/ingress，复用 c2_ingress_deploy 的核心服务函数（自动创建 loopback listener、PlanIngress、部署、返回植入端）。
+- 停止 API：POST /api/c2/ingress/{tunnel_id}/teardown，停隧道并停关联 listener。
+- UI：C2 页新增“入站中继”卡片，支持创建（VPS 会话 id、VPS host/port、listener 类型、node_label、平台 chisel host/port）、列表与停止。
+- 健康口径：tunnel state=alive 且 listener status=running 视为 healthy；decisive 探活仍由 tunnel 巡检承担，列表展示最近 last_check。
+- 多 VPS：每个 ingress 独立 loopback listener + node_label；P2 再考虑节点级健康聚合/故障转移。
+
+### P1 实施记录（v0.4.8）
+
+- Plan/PlanOpts 增加 node_label；DB 增加 ListIngress。
+- REST：GET/POST /api/c2/ingress、POST /api/c2/ingress/{id}/teardown；列表返回 callback/listener/state/healthy/last_check。
+- UI：C2 管理页新增“入站中继”卡片（创建/列表/停止/复制植入端）。
+- 校验：go build/vet、web npm run build 通过；P0 真机 E2E 保持通过（Windows 133 → VPS ingress → 平台 loopback C2）。
 

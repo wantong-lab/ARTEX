@@ -222,6 +222,9 @@ func (s *Server) registerC2Routes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/c2/listeners/{id}", s.c2DeleteListener)
 	mux.HandleFunc("POST /api/c2/sessions/{id}/tasks", s.c2QueueTask)
 	mux.HandleFunc("GET /api/c2/implant", s.c2GenerateImplant)
+	mux.HandleFunc("GET /api/c2/ingress", s.c2IngressList)
+	mux.HandleFunc("POST /api/c2/ingress", s.c2IngressCreate)
+	mux.HandleFunc("POST /api/c2/ingress/{id}/teardown", s.c2IngressTeardown)
 }
 
 func (s *Server) c2Status(w http.ResponseWriter, r *http.Request) {

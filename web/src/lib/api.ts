@@ -124,6 +124,7 @@ import type {
   RetentionCleanupResult,
   RetentionCleanupList,
   SchedulerStatus,
+  C2Ingress,
   C2Listener,
   C2Session,
   C2Task,
@@ -298,6 +299,18 @@ export const api = {
     get<{ tasks: C2Task[] }>("/c2/tasks" + (sessionId ? "?session_id=" + sessionId : "")),
   c2QueueTask: (sessionId: number, command: string) =>
     post<{ ok: boolean; id: number; status: string }>("/c2/sessions/" + sessionId + "/tasks", { command }),
+  c2Ingress: () => get<{ ingress: C2Ingress[] }>("/c2/ingress"),
+  c2CreateIngress: (input: {
+    session_id: number;
+    vps_host: string;
+    vps_port: number;
+    c2_listener_kind?: string;
+    node_label?: string;
+    platform_host?: string;
+    platform_chisel_port?: number;
+    implant_lang?: string;
+  }) => post<{ tunnel_id: number; callback_addr: string; implant?: string; base_url?: string }>("/c2/ingress", input),
+  c2TeardownIngress: (id: number) => post<{ ok: boolean; tunnel_id: number; listener_id: number }>("/c2/ingress/" + id + "/teardown", {}),
   c2Implant: (listenerId: number, lang: string) =>
     get<{ ok: boolean; lang: string; base_url: string; content: string }>(
       "/c2/implant?listener_id=" + listenerId + "&lang=" + encodeURIComponent(lang),

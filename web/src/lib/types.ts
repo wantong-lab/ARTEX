@@ -1932,6 +1932,23 @@ export interface C2Task {
 }
 
 
+
+export interface C2Ingress {
+  tunnel_id: number;
+  listener_id: number;
+  node_label: string;
+  callback_addr: string;
+  vps_host: string;
+  vps_port: number;
+  listener_kind: string;
+  listener_status: string;
+  state: string;
+  healthy: boolean;
+  last_check: string;
+  error?: string;
+  created_at: string;
+}
+
 export interface WebshellCleanupResult {
   ok: boolean;
   cleanup: string;
