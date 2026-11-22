@@ -42,7 +42,7 @@
 
 - [x] P4-21 C2 会话作为隧道部署入口：tunnel_deploy 支持 c2_session_id；新增 C2 session adapter（TCP Manager Dispatch / HTTP c2_tasks 队列）、固定 listen_port、gzip 分块上传兜底；公网 C2 TCP（无 SSH）→ chisel SOCKS E2E PASS。提交 eadca3a，tag v0.4.6。
 
-- [x] P4-22 C2 入站回调中继：新增 ingress 隧道类型（迁移 0013）、PlanIngress、c2_ingress_deploy/teardown；平台 C2 listener loopback + VPS chisel local forward；Windows 133 HTTP PowerShell 真机 E2E PASS（VPS 443，20.6s）。
+- [x] P4-22 C2 入站回调中继：新增 ingress 隧道类型（迁移 0013）、PlanIngress、c2_ingress_deploy/teardown；平台 C2 listener loopback + VPS chisel local forward；Windows 133 HTTP PowerShell 真机 E2E PASS（VPS 443，20.6s）。提交 2a5fe54，tag v0.4.7。
 
 ## 变更记录
 
@@ -88,4 +88,4 @@
 - 2026-11-22：P4-19 公网 VPS 隧道验证完成（固定 bootstrap 端口 + SSH 拉起修复）；VPS E2E PASS，公网出口 IP 113.20.3.124 经隧道返回。提交 10faddf；CI 45025109590 全绿；tag v0.4.5，Release 45025422076 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.5 index 校验通过）。
 - 2026-11-22：P4-20 公网 C2 HTTP/TCP 真机测试完成；HTTP 任务回传与 TCP 加密信封 exec 均 PASS，测试后清理监听器/VPS 植入端。
 - 2026-11-22：P4-21 C2→隧道适配完成；公网 C2 TCP 无 SSH 真机 E2E PASS（SOCKS 访问 VPS 本地 HTTP 200，47.7s）。提交 eadca3a；CI 45032012302 全绿；tag v0.4.6，Release 45032289276 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.6 index）。
-- 2026-11-22：P4-22 C2 入站回调中继实现并真机验证；VPS 云防火墙 39444 被拦，测试用 443 并恢复 openresty。
+- 2026-11-22：P4-22 C2 入站回调中继实现并真机验证；VPS 云防火墙 39444 被拦，测试用 443 并恢复 openresty。提交 2a5fe54；CI 45037375661 全绿；tag v0.4.7，Release 45037673828 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.7 index）。
