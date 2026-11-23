@@ -365,7 +365,7 @@ P2-A/P2-B 暂不做。当前优先执行 P2-C（多 VPS 健康台账/巡检/手�
 - 服务：部署成功写台账；停止时标记 stopped；列表以 c2_ingress 为主，兼容旧 tunnels 记录；新增 POST /api/c2/ingress/{id}/rebuild 手动重建。
 - 巡检：服务启动后每 30s 检查 tunnel 状态、C2 listener 状态、VPS 回调端口 TCP 可达性，写回 health/status/last_error；兼容旧 ingress 自动补台账。
 - UI：C2 页面入站中继表增加最近健康时间与“重建”按钮。
-- 说明：A/B 暂不做（用户可单独放行端口，C2/chisel 链路已加密）。
+- 说明：A/B 暂不做（用户可单独放行端口，C2/chisel 链路已加密）。提交 f9903e7。
 
 ### P2-D 实施记录（v0.4.9）
 
@@ -373,3 +373,4 @@ P2-A/P2-B 暂不做。当前优先执行 P2-C（多 VPS 健康台账/巡检/手�
 - 事件：c2_events 写创建/停止/健康状态变化；GET /api/c2/ingress/events?limit=N；C2 页面入站中继卡展示最近事件。
 - 审计沿用 c2_events；未把 token/命令写入事件。
 - 外发告警（钉钉/飞书/Webhook）暂未接入 notifier，先以事件 + 指标供外部告警规则消费。
+- 提交 1cc778b；本地 go build/vet、fresh DB go test ./...、web build、/metrics 冒烟通过；GitHub Actions 因账单禁用，改推 Gitea wantong/ARTEX。

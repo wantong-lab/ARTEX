@@ -226,12 +226,11 @@ func (s *Server) metricsHandler() http.Handler {
 				fmt.Fprintf(&b, "artex_c2_ingress_unhealthy %d\n", total-healthy)
 			}
 		}
-		if req, fail := s.c2BeaconCounters(); req > 0 || fail > 0 {
-			writeMetricHeader(&b, "artex_c2_beacon_requests_total", "counter", "HTTP beacon 请求总数")
-			fmt.Fprintf(&b, "artex_c2_beacon_requests_total %d\n", req)
-			writeMetricHeader(&b, "artex_c2_beacon_failures_total", "counter", "HTTP beacon 失败总数")
-			fmt.Fprintf(&b, "artex_c2_beacon_failures_total %d\n", fail)
-		}
+		req, fail := s.c2BeaconCounters()
+		writeMetricHeader(&b, "artex_c2_beacon_requests_total", "counter", "HTTP beacon 请求总数")
+		fmt.Fprintf(&b, "artex_c2_beacon_requests_total %d\n", req)
+		writeMetricHeader(&b, "artex_c2_beacon_failures_total", "counter", "HTTP beacon 失败总数")
+		fmt.Fprintf(&b, "artex_c2_beacon_failures_total %d\n", fail)
 		if s.engine != nil {
 			writeMetricHeader(&b, "artex_llm_active_calls", "gauge", "进行中的 LLM 调用数")
 			fmt.Fprintf(&b, "artex_llm_active_calls %d\n", s.engine.SumActiveLLMCalls())

@@ -308,4 +308,4 @@
 - /metrics：ingress 总数/健康/异常、beacon 请求/失败计数。
 - c2_events：创建/停止/健康状态变化；GET /api/c2/ingress/events；C2 页最近事件时间线。
 - 外发告警暂未接 notifier，事件 + 指标可供外部规则消费。
-- 校验：go build/vet、web build、本地 go test 通过；推送 Gitea（GitHub Actions 因账单暂不可用）。
+- 校验：go build/vet、web build、fresh DB go test ./... 全绿、/metrics 冒烟通过；提交 P2-C f9903e7、P2-D 1cc778b；推送 Gitea wantong/ARTEX。GitHub Actions 因账单禁用，CI/Release 待恢复。
