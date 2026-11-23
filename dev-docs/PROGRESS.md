@@ -327,3 +327,9 @@
 - 新增 PlanIngressReverse、Manager.deployReverse（VPS server + 平台 client，authfile/AUTH 分离）。
 - c2_ingress_deploy/API/UI 增加 mode=forward|reverse；worker 工具目录补 A/forward/reverse 决策规则。
 - 待完整 C2 植入端反向 E2E；forward 回归与 build 通过。
+
+## 轮次 54 · 2026-11-23（统一出口代理）
+- settings egress_mode=direct/fixed/pool；Manager EffectiveProxy（pool: active→fallback→direct）。
+- ProxyAddr/自更新改用 effective；代理池 switch/fallback/global/delete 同步并重建 Agent。
+- 系统配置出口代理卡增加模式选择/当前生效；代理池页明确接管关系。
+- 校验：go build/vet、web build、EffectiveProxy 单测通过；待真实代理出口 E2E。

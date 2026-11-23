@@ -998,7 +998,7 @@ function ProxyPoolBlock() {
           </div>
         </Card>
         <Card className="flex flex-col gap-2 p-3">
-          <p className="font-medium text-sm">全局兜底代理（活动代理失败时自动回退）</p>
+          <p className="font-medium text-sm">代理池兜底代理（pool 模式第二级：活动代理失败时回退）</p>
           <div className="flex gap-2">
             <Input placeholder="留空 = 直连" value={globalURL} onChange={(e) => setGlobalURL(e.target.value)} />
             <Button size="sm" variant="outline" disabled={busy} onClick={() => void run(async () => {
@@ -1083,6 +1083,7 @@ function ProxyPoolBlock() {
         <div className="flex items-center justify-between p-2">
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <p className="font-medium text-sm">代理池（{state?.entries.length ?? 0}）</p>
+            <p className="text-muted-foreground text-xs">当前是否接管全局出口由「系统配置 → 出口模式」决定；本页只管理条目/活动代理。</p>
             <Badge variant="secondary">健康 {state?.healthy ?? 0}</Badge>
             <Badge variant={(state?.failed ?? 0) > 0 ? "destructive" : "secondary"}>失败 {state?.failed ?? 0}</Badge>
             <span className="text-muted-foreground">

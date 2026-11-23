@@ -40,4 +40,5 @@
 - P2-E（v0.4.9）：入站中继 VPS 会话下拉、健康/节点筛选、runbook、验收脚本。
 - C2 控制台 UX（v0.4.9）：首屏方式说明/字段速查、监听器→中继→植入端→会话→任务排序、默认端口 39444/39443。
 - C2 反向 ingress（v0.4.9）：平台主动出站连 VPS（热点/NAT），c2_ingress_deploy mode=reverse；手动链路验证通过，待完整 C2 E2E。
+- 统一出口代理（v0.4.9）：egress_mode=direct/fixed/pool；fixed 用 global_proxy，pool 用代理池活动/兜底；代理池切换会同步重建 Agent。
 - C2 socks5 仍未内置；二开为外部 C2 MCP（Supershell manage_socks5）集成，主线如需内置走反向 SOCKS-over-C2 或外部 MCP，待定。

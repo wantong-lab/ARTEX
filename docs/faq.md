@@ -142,3 +142,6 @@ v0.4.9 起 /metrics 暴露 artex_c2_ingress_total、artex_c2_ingress_healthy、a
 
 ### Q35：C2 入站中继怎么部署/排障？
 见 docs/c2-ingress-runbook.md：包含 VPS 防火墙/云安全组、UI/工具/REST 部署、健康与重建、排障表和清理步骤。真机验收可用 scripts/acceptance/c2_ingress_direct.sh（需先设置环境变量）。
+
+### Q36：全局代理和代理池到底谁生效？
+v0.4.9 起由「系统配置 → 出口代理 → 出口模式」决定：direct=直连，fixed=使用 global_proxy，pool=使用内网中枢代理池活动代理（失败回退池兜底代理，再回退直连）。代理池页的“兜底代理”只在 pool 模式作为第二级。

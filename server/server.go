@@ -3357,7 +3357,9 @@ func (s *Server) settingsPayload() map[string]any {
 		"brave_key_set":            strings.TrimSpace(braveKey) != "",
 		"tavily_key_set":           strings.TrimSpace(tavilyKey) != "",
 		"web_search_proxy":         proxy,                       // 独立出口代理(http/https/socks5)，空=直连
-		"global_proxy":             s.m.GlobalProxy(),           // 全局出口代理(http/https/socks5)，所有目标流量走它，空=直连
+		"global_proxy":             s.m.GlobalProxy(),           // fixed 模式的固定出口代理(http/https/socks5)，空=直连
+		"egress_mode":              s.m.EgressMode(),            // direct | fixed | pool
+		"effective_proxy":          s.m.EffectiveProxy(),        // 当前实际生效出口
 		"python_interpreter":       strings.TrimSpace(pyStored), // 用户/自动设的值(空=用运行时检测)
 		"workers":                  s.m.Workers(),               // 并发工作 agent 数(默认3)；对之后启动的任务生效
 		"task_concurrency_enabled": concOn,                      // 任务并发上限开关(默认关)
@@ -3431,7 +3433,8 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		BraveKey         *string `json:"brave_search_api_key"`
 		TavilyKey        *string `json:"tavily_search_api_key"`
 		WebSearchProxy   *string `json:"web_search_proxy"`   // 独立出口代理(http/https/socks5)；null=不改，""=清空
-		GlobalProxy      *string `json:"global_proxy"`       // 全局出口代理(http/https/socks5)；null=不改，""=清空(直连)
+		GlobalProxy      *string `json:"global_proxy"`       // fixed 模式固定出口代理；null=不改，""=清空(直连)
+		EgressMode       *string `json:"egress_mode"`        // direct/fixed/pool；null=不改
 		PythonInterp     *string `json:"python_interpreter"` // 自定义脚本工具的 python 解释器路径
 		Workers          *int    `json:"workers"`            // 并发工作 agent 数(>0)；对之后启动的任务生效
 		// 任务并发上限:同时「运行中」的任务数上限。关闭=不限;开启后新建任务超限则排队,有空位自动启动。
@@ -3580,6 +3583,16 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	if req.TrafficCapture != nil {
 		if err := s.m.SetTrafficEnabled(*req.TrafficCapture); err != nil {
 			writeErr(w, 500, err.Error())
+			return
+		}
+		changed = true
+	}
+	if req.EgressMode != nil {
+		if s.proxyPool() != nil {
+			s.syncPoolEgress(r.Context(), false)
+		}
+		if err := s.m.SetEgressMode(*req.EgressMode); err != nil {
+			writeErr(w, 400, err.Error())
 			return
 		}
 		changed = true

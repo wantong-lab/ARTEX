@@ -196,6 +196,12 @@ func (m *Manager) activeURL(ctx context.Context) (int64, string) {
 	return id, e.URL
 }
 
+// ActiveURL 返回当前活动代理 URL（无活动/非 active 时为空）。
+func (m *Manager) ActiveURL(ctx context.Context) string {
+	_, u := m.activeURL(ctx)
+	return u
+}
+
 // Probe 探测指定条目的出口 IP 与延迟，并把结果写回存储。
 func (m *Manager) Probe(ctx context.Context, id int64) (ProbeResult, error) {
 	if m.store == nil {

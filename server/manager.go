@@ -250,7 +250,18 @@ type Manager struct {
 	// capture is on it becomes the MITM's upstream; when capture is off it is
 	// injected into agent bash env / WebFetch directly. See ProxyAddr.
 	globalProxy string
+	// P2 统一出口：direct/fixed/pool；pool 时使用代理池活动代理，
+	// fallback 为池兜底代理（proxy_global_url），空则直连。
+	egressMode        string
+	poolActiveProxy   string
+	poolFallbackProxy string
 }
+
+const (
+	egressDirect = "direct"
+	egressFixed  = "fixed"
+	egressPool   = "pool"
+)
 
 // Settings keys the UI toggles at runtime.
 const (
@@ -265,6 +276,7 @@ const (
 	// (http/https/socks5). Empty = direct. Distinct from web_search_proxy (which
 	// only routes the search backend) and the per-profile LLM proxy.
 	settingGlobalProxy = "global_proxy"
+	settingEgressMode  = "egress_mode"
 	settingWorkers     = "workers"
 	settingLLMRecord   = "llm_record"
 	// LLM 轮询(故障转移)。默认关闭——开启后走「全局激活配置」的 agent 在当前配置
@@ -438,6 +450,11 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 	// off, ProxyAddr hands it to agents directly (bash env / WebFetch).
 	if v, ok, _ := pg.GetSetting(settingGlobalProxy); ok {
 		m.globalProxy = strings.TrimSpace(v)
+	}
+	if v, ok, _ := pg.GetSetting(settingEgressMode); ok {
+		m.egressMode = normalizeEgressMode(v, m.globalProxy)
+	} else {
+		m.egressMode = inferEgressMode(m.globalProxy)
 	}
 	if m.traffic != nil {
 		if err := m.traffic.SetUpstreamProxy(m.globalProxy); err != nil {
@@ -754,9 +771,7 @@ func (m *Manager) ProxyAddr() string {
 	if m.traffic != nil && m.TrafficEnabled() {
 		return m.traffic.ProxyAddr()
 	}
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.globalProxy
+	return m.EffectiveProxy()
 }
 
 // ProxyCACert returns the CA cert path agents must trust to verify HTTPS through
@@ -771,7 +786,90 @@ func (m *Manager) ProxyCACert() string {
 	return m.traffic.CACertPath()
 }
 
-// GlobalProxy returns the configured global egress proxy URL (empty = direct).
+func normalizeEgressMode(mode, global string) string {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case egressDirect:
+		return egressDirect
+	case egressFixed:
+		return egressFixed
+	case egressPool:
+		return egressPool
+	default:
+		return inferEgressMode(global)
+	}
+}
+
+func inferEgressMode(global string) string {
+	if strings.TrimSpace(global) != "" {
+		return egressFixed
+	}
+	return egressDirect
+}
+
+// EgressMode returns the effective configured mode (direct/fixed/pool).
+func (m *Manager) EgressMode() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return normalizeEgressMode(m.egressMode, m.globalProxy)
+}
+
+// EffectiveProxy resolves the actual egress proxy URL for the current mode.
+// pool: active entry -> pool fallback -> direct; fixed: global_proxy; direct: "".
+func (m *Manager) EffectiveProxy() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	switch normalizeEgressMode(m.egressMode, m.globalProxy) {
+	case egressDirect:
+		return ""
+	case egressPool:
+		if strings.TrimSpace(m.poolActiveProxy) != "" {
+			return m.poolActiveProxy
+		}
+		if strings.TrimSpace(m.poolFallbackProxy) != "" {
+			return m.poolFallbackProxy
+		}
+		return ""
+	default:
+		return m.globalProxy
+	}
+}
+
+// SetEgressMode validates, persists and applies direct/fixed/pool.
+func (m *Manager) SetEgressMode(mode string) error {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	if mode != egressDirect && mode != egressFixed && mode != egressPool {
+		return fmt.Errorf("egress_mode 仅支持 direct/fixed/pool")
+	}
+	if err := m.pg.SetSetting(settingEgressMode, mode); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	m.egressMode = mode
+	m.mu.Unlock()
+	return m.applyEffectiveProxy()
+}
+
+// SetPoolEgress 由代理池运行时调用，更新池活动代理/兜底代理并重新应用出口。
+func (m *Manager) SetPoolEgress(active, fallback string) {
+	m.mu.Lock()
+	m.poolActiveProxy = strings.TrimSpace(active)
+	m.poolFallbackProxy = strings.TrimSpace(fallback)
+	m.mu.Unlock()
+	_ = m.applyEffectiveProxy()
+}
+
+func (m *Manager) applyEffectiveProxy() error {
+	effective := m.EffectiveProxy()
+	if m.traffic != nil {
+		if err := m.traffic.SetUpstreamProxy(effective); err != nil {
+			return err
+		}
+	}
+	m.syncBrowserMCPProxy()
+	return nil
+}
+
+// GlobalProxy returns the configured fixed egress proxy URL (empty = direct).
 func (m *Manager) GlobalProxy() string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -794,15 +892,11 @@ func (m *Manager) SetGlobalProxy(raw string) error {
 	}
 	m.mu.Lock()
 	m.globalProxy = raw
-	m.mu.Unlock()
-	if m.traffic != nil {
-		if err := m.traffic.SetUpstreamProxy(raw); err != nil {
-			return err
-		}
+	if strings.TrimSpace(m.egressMode) == "" {
+		m.egressMode = inferEgressMode(raw)
 	}
-	// Keep the browser MCP's egress in sync with the new global proxy too.
-	m.syncBrowserMCPProxy()
-	return nil
+	m.mu.Unlock()
+	return m.applyEffectiveProxy()
 }
 
 func (m *Manager) Close() error {

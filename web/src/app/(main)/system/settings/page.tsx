@@ -30,6 +30,8 @@ export default function SystemSettingsPage() {
   const [proxyInput, setProxyInput] = React.useState("");
   const [savingProxy, setSavingProxy] = React.useState(false);
   const [globalProxyInput, setGlobalProxyInput] = React.useState("");
+  const [egressMode, setEgressMode] = React.useState("direct");
+  const [effectiveProxy, setEffectiveProxy] = React.useState("");
   const [savingGlobalProxy, setSavingGlobalProxy] = React.useState(false);
   const [testing, setTesting] = React.useState(false);
   const [loaded, setLoaded] = React.useState(false);
@@ -55,6 +57,8 @@ export default function SystemSettingsPage() {
     setTavilyKeySet(!!s.tavily_key_set);
     setProxyInput(s.web_search_proxy ?? "");
     setGlobalProxyInput(s.global_proxy ?? "");
+    setEgressMode(s.egress_mode || "direct");
+    setEffectiveProxy(s.effective_proxy || "");
     setPyInterp(s.python_interpreter ?? "");
     setWorkers(String(s.workers ?? 3));
     setInjectPlanner(s.constraints_inject_planner !== false);
@@ -220,6 +224,18 @@ export default function SystemSettingsPage() {
       .finally(() => setSavingProxy(false));
   };
 
+  const saveEgressMode = (mode: string) => {
+    setSavingGlobalProxy(true);
+    api
+      .setSettings({ egress_mode: mode as "direct" | "fixed" | "pool" })
+      .then((s) => {
+        apply(s);
+        toast.success("出口模式已切换");
+      })
+      .catch((e) => toast.error("切换失败：" + (e as Error).message))
+      .finally(() => setSavingGlobalProxy(false));
+  };
+
   const saveGlobalProxy = () => {
     setSavingGlobalProxy(true);
     api
@@ -329,10 +345,10 @@ export default function SystemSettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <RadioTowerIcon className="size-4" />
-              全局代理
+              出口代理
             </CardTitle>
             <CardDescription>
-              所有 Agent 的<b>目标流量</b>经此代理出网（隐藏源 IP / 走跳板）。支持 <b>http / https / socks5</b>，可带{" "}
+              出口模式决定所有 Agent 的<b>目标流量</b>走直连、固定代理，还是由内网中枢代理池接管（三选一）。支持 <b>http / https / socks5</b>，可带{" "}
               <code>user:pass</code> 认证。留空=直连。
               <br />
               开启<b>流量捕获</b>时，它作为记录代理的<b>上游</b>（流量仍全量落库，再经此代理出网）；关闭捕获时，直接注入
@@ -344,8 +360,23 @@ export default function SystemSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
+            <Label className="text-sm font-normal text-muted-foreground">出口模式</Label>
+            <select
+              className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+              value={egressMode}
+              disabled={!loaded || savingGlobalProxy}
+              onChange={(e) => saveEgressMode(e.target.value)}
+            >
+              <option value="direct">直连（不使用代理）</option>
+              <option value="fixed">固定代理（global_proxy）</option>
+              <option value="pool">代理池接管（内网中枢 → 代理池）</option>
+            </select>
+            <p className="text-muted-foreground text-xs">
+              当前生效：{effectiveProxy || "直连"}
+              {egressMode === "pool" ? "（由代理池活动代理决定，固定代理输入不生效）" : ""}
+            </p>
             <Label htmlFor="global-proxy" className="text-sm font-normal text-muted-foreground">
-              代理地址
+              固定代理地址
             </Label>
             <div className="flex items-center gap-2">
               <Input
@@ -353,15 +384,15 @@ export default function SystemSettingsPage() {
                 autoComplete="off"
                 placeholder="socks5://user:pass@host:1080 或 http://host:port（留空=直连）"
                 value={globalProxyInput}
-                disabled={!loaded || savingGlobalProxy}
+                disabled={!loaded || savingGlobalProxy || egressMode !== "fixed"}
                 onChange={(e) => setGlobalProxyInput(e.target.value)}
               />
-              <Button type="button" onClick={saveGlobalProxy} disabled={!loaded || savingGlobalProxy}>
+              <Button type="button" onClick={saveGlobalProxy} disabled={!loaded || savingGlobalProxy || egressMode !== "fixed"}>
                 保存
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">
-              {globalProxyInput.trim() ? "已配置 · 所有目标流量经此代理出网" : "未配置 · 目标流量直连出网"}
+              {egressMode === "pool" ? "代理池接管中：以代理池活动代理为实际出口" : egressMode === "direct" ? "直连模式：不使用固定代理" : globalProxyInput.trim() ? "已配置 · 所有目标流量经此代理出网" : "未配置 · 目标流量直连出网"}
             </p>
           </CardContent>
         </Card>

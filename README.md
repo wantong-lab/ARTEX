@@ -133,7 +133,9 @@ v0.4.8 起 C2 管理页提供“入站中继”卡片：选择 VPS 会话 id、�
 
 v0.4.9 起：入站中继增加节点台账、30s 健康巡检、手动重建、指标/事件与页面最近事件；VPS 会话改为下拉选择，支持健康/节点筛选。
 
-平台在手机热点/NAT 时使用反向模式：平台主动出站连 VPS，VPS 回调端口反向转发到平台 C2 loopback；C2 页“网络模式”选“反向”，worker 工具描述含 A/forward/reverse 决策规则。完整操作/排障见 docs/c2-ingress-runbook.md；真机验收脚本 scripts/acceptance/c2_ingress_direct.sh。
+平台在手机热点/NAT 时使用反向模式：平台主动出站连 VPS，VPS 回调端口反向转发到平台 C2 loopback；C2 页“网络模式”选“反向”，worker 工具描述含 A/forward/reverse 决策规则。
+
+出口代理统一为三选一：直连 / 固定代理（global_proxy）/ 代理池接管；在内网中枢代理池选择活动代理后，到系统配置 → 出口代理切换为“代理池接管”。完整操作/排障见 docs/c2-ingress-runbook.md；真机验收脚本 scripts/acceptance/c2_ingress_direct.sh。
 
 
 

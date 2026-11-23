@@ -85,7 +85,37 @@ func (s *Server) proxyPool() *proxyPoolRuntime {
 	kb.SetSploitusHTTPClient(mgr.Client())
 	kb.SetCVEHTTPClient(mgr.Client()) // 统一出站：Sploitus + CVE 同步共用代理池回退链
 	s.proxyRT = rt
+	if s.m != nil {
+		s.m.SetPoolEgress(rt.mgr.ActiveURL(context.Background()), rt.mgr.Global())
+	}
 	return rt
+}
+
+// syncPoolEgress 把代理池活动/兜底代理同步给 Manager；pool 模式下这是实际出口。
+// rebuild=true 时重建 Agent，使 capture-off 的 bash/WebFetch 立刻换代理。
+func (s *Server) syncPoolEgress(ctx context.Context, rebuild bool) {
+	rt := s.proxyPool()
+	if rt == nil || s.m == nil {
+		return
+	}
+	active := rt.mgr.ActiveURL(ctx)
+	if s.m != nil {
+		s.m.SetPoolEgress(active, rt.mgr.Global())
+	}
+	if rebuild && s.m.EgressMode() == egressPool {
+		s.rebuildAgentsForEgress()
+	}
+}
+
+func (s *Server) rebuildAgentsForEgress() {
+	s.cfgMu.Lock()
+	cfg, on := s.llmCfg, s.llmOn
+	s.cfgMu.Unlock()
+	if on {
+		if err := s.applyLLM(cfg); err != nil {
+			log.Printf("[egress] 重建 Agent 失败: %v", err)
+		}
+	}
 }
 
 func (s *Server) registerProxyPoolRoutes(mux *http.ServeMux) {
@@ -232,6 +262,7 @@ func (s *Server) proxyPoolSwitch(w http.ResponseWriter, r *http.Request) {
 	if err := s.m.pg.SetSetting("proxy_active_id", strconv.FormatInt(id, 10)); err != nil {
 		log.Printf("[proxypool] 保存活动代理失败: %v", err)
 	}
+	s.syncPoolEgress(r.Context(), true)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "active_id": id})
 }
 
@@ -243,6 +274,7 @@ func (s *Server) proxyPoolFallback(w http.ResponseWriter, r *http.Request) {
 	}
 	rt.mgr.SetActive(0)
 	_ = s.m.pg.SetSetting("proxy_active_id", "0")
+	s.syncPoolEgress(r.Context(), true)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "active_id": 0, "global_set": rt.mgr.Global() != ""})
 }
 
@@ -267,6 +299,7 @@ func (s *Server) proxyPoolGlobal(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
+	s.syncPoolEgress(r.Context(), true)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "global_set": rt.mgr.Global() != ""})
 }
 
@@ -306,6 +339,7 @@ func (s *Server) proxyPoolDelete(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
+	s.syncPoolEgress(r.Context(), true)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 

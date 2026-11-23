@@ -56,6 +56,8 @@
 
 - [x] P4-30 C2 入站中继反向模式：PlanIngressReverse + Manager.deployReverse + mode/UI/worker 决策；手动 chisel 反向链路验证通过；提交 b1f2372；待完整 C2 E2E。
 
+- [x] P4-31 统一出口代理：egress_mode direct/fixed/pool + EffectiveProxy + 代理池同步/重建 + 设置页模式选择。
+
 ## 变更记录
 
 - 2026-11-21：建立任务板；P0-2、P0-3 完成（提交后回填 commit）。
@@ -73,3 +75,4 @@
 - 2026-11-23：P4-28 P2-E 完成（UI 选择器/筛选、runbook、验收脚本）；web build 通过。
 - 2026-11-23：P4-29 C2 页面 UX 优化（说明卡/速查/排序/默认值）；web build 通过。
 - 2026-11-23：P4-30 反向 ingress 实现；手动 chisel 反向隧道 VPS 回调 200；待完整 C2 E2E。
+- 2026-11-23：P4-31 统一出口代理完成；go build/vet、web build、EffectiveProxy 单测通过。
