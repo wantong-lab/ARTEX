@@ -293,9 +293,10 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	s.restoreTaskRuntimes()
 	go s.reconcileConcurrency()
 	s.startTaskArchiveWorker()
-	s.wireInterceptReviewer() // LLM 兜底审批:未命中拦截规则的命令交给模型判定
-	s.startC2IfEnabled(ctx)   // C2 默认关闭；仅 c2_enabled=on 时按台账拉起监听器
-	s.proxyPool()             // 代理池：加载全局/活动配置并注入出站 client
+	s.wireInterceptReviewer()     // LLM 兜底审批:未命中拦截规则的命令交给模型判定
+	s.startC2IfEnabled(ctx)       // C2 默认关闭；仅 c2_enabled=on 时按台账拉起监听器
+	go s.c2IngressHealthLoop(ctx) // P2-C：C2 入站中继健康巡检
+	s.proxyPool()                 // 代理池：加载全局/活动配置并注入出站 client
 	if s.m != nil && s.m.pg != nil {
 		s.maintenance = newMaintenanceScheduler(s)
 		go s.maintenance.Run(s.ctx) // P1-4 维护调度：默认保留清理/CVE 关闭、代理池巡检开启（空池跳过）

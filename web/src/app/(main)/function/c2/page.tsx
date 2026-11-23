@@ -224,6 +224,20 @@ export default function C2Page() {
     } finally { setBusy(""); }
   }
 
+
+  async function rebuildIngress(id: number) {
+    if (!window.confirm("重建会先停止当前中继再用原会话/节点重新部署，确认？")) return;
+    setBusy("rebuild:" + id);
+    try {
+      const r = await api.c2RebuildIngress(id);
+      setIngImplantContent(r.implant || "");
+      toast.success("已重建 tunnel=" + r.tunnel_id + " callback=" + r.callback_addr);
+      await refresh();
+    } catch (e) {
+      toast.error("重建失败：" + (e as Error).message);
+    } finally { setBusy(""); }
+  }
+
   const httpListeners = listeners.filter((l) => l.kind === "http");
   const e = (v: string) => v || "—";
 

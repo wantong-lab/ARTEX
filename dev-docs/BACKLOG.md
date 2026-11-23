@@ -46,9 +46,9 @@
 
 - [x] P4-23 C2 入站中继 P1：C2 页入站中继卡片 + REST（GET/POST /api/c2/ingress、teardown）+ node_label 多 VPS 归属 + healthy 列表；web/后端构建通过。提交 2da92c0，tag v0.4.8。
 
-- [ ] P4-24 P2-A HTTPS/443 反代：vps_bind_host/public_base_url/path_prefix + openresty 站点反代模板 + Windows HTTPS 真机验收
-- [ ] P4-25 P2-B 访问控制/安全：源 IP ACL、限速、body/Content-Type 限制、日志脱敏、TLS/HSTS
-- [ ] P4-26 P2-C 多 VPS 健康台账：c2_ingress 表、健康巡检、失联告警、手动重建
+- [-] P4-24 P2-A HTTPS/443 反代（暂不做：用户可独立放行端口）：vps_bind_host/public_base_url/path_prefix + openresty 站点反代模板 + Windows HTTPS 真机验收
+- [-] P4-25 P2-B 访问控制/安全（暂不做：链路已加密）：源 IP ACL、限速、body/Content-Type 限制、日志脱敏、TLS/HSTS
+- [~] P4-26 P2-C 多 VPS 健康台账（进行中）：c2_ingress 表、健康巡检、失联告警、手动重建
 - [ ] P4-27 P2-D 可观测性/告警：指标、事件、告警、审计
 - [ ] P4-28 P2-E UI/文档/验收：会话选择器、节点/健康/事件面板、runbook、验收脚本
 
@@ -63,3 +63,4 @@
 - 2026-11-21：P1-5 完成（/system/retention：策略/预览/dry-run/真删确认/审计/清理清单/调度状态+手动执行）。Playwright 7 项交互全过、0 console error。
 
 - 2026-11-21：P1-6 完成（迁移 0010 kind；HTTP beacon + token 路径；c2_http.go 会话/任务复用；DELETE listener；POST session task；GET implant 三语言；/function/c2 前端页）。后端集成 13 项全过；Playwright 11 项 E2E 全过（含真实 beacon 领取/回传、端口关闭），0 console error；db 全量测试 fresh DB 全绿。
+- 2026-11-23：P4-26 P2-C 完成（迁移 0014、健康巡检、重建 API/UI）；P2-A/B 按用户确认暂不做。

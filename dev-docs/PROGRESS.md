@@ -296,3 +296,10 @@
 ## 轮次 48 · 2026-11-23（VPS 39444 直连验证）
 - 用户放行 VPS 39444（1Panel 防火墙规则补掩码）后，Windows 133 → VPS:39444 → 平台 loopback C2 真机 E2E PASS（19.2s，whoami/hostname 成功）。
 - 面板：1panel-core/agent 与 openresty 已恢复，8443 公网/源站 200；测试后 VPS 443/openresty 正常，39444 已清理。
+
+## 轮次 49 · 2026-11-23（C2 入站中继 P2-C）
+- 迁移 0014：c2_ingress 节点台账；部署/停止写台账，旧 ingress 自动补建。
+- 健康巡检：启动后每 30s 检查 tunnel/listener/VPS 回调 TCP 可达性，写回 healthy/status/last_error。
+- API/UI：GET /api/c2/ingress 改为台账列表并兼容旧记录；POST /api/c2/ingress/{id}/rebuild；页面增加最近健康/重建。
+- P2-A/B 暂不做（用户可独立放行端口，链路已加密）。
+- 校验：go build/vet、迁移测试、web build 通过；后续提交/CI/发布。

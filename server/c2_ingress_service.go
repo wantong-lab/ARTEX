@@ -113,9 +113,19 @@ func (h *tunnelRuntime) deployC2Ingress(ctx context.Context, req c2IngressReques
 	if err != nil {
 		return nil, fmt.Errorf("C2 ingress 部署失败: %w", err)
 	}
+	ingStore := db.NewC2IngressStore(h.srv.m.pg)
+	ingID, ierr := ingStore.Upsert(ctx, &db.C2IngressRecord{
+		TunnelID: rec.ID, ListenerID: listenerID, TaskID: req.TaskID,
+		VPSHost: strings.TrimSpace(req.VPSHost), VPSPort: req.VPSPort,
+		NodeLabel: strings.TrimSpace(req.NodeLabel), Status: "deploying",
+	})
+	if ierr != nil {
+		_ = h.mgr.Teardown(ctx, rec.ID)
+		return nil, fmt.Errorf("C2 ingress 台账写入失败: %w", ierr)
+	}
 	callback := net.JoinHostPort(strings.TrimSpace(req.VPSHost), strconv.Itoa(req.VPSPort))
 	out := map[string]any{
-		"tunnel_id": rec.ID, "state": rec.State, "listener_id": listenerID,
+		"tunnel_id": rec.ID, "ingress_id": ingID, "state": rec.State, "listener_id": listenerID,
 		"listener_kind": l.Kind, "callback_addr": callback,
 		"platform_chisel_port": platformPort,
 		"node_label":           strings.TrimSpace(req.NodeLabel),
@@ -168,7 +178,34 @@ func (h *tunnelRuntime) teardownC2Ingress(ctx context.Context, tunnelID int64) (
 			_ = rt.stopOne(ctx, plan.C2ListenerID)
 		}
 	}
+	_ = db.NewC2IngressStore(h.srv.m.pg).MarkStopped(ctx, tunnelID)
 	return plan.C2ListenerID, nil
+}
+
+func (h *tunnelRuntime) rebuildC2Ingress(ctx context.Context, tunnelID int64) (map[string]any, error) {
+	rec, err := h.store.Get(ctx, tunnelID)
+	if err != nil || rec == nil {
+		return nil, fmt.Errorf("隧道 %d 不存在", tunnelID)
+	}
+	var plan tunnel.Plan
+	_ = json.Unmarshal(rec.DeployParams, &plan)
+	if plan.C2ListenerID <= 0 || plan.C2CallbackHost == "" {
+		return nil, fmt.Errorf("不是 C2 ingress 隧道")
+	}
+	host, portStr, err := net.SplitHostPort(plan.PlatformAddr)
+	if err != nil {
+		return nil, fmt.Errorf("平台地址解析失败: %w", err)
+	}
+	port, _ := strconv.Atoi(portStr)
+	if _, err := h.teardownC2Ingress(ctx, tunnelID); err != nil {
+		return nil, err
+	}
+	return h.deployC2Ingress(ctx, c2IngressRequest{
+		SessionID: plan.ViaSessionID, C2ListenerID: plan.C2ListenerID,
+		VPSHost: plan.C2CallbackHost, VPSPort: plan.ListenPort,
+		PlatformHost: host, PlatformChiselPort: port,
+		NodeLabel: plan.NodeLabel, ImplantLang: "powershell", TaskID: plan.TaskID,
+	})
 }
 
 // ---- REST ----
@@ -180,40 +217,80 @@ func (s *Server) c2IngressList(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "C2/隧道运行时不可用"})
 		return
 	}
-	recs, err := h.store.ListIngress(r.Context())
+	ctx := r.Context()
+	ingStore := db.NewC2IngressStore(s.m.pg)
+	recs, err := ingStore.ListActive(ctx)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
+	seen := map[int64]bool{}
 	items := make([]map[string]any, 0, len(recs))
-	for _, rec := range recs {
-		var plan tunnel.Plan
-		_ = json.Unmarshal(rec.DeployParams, &plan)
-		listenerStatus := ""
-		listenerKind := ""
-		if plan.C2ListenerID > 0 {
-			if l, _ := rt.store.GetListener(r.Context(), plan.C2ListenerID); l != nil {
-				listenerStatus = l.Status
-				listenerKind = l.Kind
-			}
+	for _, ing := range recs {
+		seen[ing.TunnelID] = true
+		state := ""
+		if tr, _ := h.store.Get(ctx, ing.TunnelID); tr != nil {
+			state = tr.State
+		}
+		listenerStatus, listenerKind := "", ""
+		if l, _ := rt.store.GetListener(ctx, ing.ListenerID); l != nil {
+			listenerStatus, listenerKind = l.Status, l.Kind
+		}
+		healthy := ing.Healthy
+		if state != "" {
+			healthy = healthy && state == db.TunnelAlive
+		}
+		healthy = healthy && listenerStatus == db.C2ListenerRunning
+		var lastHealth any
+		if !ing.LastHealthAt.IsZero() {
+			lastHealth = ing.LastHealthAt
 		}
 		items = append(items, map[string]any{
-			"tunnel_id":       rec.ID,
-			"listener_id":     plan.C2ListenerID,
-			"node_label":      plan.NodeLabel,
-			"callback_addr":   net.JoinHostPort(plan.C2CallbackHost, strconv.Itoa(plan.ListenPort)),
-			"vps_host":        plan.C2CallbackHost,
-			"vps_port":        plan.ListenPort,
-			"listener_kind":   listenerKind,
-			"listener_status": listenerStatus,
-			"state":           rec.State,
-			"healthy":         rec.State == db.TunnelAlive && listenerStatus == db.C2ListenerRunning,
-			"last_check":      rec.LastCheck,
-			"error":           rec.Error,
-			"created_at":      rec.CreatedAt,
+			"ingress_id": ing.ID, "tunnel_id": ing.TunnelID, "listener_id": ing.ListenerID,
+			"node_label": ing.NodeLabel, "vps_host": ing.VPSHost, "vps_port": ing.VPSPort,
+			"callback_addr": net.JoinHostPort(ing.VPSHost, strconv.Itoa(ing.VPSPort)),
+			"listener_kind": listenerKind, "listener_status": listenerStatus, "state": state,
+			"healthy": healthy, "status": ing.Status, "last_health_at": lastHealth,
+			"last_error": ing.LastError, "created_at": ing.CreatedAt,
+		})
+	}
+	// 兼容升级前只有 tunnels 台账的 ingress：无 c2_ingress 记录时展示为 unknown。
+	tunnels, _ := h.store.ListIngress(ctx)
+	for _, tr := range tunnels {
+		if seen[tr.ID] {
+			continue
+		}
+		var plan tunnel.Plan
+		_ = json.Unmarshal(tr.DeployParams, &plan)
+		listenerStatus, listenerKind := "", ""
+		if l, _ := rt.store.GetListener(ctx, plan.C2ListenerID); l != nil {
+			listenerStatus, listenerKind = l.Status, l.Kind
+		}
+		items = append(items, map[string]any{
+			"ingress_id": 0, "tunnel_id": tr.ID, "listener_id": plan.C2ListenerID,
+			"node_label": plan.NodeLabel, "vps_host": plan.C2CallbackHost, "vps_port": plan.ListenPort,
+			"callback_addr": net.JoinHostPort(plan.C2CallbackHost, strconv.Itoa(plan.ListenPort)),
+			"listener_kind": listenerKind, "listener_status": listenerStatus, "state": tr.State,
+			"healthy": false, "status": "unknown", "last_health_at": nil,
+			"last_error": "", "created_at": tr.CreatedAt,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ingress": items})
+}
+
+func (s *Server) c2IngressRebuild(w http.ResponseWriter, r *http.Request) {
+	h := s.tunnels()
+	if h == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "隧道运行时不可用"})
+		return
+	}
+	id, _ := strconv.ParseInt(strings.TrimSpace(r.PathValue("id")), 10, 64)
+	out, err := h.rebuildC2Ingress(r.Context(), id)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) c2IngressCreate(w http.ResponseWriter, r *http.Request) {

@@ -276,7 +276,9 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 
 把 C2 ingress 从“能用”做到可长期运行、可审计、可多节点管理；不改变 C2 直连模式，不内置 C2 socks5。
 
-### 13.2 P2-A HTTPS/443 前置反代（最高优先）
+### 13.2 P2-A HTTPS/443 前置反代（暂不做）
+
+> 2026-11-23 用户确认：可单独放行 39443/39444，不需要 443 前置反代；本章保留为备选设计，不进入本期实现。
 
 问题：部分 VPS 云防火墙只允许 22/80/443，不能直接放行 39444。
 
@@ -296,7 +298,9 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 4. 健康与回滚：平台侧探测 public_base_url 路径；配置前备份、nginx -t、reload，失败回滚。
 5. 验收：Windows 133 用 HTTPS 植入端经 443 反代上线；39444 直连回归不退步；错误路径/token 被拒。
 
-### 13.3 P2-B 访问控制与安全加固
+### 13.3 P2-B 访问控制与安全加固（暂不做）
+
+> 2026-11-23 用户确认：回连 VPS 与 VPS 到平台的数据交互已加密（TCP 信封 / chisel TLS 控制链路），本期不做额外 ACL/限速；保留为后续可选加固。
 
 1. 源 IP ACL：openresty allow/deny 目标出口 IP，或按任务动态白名单。
 2. Token 防重放/限速：每 IP 请求速率、失败次数限制，配合 fail2ban。
@@ -306,7 +310,7 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 6. 凭据管理：listener token 不出现在 UI 明文/日志；植入端下载加短时一次性授权。
 7. 可选 WAF：对 C2 beacon 路径精确放行，避免误拦。
 
-### 13.4 P2-C 多 VPS 节点健康与故障处理
+### 13.4 P2-C 多 VPS 节点健康与故障处理（已实施 v0.4.9）
 
 1. 节点台账：建议新增 c2_ingress 表（tunnel_id/listener_id/vps_host/vps_port/node_label/last_health_at/status/last_error），比只靠 tunnels.deploy_params 更易查询。
 2. 健康巡检：定时探测 VPS 回调端口（TCP connect / HTTP HEAD）；校验 listener 状态、tunnel 状态、chisel 进程；写入 health 并产生事件。
@@ -329,7 +333,9 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 3. 验收脚本：Windows/Linux 目标、HTTP/TCP、443 反代/直连、失败回退。
 4. 发布：独立小版本，保持 P0/P1 回归。
 
-### 13.7 优先级与依赖
+### 13.7 优先级与依赖（2026-11-23 调整）
+
+P2-A/P2-B 暂不做。当前优先执行 P2-C（多 VPS 健康台账/巡检/手动重建），再做 P2-D/E。
 
 1. P2-A HTTPS/443 反代（解决端口限制）。
 2. P2-B ACL/限速（可与 A 同批）。
@@ -353,3 +359,10 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 - 节点健康可查询、失联可告警；停止/重建幂等。
 - 文档/验收/版本记录齐全。
 
+### P2-C 实施记录（v0.4.9）
+
+- 迁移 0014：新增 c2_ingress 表（tunnel_id 唯一、listener/task、vps_host/port、node_label、status/healthy/last_health_at/last_error、stopped_at）。
+- 服务：部署成功写台账；停止时标记 stopped；列表以 c2_ingress 为主，兼容旧 tunnels 记录；新增 POST /api/c2/ingress/{id}/rebuild 手动重建。
+- 巡检：服务启动后每 30s 检查 tunnel 状态、C2 listener 状态、VPS 回调端口 TCP 可达性，写回 health/status/last_error；兼容旧 ingress 自动补台账。
+- UI：C2 页面入站中继表增加最近健康时间与“重建”按钮。
+- 说明：A/B 暂不做（用户可单独放行端口，C2/chisel 链路已加密）。

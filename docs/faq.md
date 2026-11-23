@@ -133,3 +133,6 @@ v0.4.6 起 `tunnel_deploy` 支持 `c2_session_id`：平台经 C2 任务在目标
 
 ### Q32：C2 入站中继在页面上怎么管？
 C2 管理页的“入站中继”卡片可填写 VPS 会话 id、VPS 公网 host/回调端口、listener 类型和节点标签，创建后返回回调地址和植入端；列表显示 listener 状态与健康状态，可直接停止。对应 REST 为 GET/POST /api/c2/ingress 和 POST /api/c2/ingress/{id}/teardown。
+
+### Q33：C2 入站中继如何判断节点是否健康/重建？
+v0.4.9 起 c2_ingress 台账每 30s 巡检 tunnel 状态、C2 listener 状态和 VPS 回调端口，页面显示最近健康时间与错误；节点异常时可用“重建”按钮（REST POST /api/c2/ingress/{id}/rebuild）按原会话/节点重新部署。

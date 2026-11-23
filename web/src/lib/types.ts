@@ -1934,6 +1934,7 @@ export interface C2Task {
 
 
 export interface C2Ingress {
+  ingress_id?: number;
   tunnel_id: number;
   listener_id: number;
   node_label: string;
@@ -1944,6 +1945,9 @@ export interface C2Ingress {
   listener_status: string;
   state: string;
   healthy: boolean;
+  status?: string;
+  last_health_at?: string;
+  last_error?: string;
   last_check: string;
   error?: string;
   created_at: string;

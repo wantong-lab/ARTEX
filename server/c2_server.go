@@ -225,6 +225,7 @@ func (s *Server) registerC2Routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/c2/ingress", s.c2IngressList)
 	mux.HandleFunc("POST /api/c2/ingress", s.c2IngressCreate)
 	mux.HandleFunc("POST /api/c2/ingress/{id}/teardown", s.c2IngressTeardown)
+	mux.HandleFunc("POST /api/c2/ingress/{id}/rebuild", s.c2IngressRebuild)
 }
 
 func (s *Server) c2Status(w http.ResponseWriter, r *http.Request) {

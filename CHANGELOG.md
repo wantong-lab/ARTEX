@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+## [0.4.9] - 2026-11-23
+
+### 新增
+- C2 入站中继 P2-C：新增 c2_ingress 节点台账（迁移 0014），记录 VPS 回调地址、节点标签、健康状态/最近错误。
+- 健康巡检：服务启动后每 30s 检查 tunnel、C2 listener、VPS 回调端口，写回 health；兼容旧 ingress 自动补台账。
+- 手动重建：POST /api/c2/ingress/{id}/rebuild；C2 页面入站中继表增加“重建”和最近健康时间。
+- P2-A（443 前置反代）/P2-B（额外 ACL）根据用户确认暂不做；链路加密由 C2 信封/chisel 控制链路承担。
+
+### 测试
+- go build ./...、go vet、go test ./db -run TestApplyMigrationsIdempotent、web npm run build 通过。
+- 已有 P0/P1 真机链路回归保持（Windows 133 → VPS:39444 → 平台 loopback C2）。
+
+
 ## [0.4.8] - 2026-11-22
 
 ### 新增
