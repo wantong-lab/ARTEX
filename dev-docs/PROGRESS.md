@@ -339,3 +339,8 @@
 - ProxyPoolBlock 抽到 components/proxy-pool-panel.tsx；
 - 内网中枢移除代理池 Tab；页面顶部显示出口模式/实际出口；
 - 无后端/API 变更；web build 通过。
+
+## 轮次 56 · 2026-11-24（Clash 订阅导入）
+- 代理池面板新增订阅 URL 输入 + 拉取订阅并导入；
+- 后端 validateSubscriptionURL 仅允许 http/https，保留 YAML 导入；
+- go build、订阅 URL 单测、web build 通过。

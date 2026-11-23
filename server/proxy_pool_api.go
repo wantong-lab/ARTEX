@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -346,6 +347,18 @@ func (s *Server) proxyPoolDelete(w http.ResponseWriter, r *http.Request) {
 var _ sync.Mutex
 
 // proxyPoolImportMihomo 从 mihomo/Clash YAML（或订阅 URL）导入 http/socks5 代理。
+// validateSubscriptionURL 只允许 http/https 订阅地址，避免 file/其他 scheme。
+func validateSubscriptionURL(raw string) error {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Host == "" {
+		return fmt.Errorf("订阅地址非法")
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("订阅地址仅支持 http/https")
+	}
+	return nil
+}
+
 func (s *Server) proxyPoolImportMihomo(w http.ResponseWriter, r *http.Request) {
 	rt := s.proxyPool()
 	if rt == nil {
@@ -368,12 +381,17 @@ func (s *Server) proxyPoolImportMihomo(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "yaml 或 url 必填"})
 			return
 		}
+		if err := validateSubscriptionURL(subURL); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+			return
+		}
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, subURL, nil)
 		if err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 			return
 		}
 		req.Header.Set("User-Agent", "ARTEX-proxypool/1.0")
+		req.Header.Set("Accept", "application/yaml,text/yaml,text/plain,*/*")
 		resp, err := rt.mgr.Client().Do(req)
 		if err != nil {
 			writeJSON(w, http.StatusBadGateway, map[string]any{"error": "订阅拉取失败：" + err.Error()})

@@ -24,6 +24,7 @@ export function ProxyPoolPanel() {
   const [globalURL, setGlobalURL] = React.useState("");
   const [egress, setEgress] = React.useState("");
   const [mihomoYAML, setMihomoYAML] = React.useState("");
+  const [subscriptionURL, setSubscriptionURL] = React.useState("");
   const [mihomoPrefix, setMihomoPrefix] = React.useState("mh-");
   const [importing, setImporting] = React.useState(false);
   const [importResult, setImportResult] = React.useState<MihomoImportResult | null>(null);
@@ -53,6 +54,14 @@ export function ProxyPoolPanel() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const applyImportResult = (r: MihomoImportResult) => {
+    setImportResult(r);
+    setNotice(
+      "导入完成：新增 " + r.imported_count + " 条，重复 " + r.duplicates +
+      " 条，跳过 " + r.skipped.length + " 条（ss/vmess 等需 mihomo 内核转发）",
+    );
   };
 
   return (
@@ -101,10 +110,39 @@ export function ProxyPoolPanel() {
       </div>
 
       <Card className="flex flex-col gap-2 p-3">
-        <p className="font-medium text-sm">从 mihomo / Clash 配置导入（适配器：仅 http/socks5）</p>
+        <p className="font-medium text-sm">从 Clash 订阅 / mihomo 配置导入（适配器：仅 http/https/socks5）</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            className="min-w-64 flex-1"
+            placeholder="https://example.com/clash.yaml（Clash 订阅地址）"
+            value={subscriptionURL}
+            onChange={(e) => setSubscriptionURL(e.target.value)}
+          />
+          <Button
+            size="sm"
+            disabled={busy || importing || !subscriptionURL.trim()}
+            onClick={() => {
+              setImporting(true);
+              void run(async () => {
+                try {
+                  const r = await api.proxyPoolImportMihomo({ url: subscriptionURL.trim(), name_prefix: mihomoPrefix });
+                  applyImportResult(r);
+                  await refresh();
+                } finally {
+                  setImporting(false);
+                }
+              });
+            }}
+          >
+            {importing ? "导入中…" : "拉取订阅并导入"}
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          订阅地址只本次拉取、不落库；返回 Clash YAML proxies 的订阅可直接导入，非 http/socks5 节点会跳过。
+        </p>
         <textarea
           className="min-h-28 rounded-md border bg-transparent p-2 font-mono text-xs"
-          placeholder="粘贴 mihomo config.yaml 或订阅内容（proxies 列表）"
+          placeholder="或粘贴 mihomo config.yaml / 订阅内容（proxies 列表）"
           value={mihomoYAML}
           onChange={(e) => setMihomoYAML(e.target.value)}
         />
@@ -112,17 +150,14 @@ export function ProxyPoolPanel() {
           <Input className="w-32" placeholder="名称前缀" value={mihomoPrefix} onChange={(e) => setMihomoPrefix(e.target.value)} />
           <Button
             size="sm"
+            variant="outline"
             disabled={busy || importing || !mihomoYAML.trim()}
             onClick={() => {
               setImporting(true);
               void run(async () => {
                 try {
                   const r = await api.proxyPoolImportMihomo({ yaml: mihomoYAML, name_prefix: mihomoPrefix });
-                  setImportResult(r);
-                  setNotice(
-                    "导入完成：新增 " + r.imported_count + " 条，重复 " + r.duplicates +
-                    " 条，跳过 " + r.skipped.length + " 条（ss/vmess 等需 mihomo 内核转发）",
-                  );
+                  applyImportResult(r);
                   setMihomoYAML("");
                   await refresh();
                 } finally {
@@ -131,7 +166,7 @@ export function ProxyPoolPanel() {
               });
             }}
           >
-            {importing ? "导入中…" : "导入代理"}
+            {importing ? "导入中…" : "导入粘贴内容"}
           </Button>
           <span className="text-muted-foreground text-xs">
             认证代理自动加密落库；跳过项见下方结果。
@@ -155,7 +190,6 @@ export function ProxyPoolPanel() {
           </div>
         ) : null}
       </Card>
-
 
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between p-2">

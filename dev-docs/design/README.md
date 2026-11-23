@@ -9,3 +9,4 @@
 | 2026-11-23 | [C2 入站中继反向模式](2026-11-23-c2-ingress-reverse.md) | 已实施 v0.4.9（待完整 C2 E2E） |
 | 2026-11-23 | [统一出口代理（direct/fixed/pool）](2026-11-23-unified-egress-proxy.md) | 已实施 v0.4.9 |
 | 2026-11-23 | [出口代理池独立页面](2026-11-23-proxy-pool-standalone.md) | 已实施 v0.4.9 |
+| 2026-11-24 | [Clash 订阅导入代理池](2026-11-24-clash-subscription-import.md) | 已实施 v0.4.9 |
