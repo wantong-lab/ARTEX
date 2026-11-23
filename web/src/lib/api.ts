@@ -125,6 +125,7 @@ import type {
   RetentionCleanupList,
   SchedulerStatus,
   C2Ingress,
+  C2IngressEvent,
   C2Listener,
   C2Session,
   C2Task,
@@ -310,6 +311,7 @@ export const api = {
     platform_chisel_port?: number;
     implant_lang?: string;
   }) => post<{ tunnel_id: number; callback_addr: string; implant?: string; base_url?: string }>("/c2/ingress", input),
+  c2IngressEvents: () => get<{ events: C2IngressEvent[] }>("/c2/ingress/events?limit=20"),
   c2RebuildIngress: (id: number) => post<{ tunnel_id: number; callback_addr: string; implant?: string; base_url?: string }>("/c2/ingress/" + id + "/rebuild", {}),
   c2TeardownIngress: (id: number) => post<{ ok: boolean; tunnel_id: number; listener_id: number }>("/c2/ingress/" + id + "/teardown", {}),
   c2Implant: (listenerId: number, lang: string) =>

@@ -293,6 +293,40 @@ func (s *C2Store) AddEvent(ctx context.Context, category, message, level string,
 		VALUES($1,$2,$3,NULLIF($4,0),NULLIF($5,0),NULLIF($6,0))`, category, message, level, listenerID, sessionID, taskID)
 }
 
+// C2Event 是 c2_events 的一行（列表中只暴露展示字段）。
+type C2Event struct {
+	ID         int64     "json:\"id\""
+	Category   string    "json:\"category\""
+	Message    string    "json:\"message\""
+	Level      string    "json:\"level\""
+	ListenerID int64     "json:\"listener_id,omitempty\""
+	SessionID  int64     "json:\"session_id,omitempty\""
+	TaskID     int64     "json:\"task_id,omitempty\""
+	CreatedAt  time.Time "json:\"created_at\""
+}
+
+// ListEvents 返回最近事件；category 为空表示全部。
+func (s *C2Store) ListEvents(ctx context.Context, category string, limit int) ([]*C2Event, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	rows, err := s.d.QueryContext(ctx, `SELECT id,category,message,level,COALESCE(listener_id,0),COALESCE(session_id,0),COALESCE(task_id,0),created_at
+		FROM c2_events WHERE ($1 = '' OR category = $1) ORDER BY id DESC LIMIT $2`, category, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*C2Event
+	for rows.Next() {
+		var e C2Event
+		if err := rows.Scan(&e.ID, &e.Category, &e.Message, &e.Level, &e.ListenerID, &e.SessionID, &e.TaskID, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, &e)
+	}
+	return out, rows.Err()
+}
+
 // GetSession 按 id 取会话（HTTP beacon 用）。
 func (s *C2Store) GetSession(ctx context.Context, id int64) (*C2Session, error) {
 	var c C2Session

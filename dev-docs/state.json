@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 49,
+  "round": 50,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -226,7 +226,8 @@
     "v0_4_7_c2_ingress": "提交 2a5fe54；CI 45037375661 全绿；tag v0.4.7，Release 45037673828 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.7 index）；C2 ingress P0 Windows 133 E2E PASS（20.6s，VPS 443；39444 被云防火墙拦）。",
     "v0_4_8_c2_ingress_p1": "提交 2da92c0；CI 45040387113 全绿；tag v0.4.8，Release 45040620312 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.8 index）；C2 入站中继 P1（UI/REST/node_label）通过 go build/vet、web build；P0 E2E 保持 PASS。",
     "v0_4_8_c2_ingress_39444": "VPS 39444 放行后，Windows 133 → VPS:39444 → 平台 loopback C2 直连 E2E PASS（19.2s，whoami/hostname 成功）；面板已恢复，测试环境已清理。",
-    "v0_4_9_c2_ingress_p2c": "P2-C：迁移 0014 c2_ingress 台账；健康巡检（30s、tunnel/listener/VPS 回调 TCP）与写回；REST 重建 + UI 最近健康/重建；go build/vet、迁移测试、web build 通过。P2-A/B 暂不做。"
+    "v0_4_9_c2_ingress_p2c": "P2-C：迁移 0014 c2_ingress 台账；健康巡检（30s、tunnel/listener/VPS 回调 TCP）与写回；REST 重建 + UI 最近健康/重建；go build/vet、迁移测试、web build 通过。P2-A/B 暂不做。",
+    "v0_4_9_c2_ingress_p2d": "P2-D：/metrics ingress/beacon 指标；c2_events 生命周期事件 + GET /api/c2/ingress/events + UI 最近事件；go build/vet、web build、本地 go test 通过；外发告警待接 notifier。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"

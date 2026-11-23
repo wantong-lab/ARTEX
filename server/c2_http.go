@@ -95,8 +95,35 @@ type beaconTask struct {
 	Args     string `json:"args"`
 }
 
+type beaconResponseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *beaconResponseWriter) WriteHeader(code int) {
+	if w.status == 0 {
+		w.status = code
+	}
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *beaconResponseWriter) Write(b []byte) (int, error) {
+	if w.status == 0 {
+		w.status = http.StatusOK
+	}
+	return w.ResponseWriter.Write(b)
+}
+
 func (r *c2Runtime) beaconHandler(l *db.C2Listener) http.HandlerFunc {
 	return func(w http.ResponseWriter, rq *http.Request) {
+		r.beaconReq.Add(1)
+		bw := &beaconResponseWriter{ResponseWriter: w}
+		w = bw
+		defer func() {
+			if bw.status >= 400 {
+				r.beaconFail.Add(1)
+			}
+		}()
 		rq.Body = http.MaxBytesReader(w, rq.Body, 1<<20)
 		var body beaconRequest
 		if err := json.NewDecoder(rq.Body).Decode(&body); err != nil {

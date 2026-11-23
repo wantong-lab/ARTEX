@@ -1933,6 +1933,14 @@ export interface C2Task {
 
 
 
+export interface C2IngressEvent {
+  id: number;
+  category: string;
+  message: string;
+  level: string;
+  created_at: string;
+}
+
 export interface C2Ingress {
   ingress_id?: number;
   tunnel_id: number;

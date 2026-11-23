@@ -303,3 +303,9 @@
 - API/UI：GET /api/c2/ingress 改为台账列表并兼容旧记录；POST /api/c2/ingress/{id}/rebuild；页面增加最近健康/重建。
 - P2-A/B 暂不做（用户可独立放行端口，链路已加密）。
 - 校验：go build/vet、迁移测试、web build 通过；后续提交/CI/发布。
+
+## 轮次 50 · 2026-11-23（C2 入站中继 P2-D）
+- /metrics：ingress 总数/健康/异常、beacon 请求/失败计数。
+- c2_events：创建/停止/健康状态变化；GET /api/c2/ingress/events；C2 页最近事件时间线。
+- 外发告警暂未接 notifier，事件 + 指标可供外部规则消费。
+- 校验：go build/vet、web build、本地 go test 通过；推送 Gitea（GitHub Actions 因账单暂不可用）。

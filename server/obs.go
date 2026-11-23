@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Autumn-27/artex/db"
 )
 
 // httpMetrics 是进程内 HTTP 指标（无第三方依赖）。key 使用 method 与 code。
@@ -206,6 +208,29 @@ func (s *Server) metricsHandler() http.Handler {
 				fmt.Fprintf(&b, "artex_db_connections{state=%q} %d\n", "idle", stats.Idle)
 				fmt.Fprintf(&b, "artex_db_max_open_connections %d\n", stats.MaxOpenConnections)
 			}
+		}
+		if s.m != nil && s.m.pg != nil {
+			if recs, err := db.NewC2IngressStore(s.m.pg).ListActive(r.Context()); err == nil {
+				total, healthy := 0, 0
+				for _, rec := range recs {
+					total++
+					if rec.Healthy {
+						healthy++
+					}
+				}
+				writeMetricHeader(&b, "artex_c2_ingress_total", "gauge", "C2 入站中继总数")
+				fmt.Fprintf(&b, "artex_c2_ingress_total %d\n", total)
+				writeMetricHeader(&b, "artex_c2_ingress_healthy", "gauge", "C2 入站中继健康数")
+				fmt.Fprintf(&b, "artex_c2_ingress_healthy %d\n", healthy)
+				writeMetricHeader(&b, "artex_c2_ingress_unhealthy", "gauge", "C2 入站中继异常数")
+				fmt.Fprintf(&b, "artex_c2_ingress_unhealthy %d\n", total-healthy)
+			}
+		}
+		if req, fail := s.c2BeaconCounters(); req > 0 || fail > 0 {
+			writeMetricHeader(&b, "artex_c2_beacon_requests_total", "counter", "HTTP beacon 请求总数")
+			fmt.Fprintf(&b, "artex_c2_beacon_requests_total %d\n", req)
+			writeMetricHeader(&b, "artex_c2_beacon_failures_total", "counter", "HTTP beacon 失败总数")
+			fmt.Fprintf(&b, "artex_c2_beacon_failures_total %d\n", fail)
 		}
 		if s.engine != nil {
 			writeMetricHeader(&b, "artex_llm_active_calls", "gauge", "进行中的 LLM 调用数")

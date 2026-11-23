@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
-import type { C2Ingress, C2Listener, C2Session, C2Task } from "@/lib/types";
+import type { C2Ingress, C2IngressEvent, C2Listener, C2Session, C2Task } from "@/lib/types";
 
 function fmtTime(v?: string): string {
   if (!v) return "—";
@@ -54,6 +54,7 @@ export default function C2Page() {
   const [implantContent, setImplantContent] = useState("");
 
   const [ingress, setIngress] = useState<C2Ingress[]>([]);
+  const [ingressEvents, setIngressEvents] = useState<C2IngressEvent[]>([]);
   const [ingSession, setIngSession] = useState("");
   const [ingVpsHost, setIngVpsHost] = useState("");
   const [ingVpsPort, setIngVpsPort] = useState("443");
@@ -65,17 +66,20 @@ export default function C2Page() {
   const [ingImplantContent, setIngImplantContent] = useState("");
 
   const refresh = useCallback(async () => {
-    const [st, ls, ss, ts, ing] = await Promise.all([
+    const [st, ls, ss, ts, ing, ev] = await Promise.all([
       api.c2Status(),
       api.c2Listeners(),
       api.c2Sessions(),
       api.c2Tasks(),
       api.c2Ingress(),
+      api.c2IngressEvents(),
     ]);
     setEnabled(st.enabled);
     setListeners(ls.listeners ?? []);
     setSessions(ss.sessions ?? []);
     setTasks(ts.tasks ?? []);
+    setIngress(ing.ingress ?? []);
+    setIngressEvents(ev.events ?? []);
     setLoaded(true);
   }, []);
 
@@ -266,6 +270,92 @@ export default function C2Page() {
           C2 当前未启用：监听器不会启动，工具与植入端均不可用。确认授权后点击「启用 C2」。
         </div>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">入站中继</CardTitle>
+          <CardDescription>目标只回连 VPS；平台 listener 仅绑 127.0.0.1，经 VPS chisel 本地转发回平台。P2-C 台账每 30s 健康巡检。</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <div className="grid gap-2 sm:grid-cols-4">
+            <div>
+              <Label className="text-xs">VPS 会话 id</Label>
+              <Input value={ingSession} onChange={(ev) => setIngSession(ev.target.value)} placeholder="sessions 表 id" />
+            </div>
+            <div>
+              <Label className="text-xs">VPS 公网 host</Label>
+              <Input value={ingVpsHost} onChange={(ev) => setIngVpsHost(ev.target.value)} placeholder="1.2.3.4" />
+            </div>
+            <div>
+              <Label className="text-xs">VPS 回调端口</Label>
+              <Input value={ingVpsPort} onChange={(ev) => setIngVpsPort(ev.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Listener 类型</Label>
+              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingKind} onChange={(ev) => setIngKind(ev.target.value)}>
+                <option value="http">HTTP beacon</option>
+                <option value="tcp">TCP</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs">节点标签</Label>
+              <Input value={ingNodeLabel} onChange={(ev) => setIngNodeLabel(ev.target.value)} placeholder="vps-hk-1" />
+            </div>
+            <div>
+              <Label className="text-xs">平台 chisel host</Label>
+              <Input value={ingPlatformHost} onChange={(ev) => setIngPlatformHost(ev.target.value)} placeholder="平台公网 IP" />
+            </div>
+            <div>
+              <Label className="text-xs">平台 chisel 端口</Label>
+              <Input value={ingPlatformPort} onChange={(ev) => setIngPlatformPort(ev.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">植入端语言</Label>
+              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingImplantLang} onChange={(ev) => setIngImplantLang(ev.target.value)}>
+                <option value="powershell">PowerShell</option>
+                <option value="python">Python</option>
+                <option value="bash">Bash</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" disabled={busy !== ""} onClick={() => void createIngress()}>创建中继</Button>
+            <Button size="sm" variant="outline" disabled={!ingImplantContent} onClick={() => {
+              navigator.clipboard.writeText(ingImplantContent).then(() => toast.success("已复制"), () => toast.error("复制失败"));
+            }}>复制植入端</Button>
+          </div>
+          <textarea className="border-input bg-muted/30 h-32 w-full rounded-md border p-2 font-mono text-xs" readOnly placeholder="创建后显示植入端脚本" value={ingImplantContent} />
+          <Table
+            head={["Tunnel", "节点", "回调地址", "Listener", "状态", "健康", "最近健康", "操作"]}
+            rows={ingress.map((v) => [
+              String(v.tunnel_id),
+              v.node_label || "—",
+              v.callback_addr,
+              "#" + v.listener_id + " " + v.listener_kind + " / " + v.listener_status,
+              <Badge key={"is" + v.tunnel_id} variant={v.state === "alive" ? "default" : "secondary"}>{STATUS_LABEL[v.state] || v.state}</Badge>,
+              <Badge key={"ih" + v.tunnel_id} variant={v.healthy ? "default" : "secondary"} title={v.last_error || ""}>{v.healthy ? "健康" : "异常"}</Badge>,
+              fmtTime(v.last_health_at),
+              <span key={"ia" + v.tunnel_id} className="flex justify-end gap-1">
+                <Button size="sm" variant="outline" disabled={busy !== ""} onClick={() => void rebuildIngress(v.tunnel_id)}>重建</Button>
+                <Button size="sm" variant="destructive" disabled={busy !== ""} onClick={() => void teardownIngress(v.tunnel_id)}>停止</Button>
+              </span>,
+            ])}
+            empty="暂无入站中继"
+          />
+          {ingressEvents.length > 0 && (
+            <div className="max-h-32 overflow-auto rounded-md border p-2 text-xs">
+              <div className="mb-1 font-medium text-muted-foreground">最近事件</div>
+              {ingressEvents.slice(0, 8).map((ev) => (
+                <div key={ev.id} className="flex items-center gap-2 py-0.5">
+                  <Badge variant={ev.level === "warn" ? "destructive" : "secondary"}>{ev.level}</Badge>
+                  <span className="truncate">{ev.message}</span>
+                  <span className="ml-auto shrink-0 text-muted-foreground">{fmtTime(ev.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

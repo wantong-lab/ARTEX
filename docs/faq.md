@@ -136,3 +136,6 @@ C2 管理页的“入站中继”卡片可填写 VPS 会话 id、VPS 公网 host
 
 ### Q33：C2 入站中继如何判断节点是否健康/重建？
 v0.4.9 起 c2_ingress 台账每 30s 巡检 tunnel 状态、C2 listener 状态和 VPS 回调端口，页面显示最近健康时间与错误；节点异常时可用“重建”按钮（REST POST /api/c2/ingress/{id}/rebuild）按原会话/节点重新部署。
+
+### Q34：C2 入站中继有哪些指标/事件？
+v0.4.9 起 /metrics 暴露 artex_c2_ingress_total、artex_c2_ingress_healthy、artex_c2_ingress_unhealthy、artex_c2_beacon_requests_total、artex_c2_beacon_failures_total；创建/停止/健康状态变化写入 c2_events，可通过 GET /api/c2/ingress/events 或 C2 页面查看。外发告警暂未接 notifier。

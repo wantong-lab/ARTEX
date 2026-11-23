@@ -10,6 +10,7 @@
 - C2 入站中继 P2-C：新增 c2_ingress 节点台账（迁移 0014），记录 VPS 回调地址、节点标签、健康状态/最近错误。
 - 健康巡检：服务启动后每 30s 检查 tunnel、C2 listener、VPS 回调端口，写回 health；兼容旧 ingress 自动补台账。
 - 手动重建：POST /api/c2/ingress/{id}/rebuild；C2 页面入站中继表增加“重建”和最近健康时间。
+- 可观测性（P2-D）：/metrics 增加 ingress 总数/健康/异常、beacon 请求/失败指标；c2_events 记录创建/停止/健康变化；GET /api/c2/ingress/events 与页面最近事件时间线。
 - P2-A（443 前置反代）/P2-B（额外 ACL）根据用户确认暂不做；链路加密由 C2 信封/chisel 控制链路承担。
 
 ### 测试

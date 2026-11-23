@@ -318,7 +318,7 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 4. 多节点语义：目标绑定固定节点，不自动切任意节点；故障转移需重新生成植入端或切换入口，P2 只做手动重建/迁移。
 5. UI/API：节点列表、健康状态、最近错误、事件时间线；创建时选节点/会话；批量停止需谨慎。
 
-### 13.5 P2-D 可观测性与告警
+### 13.5 P2-D 可观测性与告警（已实施 v0.4.9，外发告警待接 notifier）
 
 1. 指标：ingress_total、ingress_alive、ingress_healthy、beacon_requests、beacon_failures（relay_bytes 可选）。
 2. 事件：创建/启动/停止/健康失败/重建。
@@ -366,3 +366,10 @@ P2-A/P2-B 暂不做。当前优先执行 P2-C（多 VPS 健康台账/巡检/手�
 - 巡检：服务启动后每 30s 检查 tunnel 状态、C2 listener 状态、VPS 回调端口 TCP 可达性，写回 health/status/last_error；兼容旧 ingress 自动补台账。
 - UI：C2 页面入站中继表增加最近健康时间与“重建”按钮。
 - 说明：A/B 暂不做（用户可单独放行端口，C2/chisel 链路已加密）。
+
+### P2-D 实施记录（v0.4.9）
+
+- 指标（/metrics）：artex_c2_ingress_total / healthy / unhealthy、artex_c2_beacon_requests_total / failures_total。
+- 事件：c2_events 写创建/停止/健康状态变化；GET /api/c2/ingress/events?limit=N；C2 页面入站中继卡展示最近事件。
+- 审计沿用 c2_events；未把 token/命令写入事件。
+- 外发告警（钉钉/飞书/Webhook）暂未接入 notifier，先以事件 + 指标供外部告警规则消费。

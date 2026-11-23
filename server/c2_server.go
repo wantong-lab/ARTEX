@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Autumn-27/artex/c2"
@@ -36,6 +37,19 @@ type c2Runtime struct {
 
 	// execMu 串行化任务下发（同一植入端并发下发会串台输出）。
 	execMu sync.Mutex
+
+	// HTTP beacon 运行指标（P2-D）：请求数/失败数。
+	beaconReq  atomic.Int64
+	beaconFail atomic.Int64
+}
+
+func (s *Server) c2BeaconCounters() (int64, int64) {
+	s.c2Mu.Lock()
+	defer s.c2Mu.Unlock()
+	if s.c2RT == nil {
+		return 0, 0
+	}
+	return s.c2RT.beaconReq.Load(), s.c2RT.beaconFail.Load()
 }
 
 // c2rt 惰性初始化 C2 运行时（token 从 settings 读，缺失时生成并持久化）。
@@ -223,6 +237,7 @@ func (s *Server) registerC2Routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/c2/sessions/{id}/tasks", s.c2QueueTask)
 	mux.HandleFunc("GET /api/c2/implant", s.c2GenerateImplant)
 	mux.HandleFunc("GET /api/c2/ingress", s.c2IngressList)
+	mux.HandleFunc("GET /api/c2/ingress/events", s.c2IngressEvents)
 	mux.HandleFunc("POST /api/c2/ingress", s.c2IngressCreate)
 	mux.HandleFunc("POST /api/c2/ingress/{id}/teardown", s.c2IngressTeardown)
 	mux.HandleFunc("POST /api/c2/ingress/{id}/rebuild", s.c2IngressRebuild)

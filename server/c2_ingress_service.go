@@ -124,6 +124,7 @@ func (h *tunnelRuntime) deployC2Ingress(ctx context.Context, req c2IngressReques
 		return nil, fmt.Errorf("C2 ingress 台账写入失败: %w", ierr)
 	}
 	callback := net.JoinHostPort(strings.TrimSpace(req.VPSHost), strconv.Itoa(req.VPSPort))
+	rt.store.AddEvent(ctx, "ingress", fmt.Sprintf("创建入站中继 tunnel=%d callback=%s node=%s", rec.ID, callback, strings.TrimSpace(req.NodeLabel)), "info", listenerID, 0, req.TaskID)
 	out := map[string]any{
 		"tunnel_id": rec.ID, "ingress_id": ingID, "state": rec.State, "listener_id": listenerID,
 		"listener_kind": l.Kind, "callback_addr": callback,
@@ -179,6 +180,9 @@ func (h *tunnelRuntime) teardownC2Ingress(ctx context.Context, tunnelID int64) (
 		}
 	}
 	_ = db.NewC2IngressStore(h.srv.m.pg).MarkStopped(ctx, tunnelID)
+	if rt := h.srv.c2rt(); rt != nil {
+		rt.store.AddEvent(ctx, "ingress", fmt.Sprintf("停止入站中继 tunnel=%d", tunnelID), "warn", plan.C2ListenerID, 0, 0)
+	}
 	return plan.C2ListenerID, nil
 }
 
@@ -276,6 +280,21 @@ func (s *Server) c2IngressList(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ingress": items})
+}
+
+func (s *Server) c2IngressEvents(w http.ResponseWriter, r *http.Request) {
+	rt := s.c2rt()
+	if rt == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "C2 运行时不可用"})
+		return
+	}
+	limit, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("limit")))
+	events, err := rt.store.ListEvents(r.Context(), "ingress", limit)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
 func (s *Server) c2IngressRebuild(w http.ResponseWriter, r *http.Request) {

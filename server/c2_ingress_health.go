@@ -112,6 +112,13 @@ func (s *Server) probeC2Ingress(ctx context.Context, rt *c2Runtime, tunnelStore 
 		}
 	}
 	_ = ingStore.UpdateHealth(ctx, ing.TunnelID, healthy, status, errMsg)
+	if ing.Status != status {
+		level := "info"
+		if status == "degraded" {
+			level = "warn"
+		}
+		rt.store.AddEvent(ctx, "ingress", fmt.Sprintf("健康状态 %s → %s（tunnel=%d %s）", ing.Status, status, ing.TunnelID, errMsg), level, ing.ListenerID, 0, 0)
+	}
 }
 
 func appendErr(base, add string) string {
