@@ -293,3 +293,6 @@
 - 前端：C2 页“入站中继”卡片（创建/列表/停止/复制植入端、健康状态）。
 - 校验：go build ./...、go vet、web npm run build 通过。
 - 发布：提交 2da92c0；CI 45040387113 全绿；tag v0.4.8 → Release 45040620312 成功，5 平台 zip + SHA256SUMS、GHCR v0.4.8 index 校验通过。P2 TLS/ACL/故障转移待做。
+## 轮次 48 · 2026-11-23（VPS 39444 直连验证）
+- 用户放行 VPS 39444（1Panel 防火墙规则补掩码）后，Windows 133 → VPS:39444 → 平台 loopback C2 真机 E2E PASS（19.2s，whoami/hostname 成功）。
+- 面板：1panel-core/agent 与 openresty 已恢复，8443 公网/源站 200；测试后 VPS 443/openresty 正常，39444 已清理。

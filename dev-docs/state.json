@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 47,
+  "round": 48,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -224,7 +224,8 @@
     "v0_4_5_public_c2_http_tcp": "公网 C2 E2E PASS：HTTP 监听器 39443 + VPS Python beacon 上线，任务回传 uid=0(root)/wantong/root；TCP 监听器 39444 + VPS 植入端上线，Manager 加密信封 exec 同一组结果；测试后监听器与 VPS 植入端已清理。",
     "v0_4_6_c2_tunnel": "提交 eadca3a；CI 45032012302 全绿；tag v0.4.6，Release 45032289276 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.6 index）；C2→隧道 E2E：公网 VPS 仅 C2 TCP（无 SSH），C2 分块/gzip 上传 chisel（11MB 约29s），平台 SOCKS 127.0.0.1:20000 访问 VPS 本地 HTTP 200，整链路 47.7s。",
     "v0_4_7_c2_ingress": "提交 2a5fe54；CI 45037375661 全绿；tag v0.4.7，Release 45037673828 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.7 index）；C2 ingress P0 Windows 133 E2E PASS（20.6s，VPS 443；39444 被云防火墙拦）。",
-    "v0_4_8_c2_ingress_p1": "提交 2da92c0；CI 45040387113 全绿；tag v0.4.8，Release 45040620312 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.8 index）；C2 入站中继 P1（UI/REST/node_label）通过 go build/vet、web build；P0 E2E 保持 PASS。"
+    "v0_4_8_c2_ingress_p1": "提交 2da92c0；CI 45040387113 全绿；tag v0.4.8，Release 45040620312 成功（5 平台 zip + SHA256SUMS、GHCR v0.4.8 index）；C2 入站中继 P1（UI/REST/node_label）通过 go build/vet、web build；P0 E2E 保持 PASS。",
+    "v0_4_8_c2_ingress_39444": "VPS 39444 放行后，Windows 133 → VPS:39444 → 平台 loopback C2 直连 E2E PASS（19.2s，whoami/hostname 成功）；面板已恢复，测试环境已清理。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"

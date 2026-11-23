@@ -268,4 +268,4 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 - REST：GET/POST /api/c2/ingress、POST /api/c2/ingress/{id}/teardown；列表返回 callback/listener/state/healthy/last_check。
 - UI：C2 管理页新增“入站中继”卡片（创建/列表/停止/复制植入端）。
 - 校验：go build/vet、web npm run build 通过；P0 真机 E2E 保持通过（Windows 133 → VPS ingress → 平台 loopback C2）。发布：提交 2da92c0，CI 45040387113 全绿，tag v0.4.8，Release 45040620312 成功。
-
+- 补充（2026-11-23）：用户放行 VPS 39444 后，Windows 133 → VPS:39444 → 平台 loopback C2 直连 E2E PASS（19.2s，whoami/hostname 成功），不再依赖 443 临时方案。

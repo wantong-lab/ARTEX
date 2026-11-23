@@ -196,3 +196,5 @@ go test ./server -run TestC2IngressWindowsE2E -v -timeout 420s
 ```
 
 端口：VPS 回调端口需云防火墙放行；测试环境 39444 被 VPS 云防火墙拦截，实际使用 443（临时停 1Panel openresty，测试后恢复）。测试 Windows 植入端用本地 SSH 前台会话保持，不依赖 Start-Process/WMI。
+
+补充：VPS 39444 入站放行后，已用同一测试直连 39444 验证 PASS（19.2s）；不再需要临时停 openresty 使用 443。
