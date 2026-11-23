@@ -37,4 +37,5 @@
 - C2 入站回调中继：v0.4.7 已实现 c2_ingress_deploy/teardown（ingress 隧道 + loopback C2 listener + chisel local forward）；v0.4.8 补 C2 页入站中继卡片 + REST + node_label。Windows 133 目标只回连 VPS 的 HTTP C2 E2E PASS。
 - P2-C（v0.4.9）：c2_ingress 节点台账 + 30s 健康巡检 + 手动重建 API/UI；P2-A/B 按用户确认暂不做。
 - P2-D（v0.4.9）：/metrics ingress/beacon 指标、c2_events 事件、GET /api/c2/ingress/events 与 UI 时间线；外发告警待接 notifier。
+- P2-E（v0.4.9）：入站中继 VPS 会话下拉、健康/节点筛选、runbook、验收脚本。
 - C2 socks5 仍未内置；二开为外部 C2 MCP（Supershell manage_socks5）集成，主线如需内置走反向 SOCKS-over-C2 或外部 MCP，待定。

@@ -139,3 +139,6 @@ v0.4.9 起 c2_ingress 台账每 30s 巡检 tunnel 状态、C2 listener 状态和
 
 ### Q34：C2 入站中继有哪些指标/事件？
 v0.4.9 起 /metrics 暴露 artex_c2_ingress_total、artex_c2_ingress_healthy、artex_c2_ingress_unhealthy、artex_c2_beacon_requests_total、artex_c2_beacon_failures_total；创建/停止/健康状态变化写入 c2_events，可通过 GET /api/c2/ingress/events 或 C2 页面查看。外发告警暂未接 notifier。
+
+### Q35：C2 入站中继怎么部署/排障？
+见 docs/c2-ingress-runbook.md：包含 VPS 防火墙/云安全组、UI/工具/REST 部署、健康与重建、排障表和清理步骤。真机验收可用 scripts/acceptance/c2_ingress_direct.sh（需先设置环境变量）。

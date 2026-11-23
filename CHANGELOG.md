@@ -12,10 +12,12 @@
 - 手动重建：POST /api/c2/ingress/{id}/rebuild；C2 页面入站中继表增加“重建”和最近健康时间。
 - 可观测性（P2-D）：/metrics 增加 ingress 总数/健康/异常、beacon 请求/失败指标；c2_events 记录创建/停止/健康变化；GET /api/c2/ingress/events 与页面最近事件时间线。
 - P2-A（443 前置反代）/P2-B（额外 ACL）根据用户确认暂不做；链路加密由 C2 信封/chisel 控制链路承担。
+- P2-E：入站中继 VPS 会话下拉、健康/节点筛选与汇总；新增 docs/c2-ingress-runbook.md 和 scripts/acceptance/c2_ingress_direct.sh。
 
 ### 测试
 - go build ./...、go vet、go test ./db -run TestApplyMigrationsIdempotent、web npm run build 通过。
 - 已有 P0/P1 真机链路回归保持（Windows 133 → VPS:39444 → 平台 loopback C2）。
+- P2-E 页面选择器/筛选与 runbook/验收脚本完成；fresh DB go test ./...、web build 通过。
 
 
 ## [0.4.8] - 2026-11-22

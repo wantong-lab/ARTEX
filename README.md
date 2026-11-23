@@ -131,6 +131,8 @@ c2_ingress_deploy(session_id=<VPS 会话>, vps_host=<VPS 公网 IP>, vps_port=44
 
 v0.4.8 起 C2 管理页提供“入站中继”卡片：选择 VPS 会话 id、填写 VPS 公网 host/端口、listener 类型和节点标签即可创建；列表展示回调地址、listener 状态与健康状态，可直接停止。REST 对应 `GET/POST /api/c2/ingress` 与 `POST /api/c2/ingress/{id}/teardown`。
 
+v0.4.9 起：入站中继增加节点台账、30s 健康巡检、手动重建、指标/事件与页面最近事件；VPS 会话改为下拉选择，支持健康/节点筛选。完整操作/排障见 docs/c2-ingress-runbook.md；真机验收脚本 scripts/acceptance/c2_ingress_direct.sh。
+
 
 
 

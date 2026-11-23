@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
-import type { C2Ingress, C2IngressEvent, C2Listener, C2Session, C2Task } from "@/lib/types";
+import type { C2Ingress, C2IngressEvent, C2Listener, C2Session, C2Task, IntranetSession } from "@/lib/types";
 
 function fmtTime(v?: string): string {
   if (!v) return "—";
@@ -54,6 +54,9 @@ export default function C2Page() {
   const [implantContent, setImplantContent] = useState("");
 
   const [ingress, setIngress] = useState<C2Ingress[]>([]);
+  const [vpsSessions, setVpsSessions] = useState<IntranetSession[]>([]);
+  const [ingHealthFilter, setIngHealthFilter] = useState("all");
+  const [ingNodeFilter, setIngNodeFilter] = useState("");
   const [ingressEvents, setIngressEvents] = useState<C2IngressEvent[]>([]);
   const [ingSession, setIngSession] = useState("");
   const [ingVpsHost, setIngVpsHost] = useState("");
@@ -66,13 +69,14 @@ export default function C2Page() {
   const [ingImplantContent, setIngImplantContent] = useState("");
 
   const refresh = useCallback(async () => {
-    const [st, ls, ss, ts, ing, ev] = await Promise.all([
+    const [st, ls, ss, ts, ing, ev, vs] = await Promise.all([
       api.c2Status(),
       api.c2Listeners(),
       api.c2Sessions(),
       api.c2Tasks(),
       api.c2Ingress(),
       api.c2IngressEvents(),
+      api.intranetSessions(),
     ]);
     setEnabled(st.enabled);
     setListeners(ls.listeners ?? []);
@@ -242,6 +246,14 @@ export default function C2Page() {
     } finally { setBusy(""); }
   }
 
+  const nodeOptions = Array.from(new Set(ingress.map((v) => v.node_label).filter(Boolean)));
+  const healthyCount = ingress.filter((v) => v.healthy).length;
+  const filteredIngress = ingress.filter((v) => {
+    if (ingHealthFilter === "healthy" && !v.healthy) return false;
+    if (ingHealthFilter === "unhealthy" && v.healthy) return false;
+    if (ingNodeFilter && v.node_label !== ingNodeFilter) return false;
+    return true;
+  });
   const httpListeners = listeners.filter((l) => l.kind === "http");
   const e = (v: string) => v || "—";
 
@@ -279,8 +291,15 @@ export default function C2Page() {
         <CardContent className="flex flex-col gap-3">
           <div className="grid gap-2 sm:grid-cols-4">
             <div>
-              <Label className="text-xs">VPS 会话 id</Label>
-              <Input value={ingSession} onChange={(ev) => setIngSession(ev.target.value)} placeholder="sessions 表 id" />
+              <Label className="text-xs">VPS 会话</Label>
+              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingSession} onChange={(ev) => setIngSession(ev.target.value)}>
+                <option value="">选择 VPS 会话…</option>
+                {vpsSessions.map((vs) => (
+                  <option key={vs.id} value={String(vs.id)}>
+                    #{vs.id} {vs.kind} {vs.url} ({vs.status})
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <Label className="text-xs">VPS 公网 host</Label>
@@ -325,9 +344,21 @@ export default function C2Page() {
             }}>复制植入端</Button>
           </div>
           <textarea className="border-input bg-muted/30 h-32 w-full rounded-md border p-2 font-mono text-xs" readOnly placeholder="创建后显示植入端脚本" value={ingImplantContent} />
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted-foreground">共 {ingress.length} 个中继，健康 {healthyCount}</span>
+            <select className="border-input bg-background h-8 rounded-md border px-2" value={ingHealthFilter} onChange={(ev) => setIngHealthFilter(ev.target.value)}>
+              <option value="all">全部健康状态</option>
+              <option value="healthy">仅健康</option>
+              <option value="unhealthy">仅异常</option>
+            </select>
+            <select className="border-input bg-background h-8 rounded-md border px-2" value={ingNodeFilter} onChange={(ev) => setIngNodeFilter(ev.target.value)}>
+              <option value="">全部节点</option>
+              {nodeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
           <Table
             head={["Tunnel", "节点", "回调地址", "Listener", "状态", "健康", "最近健康", "操作"]}
-            rows={ingress.map((v) => [
+            rows={filteredIngress.map((v) => [
               String(v.tunnel_id),
               v.node_label || "—",
               v.callback_addr,

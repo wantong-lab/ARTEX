@@ -309,3 +309,9 @@
 - c2_events：创建/停止/健康状态变化；GET /api/c2/ingress/events；C2 页最近事件时间线。
 - 外发告警暂未接 notifier，事件 + 指标可供外部规则消费。
 - 校验：go build/vet、web build、fresh DB go test ./... 全绿、/metrics 冒烟通过；提交 P2-C f9903e7、P2-D 1cc778b；推送 Gitea wantong/ARTEX。GitHub Actions 因账单禁用，CI/Release 待恢复。
+
+## 轮次 51 · 2026-11-23（C2 入站中继 P2-E）
+- UI：VPS 会话下拉（intranet sessions）、健康/节点筛选、总数/健康数汇总。
+- 文档：docs/c2-ingress-runbook.md（部署/健康/排障/清理/安全边界）。
+- 验收：scripts/acceptance/c2_ingress_direct.sh；acceptance README 增页面验收项。
+- 无新增迁移/后端接口；web build 通过。
