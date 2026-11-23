@@ -151,3 +151,6 @@ v0.4.9 起代理池从「内网中枢」拆为独立页面：侧边栏 → 出�
 
 ### Q38：怎么从 Clash 订阅导入代理池？
 出口代理池页面 → “从 Clash 订阅 / mihomo 配置导入” → 填订阅 URL → “拉取订阅并导入”。只导入 http/https/socks5 节点，ss/vmess/trojan 等会跳过；订阅不落库。
+
+### Q39：vless/hysteria2 的 Clash 订阅怎么用？
+出口代理池 → “Clash 订阅代理（mihomo 内核）” → 填订阅 URL → 启动。后端会自动请求 Clash.Meta 格式并启动本地 mihomo，把本地 mixed 口登记为代理池条目；需要系统有 mihomo（或设置 ARTEX_MIHOMO_PATH）。启动后到系统配置把出口模式切到“代理池接管”。

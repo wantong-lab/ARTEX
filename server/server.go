@@ -45,6 +45,7 @@ type Server struct {
 	ctx    context.Context
 
 	skillDir string // root directory for skill subdirectories
+	dataDir  string // 数据目录（代理订阅配置/日志等）
 	jwtKey   []byte // HS256 signing key loaded from / generated into dataDir/jwt.key
 
 	// P2-14 可观测性：进程内 HTTP 指标与启动时间。
@@ -72,6 +73,10 @@ type Server struct {
 	// 代理池运行时（M4-03）。
 	proxyMu sync.Mutex
 	proxyRT *proxyPoolRuntime
+
+	// Clash 订阅 → 本地 mihomo（出口代理池）。
+	proxySubMu sync.Mutex
+	proxySub   *proxySubscriptionState
 
 	// 维护性定时调度（P1-4）：保留自动清理/CVE 自动同步/代理池健康巡检。
 	maintenance *maintainer
@@ -182,7 +187,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	if err != nil {
 		log.Fatalf("[auth] JWT key: %v", err)
 	}
-	s := &Server{m: m, engine: NewEngine(m), ctx: ctx, skillDir: skillDir, jwtKey: key, chatBusy: map[string]bool{},
+	s := &Server{m: m, engine: NewEngine(m), ctx: ctx, skillDir: skillDir, dataDir: dataDir, jwtKey: key, chatBusy: map[string]bool{},
 		chatCancel: map[string]context.CancelCauseFunc{}, triggerQ: map[string][]triggeredRun{},
 		triggerActive: map[string]int{}, triggerCfg: map[string]triggerBehavior{},
 		profChatAgents: map[int64]*agent.ChatAgent{},

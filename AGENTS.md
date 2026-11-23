@@ -43,4 +43,5 @@
 - 统一出口代理（v0.4.9）：egress_mode=direct/fixed/pool；fixed 用 global_proxy，pool 用代理池活动/兜底；代理池切换会同步重建 Agent。
 - 出口代理池独立页面（v0.4.9）：/function/proxy-pool + 侧边栏入口；代理池 UI 从内网中枢迁出。
 - Clash 订阅导入（v0.4.9）：代理池页支持订阅 URL 拉取导入，后端仅允许 http/https，复用 import-mihomo。
+- Clash 订阅代理 mihomo（v0.4.9）：订阅自动 meta 格式 → 本地 mihomo mixed 口 → 代理池本地条目；用户 vless/hysteria2 订阅真机 E2E 通过。
 - C2 socks5 仍未内置；二开为外部 C2 MCP（Supershell manage_socks5）集成，主线如需内置走反向 SOCKS-over-C2 或外部 MCP，待定。

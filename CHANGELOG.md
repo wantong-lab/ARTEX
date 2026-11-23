@@ -18,6 +18,7 @@
 - 统一出口代理：settings 增加 egress_mode（direct/fixed/pool）；fixed 使用 global_proxy，pool 使用代理池活动/兜底；系统配置页增加模式选择与 effective_proxy 显示，代理池页明确接管关系。
 - 出口代理池独立页面：侧边栏新增「出口代理池」/function/proxy-pool，代理池 UI 从内网中枢迁出；页面显示当前出口模式/实际出口。
 - 出口代理池支持 Clash 订阅：新增订阅 URL 输入与“拉取订阅并导入”，后端仅允许 http/https，复用 import-mihomo；非 http/socks5 节点跳过。
+- Clash 订阅代理（mihomo 内核）：订阅自动转 Clash.Meta YAML，启动本地 mihomo mixed 口并登记为代理池本地条目；支持 vless/hysteria2 订阅；启动/停止 API 与页面卡片。
 
 ### 测试
 - go build ./...、go vet、go test ./db -run TestApplyMigrationsIdempotent、web npm run build 通过。

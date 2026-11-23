@@ -61,6 +61,7 @@ import type {
   KBInsights,
   KBSearchResult,
   ProxyPoolState,
+  ProxySubscriptionStatus,
   SploitusItem,
   WebshellShell,
   IntranetHostOp,
@@ -1471,6 +1472,10 @@ export const api = {
   proxyPoolGlobal: (url: string) => put<{ ok: boolean; global_set: boolean }>(`/proxy-pool/global`, { url }),
   proxyPoolEgress: () => post<{ ok: boolean; exit_ip?: string; error?: string; active_id?: number }>(`/proxy-pool/egress`),
   proxyPoolDelete: (id: number) => del<{ ok: boolean }>(`/proxy-pool/${id}`),
+
+  proxyPoolSubscription: () => get<ProxySubscriptionStatus>(`/proxy-pool/subscription`),
+  proxyPoolSubscriptionStart: (url: string) => post<ProxySubscriptionStatus>(`/proxy-pool/subscription`, { url }),
+  proxyPoolSubscriptionStop: () => del<ProxySubscriptionStatus>(`/proxy-pool/subscription`),
 
   proxyPoolImportMihomo: (body: { yaml?: string; url?: string; name_prefix?: string }) =>
     post<MihomoImportResult>("/proxy-pool/import-mihomo", body),

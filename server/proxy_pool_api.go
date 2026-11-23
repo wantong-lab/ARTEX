@@ -129,6 +129,9 @@ func (s *Server) registerProxyPoolRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/proxy-pool/egress", s.proxyPoolEgress)
 	mux.HandleFunc("POST /api/proxy-pool/import-mihomo", s.proxyPoolImportMihomo)
 	mux.HandleFunc("DELETE /api/proxy-pool/{id}", s.proxyPoolDelete)
+	mux.HandleFunc("GET /api/proxy-pool/subscription", s.proxyPoolSubscriptionStatus)
+	mux.HandleFunc("POST /api/proxy-pool/subscription", s.proxyPoolSubscriptionStart)
+	mux.HandleFunc("DELETE /api/proxy-pool/subscription", s.proxyPoolSubscriptionStop)
 }
 
 func (s *Server) proxyPoolList(w http.ResponseWriter, r *http.Request) {

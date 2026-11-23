@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import type { MihomoImportResult, ProxyPoolState } from "@/lib/types";
+import type { MihomoImportResult, ProxyPoolState, ProxySubscriptionStatus } from "@/lib/types";
 
 // ---------------- 代理池（M4-03）：录入 / 探测 / 切换 / 回退 ----------------
 
@@ -25,6 +25,8 @@ export function ProxyPoolPanel() {
   const [egress, setEgress] = React.useState("");
   const [mihomoYAML, setMihomoYAML] = React.useState("");
   const [subscriptionURL, setSubscriptionURL] = React.useState("");
+  const [subStatus, setSubStatus] = React.useState<ProxySubscriptionStatus | null>(null);
+  const [subBusy, setSubBusy] = React.useState(false);
   const [mihomoPrefix, setMihomoPrefix] = React.useState("mh-");
   const [importing, setImporting] = React.useState(false);
   const [importResult, setImportResult] = React.useState<MihomoImportResult | null>(null);
@@ -32,7 +34,9 @@ export function ProxyPoolPanel() {
   const refresh = React.useCallback(async () => {
     setLoading(true);
     try {
-      setState(await api.proxyPool());
+      const [pool, sub] = await Promise.all([api.proxyPool(), api.proxyPoolSubscription().catch(() => null)]);
+      setState(pool);
+      setSubStatus(sub);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -62,6 +66,32 @@ export function ProxyPoolPanel() {
       "导入完成：新增 " + r.imported_count + " 条，重复 " + r.duplicates +
       " 条，跳过 " + r.skipped.length + " 条（ss/vmess 等需 mihomo 内核转发）",
     );
+  };
+
+  const startSubscriptionProxy = () => {
+    setSubBusy(true);
+    setError("");
+    api.proxyPoolSubscriptionStart(subscriptionURL.trim())
+      .then(async (st) => {
+        setSubStatus(st);
+        setNotice(st.local_proxy ? "订阅代理已启动：" + st.local_proxy : "订阅代理已启动");
+        await refresh();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setSubBusy(false));
+  };
+
+  const stopSubscriptionProxy = () => {
+    setSubBusy(true);
+    setError("");
+    api.proxyPoolSubscriptionStop()
+      .then(async (st) => {
+        setSubStatus(st);
+        setNotice("订阅代理已停止");
+        await refresh();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setSubBusy(false));
   };
 
   return (
@@ -110,7 +140,47 @@ export function ProxyPoolPanel() {
       </div>
 
       <Card className="flex flex-col gap-2 p-3">
-        <p className="font-medium text-sm">从 Clash 订阅 / mihomo 配置导入（适配器：仅 http/https/socks5）</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-medium text-sm">Clash 订阅代理（mihomo 内核，支持 vless/hysteria2）</p>
+          <Badge variant={subStatus?.running ? "default" : "secondary"}>
+            {subStatus?.running ? "运行中" : "未运行"}
+          </Badge>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {subStatus?.mihomo_available
+            ? "mihomo：" + (subStatus.mihomo_binary || "可用")
+            : "mihomo 不可用：" + (subStatus?.mihomo_error || "未检测到，请配置 ARTEX_MIHOMO_PATH")}
+        </p>
+        {subStatus?.running ? (
+          <p className="text-xs">
+            本地代理：<code>{subStatus.local_proxy}</code> · 条目 #{subStatus.entry_id} · 已设为活动代理
+          </p>
+        ) : null}
+        {subStatus?.error ? <p className="text-destructive text-xs">{subStatus.error}</p> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            className="min-w-64 flex-1"
+            placeholder="Clash 订阅 URL（支持 base64/vless 订阅，自动尝试 meta 格式）"
+            value={subscriptionURL}
+            onChange={(e) => setSubscriptionURL(e.target.value)}
+          />
+          {subStatus?.running ? (
+            <Button size="sm" variant="destructive" disabled={subBusy} onClick={stopSubscriptionProxy}>
+              {subBusy ? "停止中…" : "停止订阅代理"}
+            </Button>
+          ) : (
+            <Button size="sm" disabled={subBusy || !subscriptionURL.trim() || !subStatus?.mihomo_available} onClick={startSubscriptionProxy}>
+              {subBusy ? "启动中…" : "启动订阅代理"}
+            </Button>
+          )}
+        </div>
+        <p className="text-muted-foreground text-xs">
+          启动后自动登记 127.0.0.1 本地代理并设为活动代理；到「系统配置 → 出口代理」把出口模式切到「代理池接管」。
+        </p>
+      </Card>
+
+      <Card className="flex flex-col gap-2 p-3">
+        <p className="font-medium text-sm">直接导入 http/socks5 节点（Clash YAML / 节点列表）</p>
         <div className="flex flex-wrap items-center gap-2">
           <Input
             className="min-w-64 flex-1"
@@ -134,7 +204,7 @@ export function ProxyPoolPanel() {
               });
             }}
           >
-            {importing ? "导入中…" : "拉取订阅并导入"}
+            {importing ? "导入中…" : "直接导入（仅 http/socks5）"}
           </Button>
         </div>
         <p className="text-muted-foreground text-xs">
@@ -190,6 +260,8 @@ export function ProxyPoolPanel() {
           </div>
         ) : null}
       </Card>
+
+
 
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between p-2">

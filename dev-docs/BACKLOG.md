@@ -62,6 +62,8 @@
 
 - [x] P4-33 出口代理池 Clash 订阅导入：订阅 URL UI + 后端 http/https 校验；复用 import-mihomo。
 
+- [x] P4-34 Clash 订阅代理（mihomo 内核）：订阅自动 meta 格式 + 本地 mihomo mixed 口 + 代理池条目/启停/状态；用户订阅真机 E2E 通过。
+
 ## 变更记录
 
 - 2026-11-21：建立任务板；P0-2、P0-3 完成（提交后回填 commit）。
@@ -82,3 +84,4 @@
 - 2026-11-23：P4-31 统一出口代理完成；go build/vet、web build、EffectiveProxy 单测通过。
 - 2026-11-23：P4-32 出口代理池独立页面完成；web build 通过。
 - 2026-11-24：P4-33 Clash 订阅导入完成；go build/单测/web build 通过。
+- 2026-11-24：P4-34 Clash 订阅代理完成；用户 vless/hysteria2 订阅真机启停/出口/清理验证通过。

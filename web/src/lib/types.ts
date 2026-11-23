@@ -1631,6 +1631,19 @@ export interface ProxyPoolState {
   unified_outbound?: string[];
 }
 
+
+export interface ProxySubscriptionStatus {
+  mihomo_available: boolean;
+  mihomo_binary?: string;
+  mihomo_error?: string;
+  running: boolean;
+  local_proxy?: string;
+  entry_id?: number;
+  error?: string;
+  egress_mode?: string;
+  effective_proxy?: string;
+}
+
 export interface MihomoImportResult {
   ok: boolean;
   imported_count: number;
