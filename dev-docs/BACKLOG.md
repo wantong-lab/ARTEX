@@ -54,7 +54,7 @@
 
 - [x] P4-29 C2 管理页信息架构/文案优化：方式说明卡、字段速查、卡片排序与默认值。
 
-- [x] P4-30 C2 入站中继反向模式：PlanIngressReverse + Manager.deployReverse + mode/UI/worker 决策；手动 chisel 反向链路验证通过，待完整 C2 E2E。
+- [x] P4-30 C2 入站中继反向模式：PlanIngressReverse + Manager.deployReverse + mode/UI/worker 决策；手动 chisel 反向链路验证通过；提交 b1f2372；待完整 C2 E2E。
 
 ## 变更记录
 

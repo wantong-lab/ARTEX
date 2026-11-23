@@ -82,4 +82,4 @@ Plan 新增：
 
 - 已加 PlanIngressReverse、Manager.deployReverse、mode 分支、UI 模式选择、worker 工具目录与决策描述；
 - 手动 chisel 反向链路验证：平台出站 -> VPS 39443 -> VPS 39444 -> 本地 HTTP 200；
-- 未做完整 C2 植入端反向 E2E（需目标可达环境）。
+- 未做完整 C2 植入端反向 E2E（需目标可达环境）。提交 b1f2372；本机二进制已重建/重启 0.4.9。
