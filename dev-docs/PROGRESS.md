@@ -315,3 +315,9 @@
 - 文档：docs/c2-ingress-runbook.md（部署/健康/排障/清理/安全边界）。
 - 验收：scripts/acceptance/c2_ingress_direct.sh；acceptance README 增页面验收项。
 - 无新增迁移/后端接口；web build 通过。
+
+## 轮次 52 · 2026-11-23（C2 页面信息架构优化）
+- 首屏新增“先看这里：选哪种方式？”说明卡与字段速查。
+- 卡片顺序调整为监听器 → 入站中继 → 植入端 → 会话 → 任务，并加序号。
+- 入站中继默认端口 39444、平台 chisel 39443；字段标签改为人话。
+- 无后端/迁移变更；web build 通过。

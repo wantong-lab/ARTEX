@@ -38,4 +38,5 @@
 - P2-C（v0.4.9）：c2_ingress 节点台账 + 30s 健康巡检 + 手动重建 API/UI；P2-A/B 按用户确认暂不做。
 - P2-D（v0.4.9）：/metrics ingress/beacon 指标、c2_events 事件、GET /api/c2/ingress/events 与 UI 时间线；外发告警待接 notifier。
 - P2-E（v0.4.9）：入站中继 VPS 会话下拉、健康/节点筛选、runbook、验收脚本。
+- C2 控制台 UX（v0.4.9）：首屏方式说明/字段速查、监听器→中继→植入端→会话→任务排序、默认端口 39444/39443。
 - C2 socks5 仍未内置；二开为外部 C2 MCP（Supershell manage_socks5）集成，主线如需内置走反向 SOCKS-over-C2 或外部 MCP，待定。

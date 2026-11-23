@@ -52,6 +52,8 @@
 - [x] P4-27 P2-D 可观测性：ingress/beacon 指标、c2_events 生命周期事件、事件 API/UI；提交 1cc778b；外发告警待接 notifier。
 - [x] P4-28 P2-E UI/文档/验收：会话选择器、健康/节点筛选、runbook、验收脚本；提交 b8f7cda。
 
+- [x] P4-29 C2 管理页信息架构/文案优化：方式说明卡、字段速查、卡片排序与默认值。
+
 ## 变更记录
 
 - 2026-11-21：建立任务板；P0-2、P0-3 完成（提交后回填 commit）。
@@ -67,3 +69,4 @@
 - 2026-11-23：P4-27 P2-D 完成指标/事件/UI 时间线；外发告警留后续。
 - 2026-11-23：P2-C 提交 f9903e7、P2-D 提交 1cc778b；fresh DB go test ./... 全绿、web build、/metrics 冒烟通过；代码已推 Gitea wantong/ARTEX。
 - 2026-11-23：P4-28 P2-E 完成（UI 选择器/筛选、runbook、验收脚本）；web build 通过。
+- 2026-11-23：P4-29 C2 页面 UX 优化（说明卡/速查/排序/默认值）；web build 通过。

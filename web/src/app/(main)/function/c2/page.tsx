@@ -60,7 +60,7 @@ export default function C2Page() {
   const [ingressEvents, setIngressEvents] = useState<C2IngressEvent[]>([]);
   const [ingSession, setIngSession] = useState("");
   const [ingVpsHost, setIngVpsHost] = useState("");
-  const [ingVpsPort, setIngVpsPort] = useState("443");
+  const [ingVpsPort, setIngVpsPort] = useState("39444");
   const [ingKind, setIngKind] = useState("http");
   const [ingNodeLabel, setIngNodeLabel] = useState("");
   const [ingPlatformHost, setIngPlatformHost] = useState("");
@@ -285,114 +285,41 @@ export default function C2Page() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">入站中继</CardTitle>
-          <CardDescription>目标只回连 VPS；平台 listener 仅绑 127.0.0.1，经 VPS chisel 本地转发回平台。P2-C 台账每 30s 健康巡检。</CardDescription>
+          <CardTitle className="text-base">先看这里：选哪种方式？</CardTitle>
+          <CardDescription>先判断目标能不能直接访问平台；能直连走方式 A，只能访问 VPS 走方式 B。</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <div className="grid gap-2 sm:grid-cols-4">
-            <div>
-              <Label className="text-xs">VPS 会话</Label>
-              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingSession} onChange={(ev) => setIngSession(ev.target.value)}>
-                <option value="">选择 VPS 会话…</option>
-                {vpsSessions.map((vs) => (
-                  <option key={vs.id} value={String(vs.id)}>
-                    #{vs.id} {vs.kind} {vs.url} ({vs.status})
-                  </option>
-                ))}
-              </select>
+        <CardContent className="flex flex-col gap-3 text-sm">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-md border p-3">
+              <div className="font-medium">方式 A：目标能直接访问平台</div>
+              <p className="text-muted-foreground mt-1">创建平台监听器 → 生成植入端。适合内网目标或平台地址可达的情况。</p>
+              <p className="text-muted-foreground mt-1">一般只需要：监听器（HTTP，127.0.0.1）→ 生成植入端。</p>
             </div>
-            <div>
-              <Label className="text-xs">VPS 公网 host</Label>
-              <Input value={ingVpsHost} onChange={(ev) => setIngVpsHost(ev.target.value)} placeholder="1.2.3.4" />
-            </div>
-            <div>
-              <Label className="text-xs">VPS 回调端口</Label>
-              <Input value={ingVpsPort} onChange={(ev) => setIngVpsPort(ev.target.value)} />
-            </div>
-            <div>
-              <Label className="text-xs">Listener 类型</Label>
-              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingKind} onChange={(ev) => setIngKind(ev.target.value)}>
-                <option value="http">HTTP beacon</option>
-                <option value="tcp">TCP</option>
-              </select>
-            </div>
-            <div>
-              <Label className="text-xs">节点标签</Label>
-              <Input value={ingNodeLabel} onChange={(ev) => setIngNodeLabel(ev.target.value)} placeholder="vps-hk-1" />
-            </div>
-            <div>
-              <Label className="text-xs">平台 chisel host</Label>
-              <Input value={ingPlatformHost} onChange={(ev) => setIngPlatformHost(ev.target.value)} placeholder="平台公网 IP" />
-            </div>
-            <div>
-              <Label className="text-xs">平台 chisel 端口</Label>
-              <Input value={ingPlatformPort} onChange={(ev) => setIngPlatformPort(ev.target.value)} />
-            </div>
-            <div>
-              <Label className="text-xs">植入端语言</Label>
-              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingImplantLang} onChange={(ev) => setIngImplantLang(ev.target.value)}>
-                <option value="powershell">PowerShell</option>
-                <option value="python">Python</option>
-                <option value="bash">Bash</option>
-              </select>
+            <div className="rounded-md border p-3">
+              <div className="font-medium">方式 B：目标只能访问 VPS</div>
+              <p className="text-muted-foreground mt-1">填写 VPS 会话/公网地址/回调端口 → 创建入站中继 → 复制生成的植入端。</p>
+              <p className="text-muted-foreground mt-1">目标只看到 VPS，不暴露平台地址。</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" disabled={busy !== ""} onClick={() => void createIngress()}>创建中继</Button>
-            <Button size="sm" variant="outline" disabled={!ingImplantContent} onClick={() => {
-              navigator.clipboard.writeText(ingImplantContent).then(() => toast.success("已复制"), () => toast.error("复制失败"));
-            }}>复制植入端</Button>
-          </div>
-          <textarea className="border-input bg-muted/30 h-32 w-full rounded-md border p-2 font-mono text-xs" readOnly placeholder="创建后显示植入端脚本" value={ingImplantContent} />
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-muted-foreground">共 {ingress.length} 个中继，健康 {healthyCount}</span>
-            <select className="border-input bg-background h-8 rounded-md border px-2" value={ingHealthFilter} onChange={(ev) => setIngHealthFilter(ev.target.value)}>
-              <option value="all">全部健康状态</option>
-              <option value="healthy">仅健康</option>
-              <option value="unhealthy">仅异常</option>
-            </select>
-            <select className="border-input bg-background h-8 rounded-md border px-2" value={ingNodeFilter} onChange={(ev) => setIngNodeFilter(ev.target.value)}>
-              <option value="">全部节点</option>
-              {nodeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </div>
-          <Table
-            head={["Tunnel", "节点", "回调地址", "Listener", "状态", "健康", "最近健康", "操作"]}
-            rows={filteredIngress.map((v) => [
-              String(v.tunnel_id),
-              v.node_label || "—",
-              v.callback_addr,
-              "#" + v.listener_id + " " + v.listener_kind + " / " + v.listener_status,
-              <Badge key={"is" + v.tunnel_id} variant={v.state === "alive" ? "default" : "secondary"}>{STATUS_LABEL[v.state] || v.state}</Badge>,
-              <Badge key={"ih" + v.tunnel_id} variant={v.healthy ? "default" : "secondary"} title={v.last_error || ""}>{v.healthy ? "健康" : "异常"}</Badge>,
-              fmtTime(v.last_health_at),
-              <span key={"ia" + v.tunnel_id} className="flex justify-end gap-1">
-                <Button size="sm" variant="outline" disabled={busy !== ""} onClick={() => void rebuildIngress(v.tunnel_id)}>重建</Button>
-                <Button size="sm" variant="destructive" disabled={busy !== ""} onClick={() => void teardownIngress(v.tunnel_id)}>停止</Button>
-              </span>,
-            ])}
-            empty="暂无入站中继"
-          />
-          {ingressEvents.length > 0 && (
-            <div className="max-h-32 overflow-auto rounded-md border p-2 text-xs">
-              <div className="mb-1 font-medium text-muted-foreground">最近事件</div>
-              {ingressEvents.slice(0, 8).map((ev) => (
-                <div key={ev.id} className="flex items-center gap-2 py-0.5">
-                  <Badge variant={ev.level === "warn" ? "destructive" : "secondary"}>{ev.level}</Badge>
-                  <span className="truncate">{ev.message}</span>
-                  <span className="ml-auto shrink-0 text-muted-foreground">{fmtTime(ev.created_at)}</span>
-                </div>
-              ))}
+          <details className="rounded-md border p-3">
+            <summary className="cursor-pointer font-medium">字段速查（点开）</summary>
+            <div className="mt-2 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
+              <div><span className="text-foreground">监听器</span>：平台侧接收植入端连接的入口，通常 HTTP + 127.0.0.1 即可。</div>
+              <div><span className="text-foreground">入站中继</span>：目标回连 VPS，VPS 再转发到平台；适合目标只能访问 VPS。</div>
+              <div><span className="text-foreground">VPS 会话</span>：平台已有的到 VPS 的会话 id（intranet sessions）。</div>
+              <div><span className="text-foreground">VPS 公网地址/端口</span>：目标实际回连的地址和端口，端口需在 VPS 防火墙放行。</div>
+              <div><span className="text-foreground">平台 chisel 地址/端口</span>：VPS 回连平台用的地址/端口，通常保持默认 39443。</div>
+              <div><span className="text-foreground">植入端</span>：在目标上运行的脚本；方式 B 创建中继后会直接给出。</div>
             </div>
-          )}
+          </details>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">监听器</CardTitle>
-            <CardDescription>TCP 长连接 / HTTP beacon 两种形态；token 加密落库，仅创建时生成。</CardDescription>
+            <CardTitle className="text-base">① 平台监听器（通常保持默认）</CardTitle>
+            <CardDescription>平台接收植入端连接的入口。一般保持 HTTP + 127.0.0.1；只有需要目标直连平台时才考虑其他绑定。</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <div className="grid gap-2 sm:grid-cols-5">
@@ -462,8 +389,8 @@ export default function C2Page() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">植入端生成</CardTitle>
-            <CardDescription>仅 HTTP 监听器支持；token 内嵌在脚本中，请妥善保管。</CardDescription>
+            <CardTitle className="text-base">③ 生成植入端</CardTitle>
+            <CardDescription>方式 A 使用；选择监听器后生成脚本。方式 B 在入站中继创建后已直接生成，不需要在这里重复。</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <div className="grid gap-2 sm:grid-cols-3">
@@ -525,7 +452,113 @@ export default function C2Page() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">会话</CardTitle>
+          <CardTitle className="text-base">② 入站中继（目标只能访问 VPS 时用）</CardTitle>
+          <CardDescription>目标只回连 VPS；平台监听器只绑 127.0.0.1，VPS 通过 chisel 把流量转发回平台。页面每 30s 更新健康状态。</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <div className="grid gap-2 sm:grid-cols-4">
+            <div>
+              <Label className="text-xs">1. 到 VPS 的会话</Label>
+              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingSession} onChange={(ev) => setIngSession(ev.target.value)}>
+                <option value="">选择 VPS 会话…</option>
+                {vpsSessions.map((vs) => (
+                  <option key={vs.id} value={String(vs.id)}>
+                    #{vs.id} {vs.kind} {vs.url} ({vs.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs">2. VPS 公网 IP/域名</Label>
+              <Input value={ingVpsHost} onChange={(ev) => setIngVpsHost(ev.target.value)} placeholder="1.2.3.4" />
+            </div>
+            <div>
+              <Label className="text-xs">VPS 回调端口（目标回连）</Label>
+              <Input value={ingVpsPort} onChange={(ev) => setIngVpsPort(ev.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">植入端类型</Label>
+              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingKind} onChange={(ev) => setIngKind(ev.target.value)}>
+                <option value="http">HTTP beacon</option>
+                <option value="tcp">TCP</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs">节点标签（可选）</Label>
+              <Input value={ingNodeLabel} onChange={(ev) => setIngNodeLabel(ev.target.value)} placeholder="vps-hk-1" />
+            </div>
+            <div>
+              <Label className="text-xs">平台 chisel 地址</Label>
+              <Input value={ingPlatformHost} onChange={(ev) => setIngPlatformHost(ev.target.value)} placeholder="平台公网 IP" />
+            </div>
+            <div>
+              <Label className="text-xs">平台 chisel 端口</Label>
+              <Input value={ingPlatformPort} onChange={(ev) => setIngPlatformPort(ev.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">脚本类型</Label>
+              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingImplantLang} onChange={(ev) => setIngImplantLang(ev.target.value)}>
+                <option value="powershell">PowerShell</option>
+                <option value="python">Python</option>
+                <option value="bash">Bash</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">不确定怎么填：VPS 回调端口填 39444，平台 chisel 端口保持默认 39443；详细说明见 docs/c2-ingress-runbook.md。</p>
+          <div className="flex gap-2">
+            <Button size="sm" disabled={busy !== ""} onClick={() => void createIngress()}>创建中继</Button>
+            <Button size="sm" variant="outline" disabled={!ingImplantContent} onClick={() => {
+              navigator.clipboard.writeText(ingImplantContent).then(() => toast.success("已复制"), () => toast.error("复制失败"));
+            }}>复制植入端</Button>
+          </div>
+          <textarea className="border-input bg-muted/30 h-32 w-full rounded-md border p-2 font-mono text-xs" readOnly placeholder="创建后显示植入端脚本" value={ingImplantContent} />
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted-foreground">共 {ingress.length} 个中继，健康 {healthyCount}</span>
+            <select className="border-input bg-background h-8 rounded-md border px-2" value={ingHealthFilter} onChange={(ev) => setIngHealthFilter(ev.target.value)}>
+              <option value="all">全部健康状态</option>
+              <option value="healthy">仅健康</option>
+              <option value="unhealthy">仅异常</option>
+            </select>
+            <select className="border-input bg-background h-8 rounded-md border px-2" value={ingNodeFilter} onChange={(ev) => setIngNodeFilter(ev.target.value)}>
+              <option value="">全部节点</option>
+              {nodeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+          <Table
+            head={["Tunnel", "节点", "回调地址", "Listener", "状态", "健康", "最近健康", "操作"]}
+            rows={filteredIngress.map((v) => [
+              String(v.tunnel_id),
+              v.node_label || "—",
+              v.callback_addr,
+              "#" + v.listener_id + " " + v.listener_kind + " / " + v.listener_status,
+              <Badge key={"is" + v.tunnel_id} variant={v.state === "alive" ? "default" : "secondary"}>{STATUS_LABEL[v.state] || v.state}</Badge>,
+              <Badge key={"ih" + v.tunnel_id} variant={v.healthy ? "default" : "secondary"} title={v.last_error || ""}>{v.healthy ? "健康" : "异常"}</Badge>,
+              fmtTime(v.last_health_at),
+              <span key={"ia" + v.tunnel_id} className="flex justify-end gap-1">
+                <Button size="sm" variant="outline" disabled={busy !== ""} onClick={() => void rebuildIngress(v.tunnel_id)}>重建</Button>
+                <Button size="sm" variant="destructive" disabled={busy !== ""} onClick={() => void teardownIngress(v.tunnel_id)}>停止</Button>
+              </span>,
+            ])}
+            empty="暂无入站中继"
+          />
+          {ingressEvents.length > 0 && (
+            <div className="max-h-32 overflow-auto rounded-md border p-2 text-xs">
+              <div className="mb-1 font-medium text-muted-foreground">最近事件</div>
+              {ingressEvents.slice(0, 8).map((ev) => (
+                <div key={ev.id} className="flex items-center gap-2 py-0.5">
+                  <Badge variant={ev.level === "warn" ? "destructive" : "secondary"}>{ev.level}</Badge>
+                  <span className="truncate">{ev.message}</span>
+                  <span className="ml-auto shrink-0 text-muted-foreground">{fmtTime(ev.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">④ 会话</CardTitle>
           <CardDescription>HTTP 植入端心跳自动上线；选中会话可下发命令，下次心跳领取。</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -572,7 +605,7 @@ export default function C2Page() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">任务</CardTitle>
+          <CardTitle className="text-base">⑤ 任务</CardTitle>
           <CardDescription>最新 50 条；排队任务由 HTTP 植入端心跳领取，结果回写 output/error。</CardDescription>
         </CardHeader>
         <CardContent>

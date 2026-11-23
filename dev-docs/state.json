@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 51,
+  "round": 52,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -228,7 +228,8 @@
     "v0_4_8_c2_ingress_39444": "VPS 39444 放行后，Windows 133 → VPS:39444 → 平台 loopback C2 直连 E2E PASS（19.2s，whoami/hostname 成功）；面板已恢复，测试环境已清理。",
     "v0_4_9_c2_ingress_p2c": "P2-C 提交 f9903e7：c2_ingress 台账、30s 健康巡检、手动重建、旧 ingress 兼容；fresh DB go test ./...、web build 通过。",
     "v0_4_9_c2_ingress_p2d": "P2-D 提交 1cc778b：/metrics ingress/beacon 指标；c2_events 事件 + GET /api/c2/ingress/events + UI 时间线；fresh DB go test ./...、web build、/metrics 冒烟通过；外发告警待接 notifier。",
-    "v0_4_9_c2_ingress_p2e": "P2-E 提交 b8f7cda：VPS 会话下拉、健康/节点筛选/汇总、runbook、验收脚本；web build 通过。"
+    "v0_4_9_c2_ingress_p2e": "P2-E 提交 b8f7cda：VPS 会话下拉、健康/节点筛选/汇总、runbook、验收脚本；web build 通过。",
+    "v0_4_9_c2_console_ux": "C2 页面 UX：方式说明卡/字段速查/监听器到任务排序/默认端口；无后端变更；web build 通过。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"
