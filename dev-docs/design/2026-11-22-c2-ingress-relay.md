@@ -363,7 +363,7 @@ P2-A/P2-B 暂不做。当前优先执行 P2-C（多 VPS 健康台账/巡检/手�
 - UI：入站中继 VPS 会话改为下拉选择（intranet sessions）；新增健康/节点筛选与总数/健康数汇总；保留最近事件时间线。
 - 文档：新增 docs/c2-ingress-runbook.md（拓扑、前置条件、1Panel/云防火墙、部署、健康、排障、清理、安全边界、验收）。
 - 验收：新增 scripts/acceptance/c2_ingress_direct.sh；acceptance README 补页面验收项。
-- 无新增后端接口/迁移。
+- 无新增后端接口/迁移。提交 b8f7cda；web build 通过。
 - 文档/验收/版本记录齐全。
 
 ### P2-C 实施记录（v0.4.9）

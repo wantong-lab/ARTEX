@@ -50,7 +50,7 @@
 - [-] P4-25 P2-B 访问控制/安全（暂不做：链路已加密）：源 IP ACL、限速、body/Content-Type 限制、日志脱敏、TLS/HSTS
 - [~] P4-26 P2-C 多 VPS 健康台账（进行中）：c2_ingress 表、健康巡检、失联告警、手动重建
 - [x] P4-27 P2-D 可观测性：ingress/beacon 指标、c2_events 生命周期事件、事件 API/UI；提交 1cc778b；外发告警待接 notifier。
-- [x] P4-28 P2-E UI/文档/验收：会话选择器、健康/节点筛选、runbook、验收脚本。
+- [x] P4-28 P2-E UI/文档/验收：会话选择器、健康/节点筛选、runbook、验收脚本；提交 b8f7cda。
 
 ## 变更记录
 
