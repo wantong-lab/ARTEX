@@ -269,3 +269,87 @@ VPS:39444 (ingress) ──> 127.0.0.1:<platform_c2_port>
 - UI：C2 管理页新增“入站中继”卡片（创建/列表/停止/复制植入端）。
 - 校验：go build/vet、web npm run build 通过；P0 真机 E2E 保持通过（Windows 133 → VPS ingress → 平台 loopback C2）。发布：提交 2da92c0，CI 45040387113 全绿，tag v0.4.8，Release 45040620312 成功。
 - 补充（2026-11-23）：用户放行 VPS 39444 后，Windows 133 → VPS:39444 → 平台 loopback C2 直连 E2E PASS（19.2s，whoami/hostname 成功），不再依赖 443 临时方案。
+
+## 13. P2 设计（生产加固与多节点，待排期）
+
+### 13.1 目标
+
+把 C2 ingress 从“能用”做到可长期运行、可审计、可多节点管理；不改变 C2 直连模式，不内置 C2 socks5。
+
+### 13.2 P2-A HTTPS/443 前置反代（最高优先）
+
+问题：部分 VPS 云防火墙只允许 22/80/443，不能直接放行 39444。
+
+要做的内容：
+
+1. Ingress 支持本地绑定与公网基址分离：
+   - 新增 vps_bind_host（默认 0.0.0.0；反代时填 127.0.0.1）。
+   - 新增 public_base_url（如 https://ddv.008359.xyz）和 public_path_prefix（如 /c2）。
+   - c2_ingress_deploy、REST、UI 增加对应字段。
+   - HTTP 植入端生成改用 public_base_url，不再固定 http://vps:port。
+   - TCP ingress 不走 HTTP 反代，仍要求直连端口。
+2. openresty/nginx 站点反代模板：
+   - 在 1Panel 站点 proxy 目录加 c2.conf，把 /c2/ 转发到 127.0.0.1:<vps_bind_port>。
+   - 只放行 POST /c2/beacon/，限制 body 大小、超时、请求速率。
+   - access log 不记录完整 token（只记录指纹）。
+3. 证书与域名：复用现有站点证书；新子域名走 1Panel 证书申请；检查续期。
+4. 健康与回滚：平台侧探测 public_base_url 路径；配置前备份、nginx -t、reload，失败回滚。
+5. 验收：Windows 133 用 HTTPS 植入端经 443 反代上线；39444 直连回归不退步；错误路径/token 被拒。
+
+### 13.3 P2-B 访问控制与安全加固
+
+1. 源 IP ACL：openresty allow/deny 目标出口 IP，或按任务动态白名单。
+2. Token 防重放/限速：每 IP 请求速率、失败次数限制，配合 fail2ban。
+3. 请求约束：只允许 POST beacon 路径、Content-Type application/json、body 上限。
+4. TLS：强制 HTTPS、HSTS、隐藏 Server 版本。
+5. 日志脱敏：access log 不记录完整 token，只记录指纹。
+6. 凭据管理：listener token 不出现在 UI 明文/日志；植入端下载加短时一次性授权。
+7. 可选 WAF：对 C2 beacon 路径精确放行，避免误拦。
+
+### 13.4 P2-C 多 VPS 节点健康与故障处理
+
+1. 节点台账：建议新增 c2_ingress 表（tunnel_id/listener_id/vps_host/vps_port/node_label/last_health_at/status/last_error），比只靠 tunnels.deploy_params 更易查询。
+2. 健康巡检：定时探测 VPS 回调端口（TCP connect / HTTP HEAD）；校验 listener 状态、tunnel 状态、chisel 进程；写入 health 并产生事件。
+3. 生命周期：节点下线/重启后的重建策略；停止顺序幂等；节点失联保留记录，不误删 C2 会话。
+4. 多节点语义：目标绑定固定节点，不自动切任意节点；故障转移需重新生成植入端或切换入口，P2 只做手动重建/迁移。
+5. UI/API：节点列表、健康状态、最近错误、事件时间线；创建时选节点/会话；批量停止需谨慎。
+
+### 13.5 P2-D 可观测性与告警
+
+1. 指标：ingress_total、ingress_alive、ingress_healthy、beacon_requests、beacon_failures（relay_bytes 可选）。
+2. 事件：创建/启动/停止/健康失败/重建。
+3. 告警：节点失联、listener 停止、chisel 进程退出、连续 beacon 失败。
+4. 审计：谁在何时创建/停止 ingress、使用哪个会话/节点/植入端语言。
+5. 日志：平台只存元数据，不存 token/命令内容；VPS access log 脱敏。
+
+### 13.6 P2-E UI/文档/验收
+
+1. UI：会话选择器、节点标签、协议/端口、TLS/路径前缀、健康筛选、事件面板。
+2. 文档：1Panel/openresty 反代模板、证书申请、防火墙规则、排障（端口/云安全组/代理节点）。
+3. 验收脚本：Windows/Linux 目标、HTTP/TCP、443 反代/直连、失败回退。
+4. 发布：独立小版本，保持 P0/P1 回归。
+
+### 13.7 优先级与依赖
+
+1. P2-A HTTPS/443 反代（解决端口限制）。
+2. P2-B ACL/限速（可与 A 同批）。
+3. P2-C 健康台账 + 多节点（依赖 public_base_url 字段）。
+4. P2-D 可观测性/告警。
+5. P2-E UI/文档完善。
+
+### 13.8 测试矩阵
+
+- 直连：Windows 133 → VPS:39444 → 平台 loopback C2（已有 PASS）。
+- 反代：Windows 133 → HTTPS 443/目标路径 → 127.0.0.1:39444 → 平台 loopback C2。
+- 失败：错误 token、错误路径、源 IP 不在白名单、VPS 端口未放行。
+- 稳定性：8h 心跳、断线重连、VPS chisel 重启、listener 重启。
+- 回归：C2 直连 HTTP/TCP、C2→隧道、socks/portfwd。
+
+### 13.9 P2 退出标准
+
+- HTTPS 443 反代链路真机 PASS，且不依赖停用 openresty。
+- ingress 本地只绑 127.0.0.1，公网只暴露 443 路径。
+- 错误请求/未授权源 IP 被拒，日志无 token 明文。
+- 节点健康可查询、失联可告警；停止/重建幂等。
+- 文档/验收/版本记录齐全。
+
