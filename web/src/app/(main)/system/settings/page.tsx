@@ -369,7 +369,7 @@ export default function SystemSettingsPage() {
             >
               <option value="direct">直连（不使用代理）</option>
               <option value="fixed">固定代理（global_proxy）</option>
-              <option value="pool">代理池接管（内网中枢 → 代理池）</option>
+              <option value="pool">代理池接管（出口代理池页面管理）</option>
             </select>
             <p className="text-muted-foreground text-xs">
               当前生效：{effectiveProxy || "直连"}

@@ -16,6 +16,7 @@
 - C2 页面信息架构优化：新增“选哪种方式”说明卡、字段速查；卡片按监听器→入站中继→植入端→会话→任务排序并加序号；中继默认端口 39444。
 - C2 入站中继反向模式：平台可主动出站连 VPS，适合手机热点/NAT；新增 mode=reverse，worker 工具目录补 A/forward/reverse 决策规则。
 - 统一出口代理：settings 增加 egress_mode（direct/fixed/pool）；fixed 使用 global_proxy，pool 使用代理池活动/兜底；系统配置页增加模式选择与 effective_proxy 显示，代理池页明确接管关系。
+- 出口代理池独立页面：侧边栏新增「出口代理池」/function/proxy-pool，代理池 UI 从内网中枢迁出；页面显示当前出口模式/实际出口。
 
 ### 测试
 - go build ./...、go vet、go test ./db -run TestApplyMigrationsIdempotent、web npm run build 通过。

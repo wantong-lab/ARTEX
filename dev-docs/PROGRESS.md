@@ -333,3 +333,9 @@
 - ProxyAddr/自更新改用 effective；代理池 switch/fallback/global/delete 同步并重建 Agent。
 - 系统配置出口代理卡增加模式选择/当前生效；代理池页明确接管关系。
 - 校验：go build/vet、web build、EffectiveProxy 单测通过；待真实代理出口 E2E。
+
+## 轮次 55 · 2026-11-23（出口代理池独立页面）
+- 新增 /function/proxy-pool 与侧边栏「出口代理池」；
+- ProxyPoolBlock 抽到 components/proxy-pool-panel.tsx；
+- 内网中枢移除代理池 Tab；页面顶部显示出口模式/实际出口；
+- 无后端/API 变更；web build 通过。

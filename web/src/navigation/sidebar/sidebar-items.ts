@@ -10,6 +10,7 @@ import {
   ClipboardList,
   FolderOpen,
   FolderSync,
+  Globe,
   LayoutDashboard,
   type LucideIcon,
   MessageSquare,
@@ -87,6 +88,7 @@ export const sidebarItems: NavGroup[] = [
     items: [
       { id: "intranet", title: "内网中枢", url: "/function/intranet", icon: Network },
       { id: "c2", title: "C2", url: "/function/c2", icon: Radio },
+      { id: "proxy-pool", title: "出口代理池", url: "/function/proxy-pool", icon: Globe },
     ],
   },
   {
