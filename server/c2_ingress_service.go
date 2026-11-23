@@ -29,6 +29,7 @@ type c2IngressRequest struct {
 	PlatformChiselPort int    `json:"platform_chisel_port"`
 	ImplantLang        string `json:"implant_lang"`
 	NodeLabel          string `json:"node_label"`
+	Mode               string `json:"mode"`
 	TaskID             int64  `json:"-"`
 }
 
@@ -81,15 +82,24 @@ func (h *tunnelRuntime) deployC2Ingress(ctx context.Context, req c2IngressReques
 			return nil, fmt.Errorf("启动 C2 listener 失败: %w", err)
 		}
 	}
+	mode := strings.ToLower(strings.TrimSpace(req.Mode))
+	if mode == "" {
+		mode = "forward"
+	}
+	if mode != "forward" && mode != "reverse" {
+		return nil, fmt.Errorf("mode 仅支持 forward 或 reverse")
+	}
 	platformHost := strings.TrimSpace(req.PlatformHost)
-	if platformHost == "" {
-		platformHost = strings.TrimSpace(h.callbackHost())
-	}
-	if platformHost == "" {
-		platformHost = strings.TrimSpace(os.Getenv("ARTEX_TUNNEL_PLATFORM_HOST"))
-	}
-	if platformHost == "" {
-		return nil, fmt.Errorf("platform_host 缺失：设 ARTEX_CALLBACK_ADDR 或传 platform_host")
+	if mode == "forward" {
+		if platformHost == "" {
+			platformHost = strings.TrimSpace(h.callbackHost())
+		}
+		if platformHost == "" {
+			platformHost = strings.TrimSpace(os.Getenv("ARTEX_TUNNEL_PLATFORM_HOST"))
+		}
+		if platformHost == "" {
+			return nil, fmt.Errorf("platform_host 缺失：设 ARTEX_CALLBACK_ADDR 或传 platform_host")
+		}
 	}
 	platformPort := req.PlatformChiselPort
 	if platformPort <= 0 {
@@ -98,14 +108,26 @@ func (h *tunnelRuntime) deployC2Ingress(ctx context.Context, req c2IngressReques
 	if platformPort <= 0 {
 		return nil, fmt.Errorf("platform_chisel_port 缺失：传参或设 ARTEX_TUNNEL_PLATFORM_PORT")
 	}
-	plan, err := tunnel.PlanIngress(&tunnel.PlanOpts{
-		TaskID: req.TaskID, ViaSessionID: req.SessionID,
-		ListenHost: "0.0.0.0", ListenPort: req.VPSPort,
-		CallbackHost: platformHost, PlatformChiselPort: platformPort,
-		C2CallbackHost: strings.TrimSpace(req.VPSHost), C2ListenerID: listenerID,
-		TargetHost: "127.0.0.1", TargetPort: l.BindPort,
-		DataDir: h.mgr.PlanDataDir(), NodeLabel: strings.TrimSpace(req.NodeLabel),
-	})
+	var plan *tunnel.Plan
+	if mode == "reverse" {
+		plan, err = tunnel.PlanIngressReverse(&tunnel.PlanOpts{
+			TaskID: req.TaskID, ViaSessionID: req.SessionID,
+			ListenHost: "0.0.0.0", ListenPort: req.VPSPort,
+			CallbackHost: strings.TrimSpace(req.VPSHost), PlatformChiselPort: platformPort,
+			C2CallbackHost: strings.TrimSpace(req.VPSHost), C2ListenerID: listenerID,
+			TargetHost: "127.0.0.1", TargetPort: l.BindPort,
+			DataDir: h.mgr.PlanDataDir(), NodeLabel: strings.TrimSpace(req.NodeLabel),
+		})
+	} else {
+		plan, err = tunnel.PlanIngress(&tunnel.PlanOpts{
+			TaskID: req.TaskID, ViaSessionID: req.SessionID,
+			ListenHost: "0.0.0.0", ListenPort: req.VPSPort,
+			CallbackHost: platformHost, PlatformChiselPort: platformPort,
+			C2CallbackHost: strings.TrimSpace(req.VPSHost), C2ListenerID: listenerID,
+			TargetHost: "127.0.0.1", TargetPort: l.BindPort,
+			DataDir: h.mgr.PlanDataDir(), NodeLabel: strings.TrimSpace(req.NodeLabel),
+		})
+	}
 	if err != nil {
 		return nil, fmt.Errorf("ingress 计划生成失败: %w", err)
 	}
@@ -126,7 +148,7 @@ func (h *tunnelRuntime) deployC2Ingress(ctx context.Context, req c2IngressReques
 	callback := net.JoinHostPort(strings.TrimSpace(req.VPSHost), strconv.Itoa(req.VPSPort))
 	rt.store.AddEvent(ctx, "ingress", fmt.Sprintf("创建入站中继 tunnel=%d callback=%s node=%s", rec.ID, callback, strings.TrimSpace(req.NodeLabel)), "info", listenerID, 0, req.TaskID)
 	out := map[string]any{
-		"tunnel_id": rec.ID, "ingress_id": ingID, "state": rec.State, "listener_id": listenerID,
+		"tunnel_id": rec.ID, "ingress_id": ingID, "mode": mode, "state": rec.State, "listener_id": listenerID,
 		"listener_kind": l.Kind, "callback_addr": callback,
 		"platform_chisel_port": platformPort,
 		"node_label":           strings.TrimSpace(req.NodeLabel),

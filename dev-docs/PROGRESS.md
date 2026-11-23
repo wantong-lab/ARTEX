@@ -321,3 +321,9 @@
 - 卡片顺序调整为监听器 → 入站中继 → 植入端 → 会话 → 任务，并加序号。
 - 入站中继默认端口 39444、平台 chisel 39443；字段标签改为人话。
 - 无后端/迁移变更；web build 通过。
+
+## 轮次 53 · 2026-11-23（C2 入站中继反向模式）
+- 手动验证平台出站 -> VPS chisel server -> VPS 回调 -> 本地 HTTP 200。
+- 新增 PlanIngressReverse、Manager.deployReverse（VPS server + 平台 client，authfile/AUTH 分离）。
+- c2_ingress_deploy/API/UI 增加 mode=forward|reverse；worker 工具目录补 A/forward/reverse 决策规则。
+- 待完整 C2 植入端反向 E2E；forward 回归与 build 通过。

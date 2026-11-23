@@ -14,6 +14,7 @@
 - P2-A（443 前置反代）/P2-B（额外 ACL）根据用户确认暂不做；链路加密由 C2 信封/chisel 控制链路承担。
 - P2-E：入站中继 VPS 会话下拉、健康/节点筛选与汇总；新增 docs/c2-ingress-runbook.md 和 scripts/acceptance/c2_ingress_direct.sh。
 - C2 页面信息架构优化：新增“选哪种方式”说明卡、字段速查；卡片按监听器→入站中继→植入端→会话→任务排序并加序号；中继默认端口 39444。
+- C2 入站中继反向模式：平台可主动出站连 VPS，适合手机热点/NAT；新增 mode=reverse，worker 工具目录补 A/forward/reverse 决策规则。
 
 ### 测试
 - go build ./...、go vet、go test ./db -run TestApplyMigrationsIdempotent、web npm run build 通过。

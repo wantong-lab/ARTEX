@@ -53,6 +53,8 @@ type Plan struct {
 	C2ListenerID       int64  `json:"c2_listener_id,omitempty"`       // 关联 C2 listener
 	C2CallbackHost     string `json:"c2_callback_host,omitempty"`     // 植入端回调的 VPS 公网 host
 	NodeLabel          string `json:"node_label,omitempty"`           // 多 VPS 节点标签（归属/展示）
+	Reverse            bool   `json:"reverse,omitempty"`              // true=VPS 跑 chisel server，平台主动出站连 VPS
+	RemoteAuthFile     string `json:"remote_auth_file,omitempty"`     // reverse：VPS 上的 authfile 路径
 	// suo5 适配器字段（omitempty，向后兼容既有 chisel deploy_params):
 	PayloadFile string `json:"payload_file,omitempty"` // 平台侧 payloads 目录里的文件名（suo5.php 等）
 	PayloadName string `json:"payload_name,omitempty"` // 目标侧随机文件名
@@ -270,6 +272,69 @@ func PlanIngress(o *PlanOpts) (*Plan, error) {
 	p.ClientArgs = []string{
 		"client", "--keepalive", "10s", "http://" + p.PlatformAddr,
 		fmt.Sprintf("%s:%d:%s:%d", listenHost, p.ListenPort, targetHost, p.TargetPort),
+	}
+	return p, nil
+}
+
+// PlanIngressReverse 生成反向入站中继计划：VPS 跑 chisel server（--reverse），
+// 平台跑 chisel client 主动出站连 VPS，把 VPS 回调端口反向转发到平台 C2 loopback。
+// 适用于平台在 NAT/手机热点、VPS 无法主动访问平台的场景。
+func PlanIngressReverse(o *PlanOpts) (*Plan, error) {
+	if o.CallbackHost == "" {
+		return nil, fmt.Errorf("callback_host 必填（VPS 控制端口 host）")
+	}
+	if o.C2CallbackHost == "" {
+		return nil, fmt.Errorf("c2_callback_host 必填（植入端回连的 VPS 公网 host）")
+	}
+	if o.ListenPort <= 0 || o.ListenPort > 65535 {
+		return nil, fmt.Errorf("listen_port 必填（VPS 回调监听端口）")
+	}
+	if o.PlatformChiselPort <= 0 || o.PlatformChiselPort > 65535 {
+		return nil, fmt.Errorf("platform_chisel_port 必填（VPS 控制端口）")
+	}
+	if o.TargetPort <= 0 || o.TargetPort > 65535 {
+		return nil, fmt.Errorf("target_port 必填（平台 C2 listener 端口）")
+	}
+	targetHost := o.TargetHost
+	if targetHost == "" {
+		targetHost = "127.0.0.1"
+	}
+	listenHost := o.ListenHost
+	if listenHost == "" {
+		listenHost = "0.0.0.0"
+	}
+	user, pass, err := newAuth()
+	if err != nil {
+		return nil, err
+	}
+	tag, err := randTag()
+	if err != nil {
+		return nil, err
+	}
+	dir := o.DataDir
+	p := &Plan{
+		Kind: KindIngress, Adapter: AdapterChisel,
+		TaskID: o.TaskID, ViaSessionID: o.ViaSessionID,
+		ListenHost: listenHost, ListenPort: o.ListenPort,
+		TargetHost: targetHost, TargetPort: o.TargetPort,
+		PlatformChiselPort: o.PlatformChiselPort,
+		C2ListenerID:       o.C2ListenerID, C2CallbackHost: o.C2CallbackHost,
+		PlatformAddr: net.JoinHostPort(o.CallbackHost, strconv.Itoa(o.PlatformChiselPort)),
+		AuthUser:     user, AuthPass: pass,
+		AuthFile:       dir + "/chisel-" + tag + ".authfile",
+		ServerLog:      dir + "/chisel-" + tag + ".client.log",
+		RemoteDir:      "/tmp/.artex-" + tag,
+		RemoteBin:      "/tmp/.artex-" + tag + "/ch",
+		RemoteLog:      "/tmp/.artex-" + tag + "/server.log",
+		RemoteAuthFile: "/tmp/.artex-" + tag + "/auth.json",
+		VerifyAddr:     o.VerifyAddr,
+		NodeLabel:      o.NodeLabel,
+		Reverse:        true,
+	}
+	p.ServerArgs = []string{"server", "--host", "0.0.0.0", "-p", strconv.Itoa(p.PlatformChiselPort), "--reverse", "--authfile", p.RemoteAuthFile}
+	p.ClientArgs = []string{
+		"client", "--keepalive", "10s", "http://" + p.PlatformAddr,
+		fmt.Sprintf("R:%s:%d:%s:%d", listenHost, p.ListenPort, targetHost, p.TargetPort),
 	}
 	return p, nil
 }

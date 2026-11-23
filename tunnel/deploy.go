@@ -200,6 +200,9 @@ func (m *Manager) Deploy(ctx context.Context, p *Plan) (*db.TunnelRecord, error)
 	if !ok {
 		return nil, fmt.Errorf("会话 %d 不在注册表，无法部署", p.ViaSessionID)
 	}
+	if p.Reverse {
+		return m.deployReverse(ctx, p, sess)
+	}
 	return m.deployWithSession(ctx, p, sess)
 }
 
@@ -214,6 +217,9 @@ func (m *Manager) DeployWithSession(ctx context.Context, p *Plan, sess session.S
 	}
 	if err := m.validateChiselPlan(p); err != nil {
 		return nil, err
+	}
+	if p.Reverse {
+		return m.deployReverse(ctx, p, sess)
 	}
 	return m.deployWithSession(ctx, p, sess)
 }
@@ -230,6 +236,9 @@ func (m *Manager) validateChiselPlan(p *Plan) error {
 	}
 	if p.Kind == KindIngress && (p.ListenPort <= 0 || p.PlatformChiselPort <= 0 || p.TargetPort <= 0) {
 		return fmt.Errorf("ingress 计划缺 VPS 监听端口/平台 chisel 端口/C2 回环端口")
+	}
+	if p.Reverse && (p.C2CallbackHost == "" || p.RemoteAuthFile == "" || p.RemoteBin == "") {
+		return fmt.Errorf("reverse ingress 计划缺 VPS 回调 host/authfile/远端二进制")
 	}
 	return nil
 }

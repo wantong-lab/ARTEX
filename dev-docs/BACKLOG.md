@@ -54,6 +54,8 @@
 
 - [x] P4-29 C2 管理页信息架构/文案优化：方式说明卡、字段速查、卡片排序与默认值。
 
+- [x] P4-30 C2 入站中继反向模式：PlanIngressReverse + Manager.deployReverse + mode/UI/worker 决策；手动 chisel 反向链路验证通过，待完整 C2 E2E。
+
 ## 变更记录
 
 - 2026-11-21：建立任务板；P0-2、P0-3 完成（提交后回填 commit）。
@@ -70,3 +72,4 @@
 - 2026-11-23：P2-C 提交 f9903e7、P2-D 提交 1cc778b；fresh DB go test ./... 全绿、web build、/metrics 冒烟通过；代码已推 Gitea wantong/ARTEX。
 - 2026-11-23：P4-28 P2-E 完成（UI 选择器/筛选、runbook、验收脚本）；web build 通过。
 - 2026-11-23：P4-29 C2 页面 UX 优化（说明卡/速查/排序/默认值）；web build 通过。
+- 2026-11-23：P4-30 反向 ingress 实现；手动 chisel 反向隧道 VPS 回调 200；待完整 C2 E2E。

@@ -58,6 +58,7 @@ export default function C2Page() {
   const [ingHealthFilter, setIngHealthFilter] = useState("all");
   const [ingNodeFilter, setIngNodeFilter] = useState("");
   const [ingressEvents, setIngressEvents] = useState<C2IngressEvent[]>([]);
+  const [ingMode, setIngMode] = useState("forward");
   const [ingSession, setIngSession] = useState("");
   const [ingVpsHost, setIngVpsHost] = useState("");
   const [ingVpsPort, setIngVpsPort] = useState("39444");
@@ -207,6 +208,7 @@ export default function C2Page() {
     setBusy("ingress");
     try {
       const r = await api.c2CreateIngress({
+        mode: ingMode,
         session_id: sid, vps_host: ingVpsHost.trim(), vps_port: port,
         c2_listener_kind: ingKind, node_label: ingNodeLabel.trim(),
         platform_host: ingPlatformHost.trim(), platform_chisel_port: pp || undefined,
@@ -458,6 +460,13 @@ export default function C2Page() {
         <CardContent className="flex flex-col gap-3">
           <div className="grid gap-2 sm:grid-cols-4">
             <div>
+              <Label className="text-xs">网络模式</Label>
+              <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingMode} onChange={(ev) => setIngMode(ev.target.value)}>
+                <option value="forward">常规：VPS 回连平台（平台需公网）</option>
+                <option value="reverse">反向：平台主动连 VPS（热点/NAT）</option>
+              </select>
+            </div>
+            <div>
               <Label className="text-xs">1. 到 VPS 的会话</Label>
               <select className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm" value={ingSession} onChange={(ev) => setIngSession(ev.target.value)}>
                 <option value="">选择 VPS 会话…</option>
@@ -487,12 +496,14 @@ export default function C2Page() {
               <Label className="text-xs">节点标签（可选）</Label>
               <Input value={ingNodeLabel} onChange={(ev) => setIngNodeLabel(ev.target.value)} placeholder="vps-hk-1" />
             </div>
+            {ingMode === "forward" && (
+              <div>
+                <Label className="text-xs">平台 chisel 地址</Label>
+                <Input value={ingPlatformHost} onChange={(ev) => setIngPlatformHost(ev.target.value)} placeholder="平台公网 IP" />
+              </div>
+            )}
             <div>
-              <Label className="text-xs">平台 chisel 地址</Label>
-              <Input value={ingPlatformHost} onChange={(ev) => setIngPlatformHost(ev.target.value)} placeholder="平台公网 IP" />
-            </div>
-            <div>
-              <Label className="text-xs">平台 chisel 端口</Label>
+              <Label className="text-xs">{ingMode === "reverse" ? "VPS 控制端口" : "平台 chisel 端口"}</Label>
               <Input value={ingPlatformPort} onChange={(ev) => setIngPlatformPort(ev.target.value)} />
             </div>
             <div>

@@ -302,6 +302,7 @@ export const api = {
     post<{ ok: boolean; id: number; status: string }>("/c2/sessions/" + sessionId + "/tasks", { command }),
   c2Ingress: () => get<{ ingress: C2Ingress[] }>("/c2/ingress"),
   c2CreateIngress: (input: {
+    mode?: string;
     session_id: number;
     vps_host: string;
     vps_port: number;

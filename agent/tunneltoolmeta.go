@@ -45,6 +45,39 @@ func TunnelToolSeeds() []ToolSeed {
 			},
 			Agents: []string{"worker", "pentest"},
 		},
+		{
+			Key:  "c2_ingress_deploy",
+			Desc: "部署 C2 入站回调中继：目标只回连 VPS，平台 C2 listener 只绑 127.0.0.1。决策规则：平台有公网映射/VPS 能回连平台时用 mode=forward；平台在 NAT/手机热点、VPS 无法访问平台时用 mode=reverse（平台主动出站连 VPS）；无 VPS 且目标能直接访问平台时不要用本工具，改用平台 listener + 植入端。部署前先确认 VPS 回调端口已放行。",
+			Schema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"mode":                 map[string]any{"type": "string", "enum": []any{"forward", "reverse"}, "description": "forward=VPS 回连平台（平台需公网可达）；reverse=平台主动连 VPS（平台无公网/NAT/热点时用）"},
+					"session_id":           map[string]any{"type": "integer", "description": "到 VPS 的立足点会话 id"},
+					"vps_host":             map[string]any{"type": "string", "description": "VPS 公网 host（目标回连地址；reverse 时也是控制地址）"},
+					"vps_port":             map[string]any{"type": "integer", "description": "VPS 回调端口（目标回连端口）"},
+					"platform_host":        map[string]any{"type": "string", "description": "forward：平台 chisel 公网 host；reverse 忽略"},
+					"platform_chisel_port": map[string]any{"type": "integer", "description": "forward：平台 chisel 端口；reverse：VPS 控制端口（默认 39443）"},
+					"c2_listener_id":       map[string]any{"type": "integer", "description": "已有 loopback C2 listener id；0=自动创建"},
+					"c2_listener_kind":     map[string]any{"type": "string", "enum": []any{"http", "tcp"}, "description": "自动创建 listener 类型（默认 http）"},
+					"implant_lang":         map[string]any{"type": "string", "enum": []any{"powershell", "python", "bash"}, "description": "HTTP 植入端语言（默认 powershell）"},
+					"node_label":           map[string]any{"type": "string", "description": "VPS 节点标签（可选）"},
+				},
+				"required": []any{"session_id", "vps_host", "vps_port"},
+			},
+			Agents: []string{"worker", "pentest"},
+		},
+		{
+			Key:  "c2_ingress_teardown",
+			Desc: "停止 C2 入站中继：停隧道并停止关联 loopback C2 listener。清理残留是 OPSEC 的一部分。",
+			Schema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"tunnel_id": map[string]any{"type": "integer", "description": "c2_ingress_deploy 返回的 tunnel_id"},
+				},
+				"required": []any{"tunnel_id"},
+			},
+			Agents: []string{"worker", "pentest"},
+		},
 	}
 }
 

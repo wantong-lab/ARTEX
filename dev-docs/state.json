@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 52,
+  "round": 53,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -229,7 +229,8 @@
     "v0_4_9_c2_ingress_p2c": "P2-C 提交 f9903e7：c2_ingress 台账、30s 健康巡检、手动重建、旧 ingress 兼容；fresh DB go test ./...、web build 通过。",
     "v0_4_9_c2_ingress_p2d": "P2-D 提交 1cc778b：/metrics ingress/beacon 指标；c2_events 事件 + GET /api/c2/ingress/events + UI 时间线；fresh DB go test ./...、web build、/metrics 冒烟通过；外发告警待接 notifier。",
     "v0_4_9_c2_ingress_p2e": "P2-E 提交 b8f7cda：VPS 会话下拉、健康/节点筛选/汇总、runbook、验收脚本；web build 通过。",
-    "v0_4_9_c2_console_ux": "C2 页面 UX：方式说明卡/字段速查/监听器到任务排序/默认端口；无后端变更；web build 通过。"
+    "v0_4_9_c2_console_ux": "C2 页面 UX：方式说明卡/字段速查/监听器到任务排序/默认端口；无后端变更；web build 通过。",
+    "v0_4_9_c2_ingress_reverse": "反向 ingress：PlanIngressReverse + deployReverse + mode/UI/worker 决策；手动 chisel 平台出站->VPS:39443->VPS:39444->本地 HTTP 200；待完整 C2 E2E。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"

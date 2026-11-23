@@ -115,3 +115,22 @@ scripts/acceptance/c2_ingress_direct.sh
 - 健康/最近健康/最近事件显示；
 - 断掉 VPS 回调端口后，30s 内健康变异常并产生 warn 事件；
 - 恢复端口后可重建/恢复。
+
+## 反向模式（平台无公网/NAT/手机热点）
+
+当 VPS 无法主动访问平台时使用 mode=reverse：
+
+~~~text
+目标 -> VPS:39444 -> VPS chisel server
+平台 chisel client 主动出站 -> VPS:39443
+平台 127.0.0.1:<C2端口>
+~~~
+
+要求：
+
+- VPS 防火墙放行 39444（目标回连）和 39443（平台出站控制）；
+- 平台能出站访问 VPS:39443；
+- VPS 控制端口建议限制来源 IP，chisel 继续用 auth；
+- C2 页面网络模式选“反向：平台主动连 VPS”。
+
+worker 规则：平台有公网映射用 forward；平台无公网（热点/NAT）用 reverse；无 VPS 且目标能直连平台则不用 ingress。

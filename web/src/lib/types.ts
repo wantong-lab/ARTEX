@@ -1943,6 +1943,7 @@ export interface C2IngressEvent {
 
 export interface C2Ingress {
   ingress_id?: number;
+  mode?: string;
   tunnel_id: number;
   listener_id: number;
   node_label: string;
