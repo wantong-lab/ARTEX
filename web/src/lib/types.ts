@@ -1634,6 +1634,19 @@ export interface ProxyPoolState {
 }
 
 
+export interface ProxySubscriptionNode {
+  name: string;
+  type: string;
+  server?: string;
+  port?: number;
+}
+
+export interface ProxySubscriptionNodes {
+  nodes: ProxySubscriptionNode[];
+  selected_node?: string;
+  selection_mode?: string;
+}
+
 export interface ProxySubscriptionStatus {
   mihomo_available: boolean;
   source_id?: number;
@@ -1645,6 +1658,8 @@ export interface ProxySubscriptionStatus {
   last_error?: string;
   fail_closed?: boolean;
   control_plane_enabled?: boolean;
+  selected_node?: string;
+  selection_mode?: string;
   mihomo_binary?: string;
   mihomo_error?: string;
   running: boolean;

@@ -133,6 +133,9 @@ func (s *Server) registerProxyPoolRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/proxy-pool/subscription", s.proxyPoolSubscriptionStart)
 	mux.HandleFunc("DELETE /api/proxy-pool/subscription", s.proxyPoolSubscriptionStop)
 	mux.HandleFunc("POST /api/proxy-pool/subscription/refresh", s.proxyPoolSubscriptionRefresh)
+	mux.HandleFunc("GET /api/proxy-pool/subscription/nodes", s.proxyPoolSubscriptionNodes)
+	mux.HandleFunc("POST /api/proxy-pool/subscription/select", s.proxyPoolSubscriptionSelect)
+	mux.HandleFunc("POST /api/proxy-pool/subscription/probe", s.proxyPoolSubscriptionProbe)
 }
 
 func (s *Server) proxyPoolList(w http.ResponseWriter, r *http.Request) {

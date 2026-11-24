@@ -45,4 +45,5 @@
 - Clash 订阅导入（v0.4.9）：代理池页支持订阅 URL 拉取导入，后端仅允许 http/https，复用 import-mihomo。
 - Clash 订阅代理 mihomo（v0.4.9）：订阅自动 meta 格式 → 本地 mihomo mixed 口 → 代理池本地条目；用户 vless/hysteria2 订阅真机 E2E 通过。
 - Egress Control Plane P0（v0.4.9）：已实现 egress_sources 持久化/恢复、target/control resolver + fail-closed、MITM blocked、PID/端口/孤儿清理、订阅刷新/清洗、状态 API/UI；自动刷新/Windows/last-good 故障注入待补。
+- 订阅节点选择（v0.4.9）：节点展开/手动/自动/延迟探测；mihomo loopback 控制面；代理池页“接管出口”开关切换 egress_mode。
 - C2 socks5 仍未内置；二开为外部 C2 MCP（Supershell manage_socks5）集成，主线如需内置走反向 SOCKS-over-C2 或外部 MCP，待定。

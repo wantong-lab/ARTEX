@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 61,
+  "round": 62,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -238,7 +238,8 @@
     "v0_4_9_egress_control_plane_design": "Egress Control Plane 设计稿完成：source/endpoint/policy/binding/event、reconciler、supervisor、fail-closed、last-good、P0-1..P0-6；代码待实施。",
     "v0_4_9_egress_p0_lean": "Egress 控制面 P0 精简稿：复用 proxy_pool + 新增 egress_sources；target/control resolver、fail-closed、稳定端口、订阅原子切换、配置清洗；代码待实施。",
     "v0_4_9_egress_p0_impl": "Egress P0 实现：egress_sources 持久化/恢复、target/control resolver + fail-closed、MITM blocked、PID/端口/孤儿清理、订阅刷新/清洗、状态 API/UI；本机启动/刷新/重启恢复/停止 E2E 通过。",
-    "v0_4_9_proxy_pool_layout": "出口代理池布局优化：订阅主卡前置、手工/兜底两列、去重订阅 URL、列表全宽；web build 通过。"
+    "v0_4_9_proxy_pool_layout": "出口代理池布局优化：订阅主卡前置、手工/兜底两列、去重订阅 URL、列表全宽；web build 通过。",
+    "v0_4_9_node_picker": "订阅节点选择/延迟探测/接管开关：节点 43、手动选择、延迟 117ms、自动/手动模式、pool/direct 开关；web/go build 通过。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"

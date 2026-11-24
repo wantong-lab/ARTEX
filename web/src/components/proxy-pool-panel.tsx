@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCwIcon } from "lucide-react";
+import { ChevronDownIcon, RefreshCwIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import type { MihomoImportResult, ProxyPoolState, ProxySubscriptionStatus } from "@/lib/types";
+import type { MihomoImportResult, ProxyPoolState, ProxySubscriptionNode, ProxySubscriptionStatus } from "@/lib/types";
 
 // ---------------- 代理池（M4-03）：录入 / 探测 / 切换 / 回退 ----------------
 
@@ -27,6 +27,11 @@ export function ProxyPoolPanel() {
   const [subscriptionURL, setSubscriptionURL] = React.useState("");
   const [subStatus, setSubStatus] = React.useState<ProxySubscriptionStatus | null>(null);
   const [subBusy, setSubBusy] = React.useState(false);
+  const [nodes, setNodes] = React.useState<ProxySubscriptionNode[]>([]);
+  const [nodesOpen, setNodesOpen] = React.useState(false);
+  const [selectionMode, setSelectionMode] = React.useState("auto");
+  const [nodeBusy, setNodeBusy] = React.useState("");
+  const [delays, setDelays] = React.useState<Record<string, number>>({});
   const [mihomoPrefix, setMihomoPrefix] = React.useState("mh-");
   const [importing, setImporting] = React.useState(false);
   const [importResult, setImportResult] = React.useState<MihomoImportResult | null>(null);
@@ -34,9 +39,15 @@ export function ProxyPoolPanel() {
   const refresh = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [pool, sub] = await Promise.all([api.proxyPool(), api.proxyPoolSubscription().catch(() => null)]);
+      const [pool, sub, nodeState] = await Promise.all([
+        api.proxyPool(),
+        api.proxyPoolSubscription().catch(() => null),
+        api.proxyPoolSubscriptionNodes().catch(() => null),
+      ]);
       setState(pool);
       setSubStatus(sub);
+      setNodes(nodeState?.nodes ?? []);
+      setSelectionMode(nodeState?.selection_mode || sub?.selection_mode || "auto");
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -107,6 +118,27 @@ export function ProxyPoolPanel() {
       .finally(() => setSubBusy(false));
   };
 
+  const selectSubscriptionNode = (mode: "auto" | "manual", name?: string) => {
+    setNodeBusy(name || mode);
+    setError("");
+    api.proxyPoolSubscriptionSelect({ mode, name })
+      .then(async () => {
+        setNotice(mode === "auto" ? "已切换为自动选择" : "已切换到节点：" + (name || ""));
+        await refresh();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setNodeBusy(""));
+  };
+
+  const probeSubscriptionNode = (name: string) => {
+    setNodeBusy("probe:" + name);
+    setError("");
+    api.proxyPoolSubscriptionProbe(name)
+      .then((r) => setDelays((prev) => ({ ...prev, [name]: r.delay })))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setNodeBusy(""));
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {error ? <Card className="border-destructive/40 bg-destructive/5 p-3 text-destructive text-sm">{error}</Card> : null}
@@ -156,6 +188,69 @@ export function ProxyPoolPanel() {
         <p className="text-muted-foreground text-xs">
           启动后自动登记 127.0.0.1 本地代理并设为活动代理；到「系统配置 → 出口代理」把出口模式切到「代理池接管」。
         </p>
+        <div className="border-t pt-3">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 text-left"
+            onClick={() => setNodesOpen((v) => !v)}
+          >
+            <span className="flex items-center gap-2 font-medium text-sm">
+              <ChevronDownIcon className={"size-4 transition-transform " + (nodesOpen ? "rotate-180" : "")} />
+              节点（{nodes.length}）
+              <Badge variant="secondary">{selectionMode === "manual" ? "手动" : "自动"}</Badge>
+            </span>
+            <span className="text-muted-foreground text-xs">{nodesOpen ? "收起" : "展开"}</span>
+          </button>
+          {nodesOpen ? (
+            <div className="mt-3 flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={selectionMode === "auto" ? "default" : "outline"}
+                  disabled={!!nodeBusy || !subStatus?.running}
+                  onClick={() => selectSubscriptionNode("auto")}
+                >
+                  自动选择
+                </Button>
+                <span className="text-muted-foreground text-xs">
+                  当前：{selectionMode === "auto" ? "自动" : subStatus?.selected_node || "-"}
+                </span>
+              </div>
+              {nodes.length === 0 ? (
+                <p className="rounded border border-dashed p-3 text-center text-muted-foreground text-xs">
+                  启动订阅后显示节点
+                </p>
+              ) : (
+                <div className="grid max-h-80 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
+                  {nodes.map((n) => {
+                    const selected = selectionMode === "manual" && subStatus?.selected_node === n.name;
+                    const probing = nodeBusy === "probe:" + n.name;
+                    return (
+                      <div key={n.name} className={"rounded-md border p-2 text-xs " + (selected ? "border-primary bg-primary/5" : "")}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate font-medium" title={n.name}>{n.name}</span>
+                          <Badge variant="secondary">{n.type}</Badge>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between gap-2 text-muted-foreground">
+                          <span className="truncate" title={n.server}>{n.server}:{n.port}</span>
+                          <span>{delays[n.name] ? delays[n.name] + "ms" : "-"}</span>
+                        </div>
+                        <div className="mt-2 flex gap-1">
+                          <Button size="sm" variant="ghost" disabled={!!nodeBusy || !subStatus?.running} onClick={() => probeSubscriptionNode(n.name)}>
+                            {probing ? "测速中…" : "测延迟"}
+                          </Button>
+                          <Button size="sm" variant={selected ? "secondary" : "outline"} disabled={!!nodeBusy || !subStatus?.running || selected} onClick={() => selectSubscriptionNode("manual", n.name)}>
+                            {selected ? "使用中" : "使用"}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">

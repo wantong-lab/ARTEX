@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -34,6 +35,8 @@ type proxySubscriptionState struct {
 	logPath   string
 	source    string
 	sourceID  int64
+	ctlPort   int
+	ctlSecret string
 	startedAt time.Time
 	lastErr   string
 }
@@ -61,6 +64,47 @@ func fetchErrText(err error) string {
 		s = s[:300]
 	}
 	return s
+}
+
+func (s *Server) mihomoControllerRequest(ctx context.Context, st *proxySubscriptionState, method, path string, body any) ([]byte, int, error) {
+	if st == nil || st.ctlPort <= 0 || st.ctlSecret == "" {
+		return nil, 0, fmt.Errorf("mihomo 控制面未就绪")
+	}
+	var rdr io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return nil, 0, err
+		}
+		rdr = strings.NewReader(string(b))
+	}
+	req, err := http.NewRequestWithContext(ctx, method, fmt.Sprintf("http://127.0.0.1:%d%s", st.ctlPort, path), rdr)
+	if err != nil {
+		return nil, 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+st.ctlSecret)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer resp.Body.Close()
+	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return data, resp.StatusCode, fmt.Errorf("mihomo 控制面返回 HTTP %d", resp.StatusCode)
+	}
+	return data, resp.StatusCode, nil
+}
+
+func (s *Server) applyMihomoSelection(ctx context.Context, st *proxySubscriptionState, mode, node string) error {
+	name := "ARTEX-AUTO"
+	if mode == "manual" && strings.TrimSpace(node) != "" {
+		name = node
+	}
+	_, _, err := s.mihomoControllerRequest(ctx, st, http.MethodPut, "/proxies/ARTEX-SELECT", map[string]any{"name": name})
+	return err
 }
 
 func (s *Server) controlHTTPClient() *http.Client {
@@ -280,7 +324,58 @@ func (s *Server) fetchClashSubscription(ctx context.Context, client *http.Client
 	return "", fmt.Errorf("订阅不是 Clash 配置")
 }
 
+type mihomoNode struct {
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Server string `json:"server"`
+	Port   int    `json:"port"`
+}
+
+func parseMihomoNodes(raw string) []mihomoNode {
+	var cfg map[string]any
+	if yaml.Unmarshal([]byte(raw), &cfg) != nil {
+		return nil
+	}
+	ps, _ := cfg["proxies"].([]any)
+	out := make([]mihomoNode, 0, len(ps))
+	for _, p := range ps {
+		m, ok := p.(map[string]any)
+		if !ok {
+			continue
+		}
+		n := mihomoNode{}
+		n.Name, _ = m["name"].(string)
+		n.Type, _ = m["type"].(string)
+		n.Server, _ = m["server"].(string)
+		switch v := m["port"].(type) {
+		case int:
+			n.Port = v
+		case int64:
+			n.Port = int(v)
+		case float64:
+			n.Port = int(v)
+		}
+		if n.Name != "" && !isInfoNode(n.Name) {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+func isInfoNode(name string) bool {
+	for _, prefix := range []string{"剩余流量", "套餐到期", "距离下次重置", "到期时间"} {
+		if strings.HasPrefix(name, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func buildMihomoConfig(raw string, mixedPort int) ([]byte, error) {
+	return buildMihomoConfigWithSelection(raw, mixedPort, "", "auto", 0, "")
+}
+
+func buildMihomoConfigWithSelection(raw string, mixedPort int, selected, mode string, extPort int, secret string) ([]byte, error) {
 	var cfg map[string]any
 	if err := yaml.Unmarshal([]byte(raw), &cfg); err != nil {
 		return nil, fmt.Errorf("Clash 配置解析失败: %w", err)
@@ -292,34 +387,41 @@ func buildMihomoConfig(raw string, mixedPort int) ([]byte, error) {
 	cfg["allow-lan"] = false
 	cfg["mode"] = "rule"
 	cfg["log-level"] = "warning"
-	delete(cfg, "port")
-	delete(cfg, "socks-port")
-	delete(cfg, "redir-port")
-	delete(cfg, "tproxy-port")
-	delete(cfg, "external-controller")
-	delete(cfg, "secret")
-	delete(cfg, "tun")
-	delete(cfg, "proxy-providers")
-	delete(cfg, "rule-providers")
-	delete(cfg, "script")
-	delete(cfg, "profile")
-	delete(cfg, "interface-name")
-	// P0 不依赖 geodata/geosite：删掉 DNS/规则/代理组，直接用第一个节点做 MATCH。
-	// 避免首次启动下载 geodata 导致 readiness 超时。
-	delete(cfg, "dns")
-	delete(cfg, "proxy-groups")
-	delete(cfg, "rules")
-	delete(cfg, "geodata-mode")
-	delete(cfg, "geo-auto-update")
-	delete(cfg, "geox-url")
-	if _, ok := cfg["rules"]; !ok {
-		if ps, ok := cfg["proxies"].([]any); ok && len(ps) > 0 {
-			if m, ok := ps[0].(map[string]any); ok {
-				if name, ok := m["name"].(string); ok && name != "" {
-					cfg["rules"] = []any{"MATCH," + name}
-				}
-			}
+	for _, k := range []string{"port", "socks-port", "redir-port", "tproxy-port", "external-controller", "secret", "tun", "proxy-providers", "rule-providers", "script", "profile", "interface-name", "dns", "proxy-groups", "rules", "geodata-mode", "geo-auto-update", "geox-url"} {
+		delete(cfg, k)
+	}
+	nodes := parseMihomoNodes(raw)
+	if len(nodes) == 0 {
+		return nil, fmt.Errorf("Clash 配置没有可用节点")
+	}
+	names := make([]any, 0, len(nodes))
+	byName := map[string]bool{}
+	for _, n := range nodes {
+		names = append(names, n.Name)
+		byName[n.Name] = true
+	}
+	autoGroup := map[string]any{
+		"name": "ARTEX-AUTO", "type": "url-test", "proxies": names,
+		"url": "http://www.gstatic.com/generate_204", "interval": 300,
+	}
+	selectNames := make([]any, 0, len(nodes)+1)
+	if mode == "manual" && selected != "" && byName[selected] {
+		selectNames = append(selectNames, selected)
+	}
+	selectNames = append(selectNames, "ARTEX-AUTO")
+	for _, n := range nodes {
+		if n.Name != selected || mode != "manual" {
+			selectNames = append(selectNames, n.Name)
 		}
+	}
+	selectGroup := map[string]any{
+		"name": "ARTEX-SELECT", "type": "select", "proxies": selectNames,
+	}
+	cfg["proxy-groups"] = []any{selectGroup, autoGroup}
+	cfg["rules"] = []any{"MATCH,ARTEX-SELECT"}
+	if extPort > 0 && secret != "" {
+		cfg["external-controller"] = fmt.Sprintf("127.0.0.1:%d", extPort)
+		cfg["secret"] = secret
 	}
 	return yaml.Marshal(cfg)
 }
@@ -375,7 +477,16 @@ func (s *Server) startProxySubscription(ctx context.Context, rawURL string) (map
 			return fail(err)
 		}
 	}
-	cfgBytes, err := buildMihomoConfig(rawCfg, port)
+	extPort, err := freeLocalPort()
+	if err != nil {
+		return fail(err)
+	}
+	var secretBytes [18]byte
+	if _, err := rand.Read(secretBytes[:]); err != nil {
+		return fail(err)
+	}
+	secret := base64.RawURLEncoding.EncodeToString(secretBytes[:])
+	cfgBytes, err := buildMihomoConfigWithSelection(rawCfg, port, src.SelectedNode, src.SelectionMode, extPort, secret)
 	if err != nil {
 		return fail(err)
 	}
@@ -437,7 +548,9 @@ func (s *Server) startProxySubscription(ctx context.Context, rawURL string) (map
 	s.proxySub = &proxySubscriptionState{
 		cmd: cmd, port: port, entryID: entryID, bin: bin, dir: dir,
 		logPath: logPath, source: rawURL, sourceID: src.ID, startedAt: time.Now(),
+		ctlPort: extPort, ctlSecret: secret,
 	}
+	_ = s.applyMihomoSelection(ctx, s.proxySub, src.SelectionMode, src.SelectedNode)
 	rt.mgr.SetActive(entryID)
 	_ = s.m.pg.SetSetting("proxy_active_id", strconv.FormatInt(entryID, 10))
 	state := "ready"
@@ -516,6 +629,8 @@ func (s *Server) proxySubscriptionStatusLocked() map[string]any {
 		out["managed_port"] = src.ManagedPort
 		out["last_fetch_at"] = src.LastFetchAt
 		out["last_error"] = src.LastError
+		out["selected_node"] = src.SelectedNode
+		out["selection_mode"] = src.SelectionMode
 	}
 	out["fail_closed"] = s.m.FailClosed()
 	out["control_plane_enabled"] = s.egressControlPlaneEnabled()
@@ -554,6 +669,118 @@ func (s *Server) recoverProxySubscription(ctx context.Context) {
 	if _, err := s.startProxySubscription(ctx, src.ConfigURL); err != nil {
 		_ = s.egressSourceStore().UpdateObserved(ctx, src.ID, "failed", fetchErrText(err), 0, 0)
 	}
+}
+
+func (s *Server) proxyPoolSubscriptionNodes(w http.ResponseWriter, r *http.Request) {
+	src, err := s.egressSourceStore().GetSubscription(r.Context())
+	if err != nil || src == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"nodes": []any{}, "selected_node": "", "selection_mode": "auto"})
+		return
+	}
+	nodes := parseMihomoNodes(src.LastGoodConfig)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"nodes": nodes, "selected_node": src.SelectedNode, "selection_mode": src.SelectionMode,
+	})
+}
+
+func (s *Server) proxyPoolSubscriptionSelect(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Mode string `json:"mode"`
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
+		return
+	}
+	mode := strings.ToLower(strings.TrimSpace(body.Mode))
+	if mode != "auto" && mode != "manual" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "mode 仅支持 auto/manual"})
+		return
+	}
+	src, err := s.egressSourceStore().GetSubscription(r.Context())
+	if err != nil || src == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "没有订阅源"})
+		return
+	}
+	if mode == "manual" {
+		ok := false
+		for _, n := range parseMihomoNodes(src.LastGoodConfig) {
+			if n.Name == body.Name {
+				ok = true
+				break
+			}
+		}
+		if !ok || strings.TrimSpace(body.Name) == "" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "节点不存在"})
+			return
+		}
+	}
+	s.proxySubMu.Lock()
+	st := s.proxySub
+	if st != nil {
+		_ = s.applyMihomoSelection(r.Context(), st, mode, body.Name)
+	}
+	s.proxySubMu.Unlock()
+	node := ""
+	if mode == "manual" {
+		node = body.Name
+	}
+	_ = s.egressSourceStore().UpdateSelection(r.Context(), src.ID, mode, node)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "mode": mode, "selected_node": node})
+}
+
+func (s *Server) proxyPoolSubscriptionProbe(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil || strings.TrimSpace(body.Name) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "name 必填"})
+		return
+	}
+	src, err := s.egressSourceStore().GetSubscription(r.Context())
+	if err != nil || src == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "没有订阅源"})
+		return
+	}
+	ok := false
+	for _, n := range parseMihomoNodes(src.LastGoodConfig) {
+		if n.Name == body.Name {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "节点不存在"})
+		return
+	}
+	s.proxySubMu.Lock()
+	st := s.proxySub
+	var data []byte
+	var code int
+	var err2 error
+	if st != nil {
+		p := "/proxies/" + url.PathEscape(body.Name) + "/delay?url=" + url.QueryEscape("http://www.gstatic.com/generate_204") + "&timeout=3000"
+		data, code, err2 = s.mihomoControllerRequest(r.Context(), st, http.MethodGet, p, nil)
+	}
+	s.proxySubMu.Unlock()
+	if st == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "订阅代理未运行"})
+		return
+	}
+	if err2 != nil {
+		writeJSON(w, http.StatusBadGateway, map[string]any{"error": err2.Error(), "status": code})
+		return
+	}
+	var out struct {
+		Delay int    `json:"delay"`
+		Msg   string `json:"message"`
+	}
+	_ = json.Unmarshal(data, &out)
+	if out.Delay <= 0 && out.Msg != "" {
+		writeJSON(w, http.StatusBadGateway, map[string]any{"error": out.Msg})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "delay": out.Delay})
 }
 
 func (s *Server) proxyPoolSubscriptionStatus(w http.ResponseWriter, r *http.Request) {

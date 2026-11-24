@@ -376,3 +376,11 @@
 - 直接导入去掉重复订阅 URL，保留 YAML 高级导入；
 - 列表全宽/横向滚动/空态文案；
 - web build 通过。
+
+## 轮次 62 · 2026-11-24（订阅节点选择/接管开关）
+- 0016 迁移 selected_node/selection_mode；
+- mihomo 生成 ARTEX-SELECT/ARTEX-AUTO + loopback external-controller；
+- 新增 nodes/select/probe API；
+- 订阅卡节点展开、测延迟、手动/自动；
+- 页面右上角“接管出口”开关切 pool/direct；
+- 实测 43 节点、选择成功、延迟 117ms。

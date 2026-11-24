@@ -26,6 +26,8 @@ type EgressSource struct {
 	LastGoodHash   string
 	ManagedProxyID int64
 	ManagedPort    int
+	SelectedNode   string
+	SelectionMode  string
 	ETag           string
 	LastModified   string
 	LastFetchAt    time.Time
@@ -97,7 +99,7 @@ func hashText(v string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-const egressSourceCols = "id,name,kind,desired_state,observed_state,config_enc,config_hash,last_good_config_enc,last_good_hash,managed_proxy_id,managed_port,etag,last_modified,last_fetch_at,last_error,revision,created_at,updated_at"
+const egressSourceCols = "id,name,kind,desired_state,observed_state,config_enc,config_hash,last_good_config_enc,last_good_hash,managed_proxy_id,managed_port,etag,last_modified,last_fetch_at,last_error,revision,created_at,updated_at,selected_node,selection_mode"
 
 func (s *EgressSourceStore) scan(row interface{ Scan(...any) error }) (*EgressSource, error) {
 	var e EgressSource
@@ -107,7 +109,7 @@ func (s *EgressSourceStore) scan(row interface{ Scan(...any) error }) (*EgressSo
 	if err := row.Scan(&e.ID, &e.Name, &e.Kind, &e.DesiredState, &e.ObservedState,
 		&cfgEnc, &e.ConfigHash, &goodEnc, &e.LastGoodHash,
 		&managed, &e.ManagedPort, &e.ETag, &e.LastModified,
-		&lastFetch, &e.LastError, &e.Revision, &e.CreatedAt, &e.UpdatedAt); err != nil {
+		&lastFetch, &e.LastError, &e.Revision, &e.CreatedAt, &e.UpdatedAt, &e.SelectedNode, &e.SelectionMode); err != nil {
 		return nil, err
 	}
 	var err error
@@ -168,6 +170,11 @@ func (s *EgressSourceStore) SaveLastGood(ctx context.Context, id int64, cfg stri
 		return err
 	}
 	_, err = s.d.ExecContext(ctx, "UPDATE egress_sources SET last_good_config_enc=$2,last_good_hash=$3,last_fetch_at=now(),revision=revision+1,updated_at=now() WHERE id=$1", id, enc, hashText(cfg))
+	return err
+}
+
+func (s *EgressSourceStore) UpdateSelection(ctx context.Context, id int64, mode, node string) error {
+	_, err := s.d.ExecContext(ctx, "UPDATE egress_sources SET selection_mode=$2,selected_node=$3,revision=revision+1,updated_at=now() WHERE id=$1", id, mode, node)
 	return err
 }
 
