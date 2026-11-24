@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 63,
+  "round": 64,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -241,7 +241,8 @@
     "v0_4_9_proxy_pool_layout": "出口代理池布局优化：订阅主卡前置、手工/兜底两列、去重订阅 URL、列表全宽；web build 通过。",
     "v0_4_9_node_picker": "订阅节点选择/延迟探测/接管开关：节点 43、手动选择、延迟 117ms、自动/手动模式、pool/direct 开关；web/go build 通过。",
     "v0_4_9_node_panel_row": "节点面板移到代理池表格 clash-sub 行下方展开；页面/静态构建通过。",
-    "v0_4_9_proxy_pool_parity": "代理池作战能力：403/429 自动换节点、耗尽保护、mihomo 守护、load-balance、proxy_pool_control、UI 自动换 IP 开关；E2E 403 切换/守护恢复/开关通过。"
+    "v0_4_9_proxy_pool_parity": "代理池作战能力：403/429 自动换节点、耗尽保护、mihomo 守护、load-balance、proxy_pool_control、UI 自动换 IP 开关；E2E 403 切换/守护恢复/开关通过。",
+    "v0_4_9_design_split_unaligned": "未对齐能力拆分设计：分享链接节点导入、住宅网关 Gateway/SID 两份独立设计稿，待实施。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"

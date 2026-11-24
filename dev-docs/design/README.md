@@ -15,3 +15,5 @@
 | 2026-11-24 | [出口代理池页面布局优化](2026-11-24-proxy-pool-layout.md) | 已实施 v0.4.9 |
 | 2026-11-24 | [订阅节点选择/延迟探测/接管开关](2026-11-24-subscription-node-picker.md) | 已实施 v0.4.9 |
 | 2026-11-24 | [代理池作战能力补齐（二开对齐 P1）](2026-11-24-proxy-pool-parity.md) | 已实施 v0.4.9；gateway/分享链接待后续 |
+| 2026-11-24 | [分享链接节点导入（vmess/ss/trojan/vless）](2026-11-24-share-link-node-import.md) | 设计稿，待实施 |
+| 2026-11-24 | [住宅网关代理模式（Gateway/SID）](2026-11-24-residential-gateway-mode.md) | 设计稿，待实施 |

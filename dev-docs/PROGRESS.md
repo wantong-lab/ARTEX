@@ -395,3 +395,8 @@
 - Agent proxy_pool_control（status/auto/rotate/pin/unpin）；
 - UI 封禁自动换 IP 开关；
 - E2E：403 触发切换、kill 进程恢复、开关 API、工具入库。
+
+## 轮次 64 · 2026-11-24（未对齐能力拆分设计）
+- 分享链接 vmess/ss/trojan/vless 导入独立设计；
+- 住宅网关 Gateway/SID 独立设计；
+- 两稿均标为待实施，不改变当前运行行为。
