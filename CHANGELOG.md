@@ -1074,3 +1074,4 @@
 [0.3.4]: https://github.com/Autumn-27/ARTEX/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/Autumn-27/ARTEX/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/Autumn-27/ARTEX/compare/v0.3.1...v0.3.2
+- 设计稿：出口代理控制面（Egress Control Plane），含 source/endpoint/policy/binding 数据模型、supervisor、fail-closed、订阅 last-good、P0/P1/P2 拆分。

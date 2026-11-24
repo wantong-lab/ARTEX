@@ -97,3 +97,6 @@ pool:    active proxy URL
 - 代理池页文案明确：是否接管由出口模式决定；兜底代理为 pool 第二级。
 - 校验：go build/vet、web build、EffectiveProxy 单元测试通过；未做真实代理出口 E2E。
 
+## 后续
+
+本文的 egress_mode 是短期统一出口模型；长期由 [出口代理控制面](2026-11-24-egress-control-plane.md) 取代（source/policy/endpoint/binding + reconciler）。

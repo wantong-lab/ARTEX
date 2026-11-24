@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 57,
+  "round": 58,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -234,7 +234,8 @@
     "v0_4_9_unified_egress": "统一出口：egress_mode direct/fixed/pool，EffectiveProxy 解析，代理池同步/重建，系统配置模式 UI；go build/vet、web build、EffectiveProxy 单测通过。",
     "v0_4_9_proxy_pool_page": "出口代理池独立页面 /function/proxy-pool，侧边栏入口；代理池 UI 从内网中枢迁出；显示 egress_mode/effective；web build 通过。",
     "v0_4_9_clash_subscription_import": "出口代理池 Clash 订阅 URL 导入：UI 拉取订阅 + 后端 http/https 校验；复用 import-mihomo；go build/单测/web build 通过。",
-    "v0_4_9_clash_subscription_mihomo": "Clash 订阅代理 mihomo：用户 base64 vless/hysteria2 订阅自动 flag=meta → 本地 mihomo mixed → 代理池条目；真机启动/出口 200/pool effective/停止清理通过。"
+    "v0_4_9_clash_subscription_mihomo": "Clash 订阅代理 mihomo：用户 base64 vless/hysteria2 订阅自动 flag=meta → 本地 mihomo mixed → 代理池条目；真机启动/出口 200/pool effective/停止清理通过。",
+    "v0_4_9_egress_control_plane_design": "Egress Control Plane 设计稿完成：source/endpoint/policy/binding/event、reconciler、supervisor、fail-closed、last-good、P0-1..P0-6；代码待实施。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"

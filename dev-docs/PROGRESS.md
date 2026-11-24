@@ -350,3 +350,9 @@
 - 代理池 API 增加 subscription 状态/启动/停止；本地 mixed 口自动登记并设为活动；
 - 前端新增“Clash 订阅代理（mihomo 内核）”卡片；
 - 用户订阅真机验证：启动 → 本地出口 200 → egress_mode=pool effective 指向本地口 → 停止清理。
+
+## 轮次 58 · 2026-11-24（出口控制面设计）
+- 新增 dev-docs/design/2026-11-24-egress-control-plane.md；
+- 定义 source/endpoint/policy/binding/event 模型、reconciler、supervisor、fail-closed、订阅 last-good；
+- 拆 P0-1..P0-6；现有 mihomo MVP 标注为短期实现；
+- 未改运行代码，待 P0 开工。

@@ -94,3 +94,7 @@
 - 前端代理池页新增“Clash 订阅代理（mihomo 内核）”卡片，支持启动/停止与状态显示。
 - 实测用户订阅：原始链接为 base64 vless/hysteria2，自动请求 flag=meta 后启动 mihomo；本地 mixed 口 curl 出口 IP 200；egress_mode=pool 时 effective_proxy 指向本地口；停止后进程/条目/配置清理。
 - mihomo 二进制：本机使用 Clash Verge 自带 verge-mihomo；其他环境设置 ARTEX_MIHOMO_PATH 或放 data/tools/mihomo。
+
+## 后续
+
+本文是 MVP 实现记录；长期控制面、supervisor、fail-closed、快照回滚、任务级绑定由 [出口代理控制面](2026-11-24-egress-control-plane.md) 接管。
