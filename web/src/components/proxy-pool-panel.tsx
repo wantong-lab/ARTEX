@@ -112,49 +112,9 @@ export function ProxyPoolPanel() {
       {error ? <Card className="border-destructive/40 bg-destructive/5 p-3 text-destructive text-sm">{error}</Card> : null}
       {notice ? <Card className="border-emerald-500/40 bg-emerald-500/5 p-3 text-emerald-600 text-sm">{notice}</Card> : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="flex flex-col gap-2 p-3">
-          <p className="font-medium text-sm">录入代理（http/https/socks5，支持认证）</p>
-          <div className="flex gap-2">
-            <Input placeholder="名称（可选）" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <Input placeholder="http://user:pass@host:port" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
-            <Button size="sm" disabled={busy || !form.url.trim()} onClick={() => void run(async () => {
-              const r = await api.proxyPoolAdd({ url: form.url, name: form.name });
-              const bad = r.results.find((x) => x.error);
-              setNotice(bad ? `录入失败：${bad.error}` : "录入成功（重复项自动去重）");
-              setForm({ name: "", url: "" });
-              await refresh();
-            })}>录入</Button>
-          </div>
-        </Card>
-        <Card className="flex flex-col gap-2 p-3">
-          <p className="font-medium text-sm">代理池兜底代理（pool 模式第二级：活动代理失败时回退）</p>
-          <div className="flex gap-2">
-            <Input placeholder="留空 = 直连" value={globalURL} onChange={(e) => setGlobalURL(e.target.value)} />
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => void run(async () => {
-              await api.proxyPoolGlobal(globalURL);
-              setNotice(globalURL ? "全局兜底代理已保存" : "已清除全局兜底代理");
-              await refresh();
-            })}>保存</Button>
-            <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(async () => {
-              const r = await api.proxyPoolFallback();
-              setNotice(r.global_set ? "已切回兜底代理" : "已切回直连");
-              await refresh();
-            })}>切回兜底</Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="secondary" disabled={busy} onClick={() => void run(async () => {
-              const r = await api.proxyPoolEgress();
-              setEgress(`出口 IP：${r.exit_ip ?? "-"}（活动代理 ${r.active_id ?? 0}）`);
-            })}>出口自检</Button>
-            <span className="text-muted-foreground text-xs">{egress}</span>
-          </div>
-        </Card>
-      </div>
-
-      <Card className="flex flex-col gap-2 p-3">
+      <Card className="flex flex-col gap-3 border-primary/30 bg-muted/10 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="font-medium text-sm">Clash 订阅代理（mihomo 内核，支持 vless/hysteria2）</p>
+          <p className="font-semibold text-sm">Clash 订阅代理（mihomo 内核，支持 vless/hysteria2）</p>
           <Badge variant={subStatus?.running ? "default" : "secondary"}>
             {subStatus?.observed_state || (subStatus?.running ? "ready" : "disabled")}
           </Badge>
@@ -198,36 +158,50 @@ export function ProxyPoolPanel() {
         </p>
       </Card>
 
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="flex flex-col gap-2 p-3">
+          <p className="font-medium text-sm">录入代理（http/https/socks5，支持认证）</p>
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]">
+            <Input placeholder="名称（可选）" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input placeholder="http://user:pass@host:port" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
+            <Button size="sm" disabled={busy || !form.url.trim()} onClick={() => void run(async () => {
+              const r = await api.proxyPoolAdd({ url: form.url, name: form.name });
+              const bad = r.results.find((x) => x.error);
+              setNotice(bad ? `录入失败：${bad.error}` : "录入成功（重复项自动去重）");
+              setForm({ name: "", url: "" });
+              await refresh();
+            })}>录入</Button>
+          </div>
+        </Card>
+        <Card className="flex flex-col gap-2 p-3">
+          <p className="font-medium text-sm">代理池兜底代理（pool 模式第二级：活动代理失败时回退）</p>
+          <div className="flex flex-wrap gap-2">
+            <Input className="min-w-48 flex-1" placeholder="留空 = 直连" value={globalURL} onChange={(e) => setGlobalURL(e.target.value)} />
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void run(async () => {
+              await api.proxyPoolGlobal(globalURL);
+              setNotice(globalURL ? "全局兜底代理已保存" : "已清除全局兜底代理");
+              await refresh();
+            })}>保存</Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => void run(async () => {
+              const r = await api.proxyPoolFallback();
+              setNotice(r.global_set ? "已切回兜底代理" : "已切回直连");
+              await refresh();
+            })}>切回兜底</Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => void run(async () => {
+              const r = await api.proxyPoolEgress();
+              setEgress(`出口 IP：${r.exit_ip ?? "-"}（活动代理 ${r.active_id ?? 0}）`);
+            })}>出口自检</Button>
+            <span className="text-muted-foreground text-xs">{egress}</span>
+          </div>
+        </Card>
+      </div>
+
       <Card className="flex flex-col gap-2 p-3">
-        <p className="font-medium text-sm">直接导入 http/socks5 节点（Clash YAML / 节点列表）</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            className="min-w-64 flex-1"
-            placeholder="https://example.com/clash.yaml（Clash 订阅地址）"
-            value={subscriptionURL}
-            onChange={(e) => setSubscriptionURL(e.target.value)}
-          />
-          <Button
-            size="sm"
-            disabled={busy || importing || !subscriptionURL.trim()}
-            onClick={() => {
-              setImporting(true);
-              void run(async () => {
-                try {
-                  const r = await api.proxyPoolImportMihomo({ url: subscriptionURL.trim(), name_prefix: mihomoPrefix });
-                  applyImportResult(r);
-                  await refresh();
-                } finally {
-                  setImporting(false);
-                }
-              });
-            }}
-          >
-            {importing ? "导入中…" : "直接导入（仅 http/socks5）"}
-          </Button>
-        </div>
+        <p className="font-medium text-sm">高级：直接导入 http/socks5 节点（YAML）</p>
         <p className="text-muted-foreground text-xs">
-          订阅地址只本次拉取、不落库；返回 Clash YAML proxies 的订阅可直接导入，非 http/socks5 节点会跳过。
+          仅用于直接可用的 http/socks5 节点；Clash/vless 订阅请用上方 mihomo 订阅代理。
         </p>
         <textarea
           className="min-h-28 rounded-md border bg-transparent p-2 font-mono text-xs"
@@ -301,8 +275,9 @@ export function ProxyPoolPanel() {
         {loading ? (
           <PageSkeleton rows={4} dense />
         ) : (state?.entries.length ?? 0) === 0 ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">代理池为空</div>
+          <div className="p-10 text-center text-muted-foreground text-sm">暂无代理，先启动 Clash 订阅或录入一条手工代理。</div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -360,6 +335,7 @@ export function ProxyPoolPanel() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </Card>
     </div>

@@ -23,9 +23,12 @@ export default function ProxyPoolPage() {
             管理出口代理条目、探测/切换活动代理与兜底；是否接管平台出口由「系统配置 → 出口模式」决定。
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-2 text-xs">
           <Badge variant={mode === "pool" ? "default" : "secondary"}>出口模式 {mode}</Badge>
-          <Badge variant="secondary">当前生效 {effective}</Badge>
+          <span className="inline-flex max-w-[360px] items-center gap-1 rounded-full border px-2.5 py-1 text-muted-foreground">
+            当前生效
+            <span className="max-w-[220px] truncate font-mono text-foreground" title={effective}>{effective}</span>
+          </span>
           <a className="text-muted-foreground underline underline-offset-4" href="/system/settings">系统配置</a>
         </div>
       </header>

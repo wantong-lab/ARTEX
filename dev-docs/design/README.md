@@ -12,3 +12,4 @@
 | 2026-11-24 | [Clash 订阅导入代理池](2026-11-24-clash-subscription-import.md) | 已实施 v0.4.9（仅直接 http/socks5） |
 | 2026-11-24 | [Clash 订阅代理（mihomo 内核）](2026-11-24-clash-subscription-mihomo.md) | 已实施 v0.4.9（MVP；长期见控制面设计） |
 | 2026-11-24 | [出口代理控制面（Egress Control Plane，P0 精简版）](2026-11-24-egress-control-plane.md) | P0 精简设计，待实施 |
+| 2026-11-24 | [出口代理池页面布局优化](2026-11-24-proxy-pool-layout.md) | 已实施 v0.4.9 |
