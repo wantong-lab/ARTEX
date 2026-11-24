@@ -356,3 +356,9 @@
 - 定义 source/endpoint/policy/binding/event 模型、reconciler、supervisor、fail-closed、订阅 last-good；
 - 拆 P0-1..P0-6；现有 mihomo MVP 标注为短期实现；
 - 未改运行代码，待 P0 开工。
+
+## 轮次 59 · 2026-11-24（出口控制面 P0 精简）
+- 修订 2026-11-24-egress-control-plane.md：删除 policy/binding/event/endpoint 冗余表；
+- 复用 proxy_pool，只新增 egress_sources；
+- 明确 target/control resolver、fail-closed、稳定端口、订阅原子切换、配置清洗、迁移/回滚；
+- P0 拆为持久化、supervisor、resolver、订阅刷新、状态/UI。
