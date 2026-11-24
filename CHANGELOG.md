@@ -1079,3 +1079,4 @@
 - 出口控制面 P0 实现：egress_sources 持久化/启动恢复、target/control resolver + fail-closed、MITM blocked、PID/端口/孤儿清理、订阅刷新与配置清洗、状态 API/UI。
 - 出口代理池页面布局优化：Clash 订阅卡前置、手工/兜底两列、直接导入折叠为高级项、移除重复订阅 URL、列表全宽与空态优化。
 - 订阅节点选择：订阅卡展开节点列表，支持自动/手动选择、逐节点延迟探测；mihomo 增加 loopback 控制面；页面右上角“接管出口”开关直接切 egress_mode pool/direct。
+- 节点面板调整：从订阅卡移到代理池表格 clash-sub 行下方展开，操作列增加“节点/收起节点”。
