@@ -298,10 +298,12 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	s.restoreTaskRuntimes()
 	go s.reconcileConcurrency()
 	s.startTaskArchiveWorker()
-	s.wireInterceptReviewer()     // LLM 兜底审批:未命中拦截规则的命令交给模型判定
-	s.startC2IfEnabled(ctx)       // C2 默认关闭；仅 c2_enabled=on 时按台账拉起监听器
-	go s.c2IngressHealthLoop(ctx) // P2-C：C2 入站中继健康巡检
-	s.proxyPool()                 // 代理池：加载全局/活动配置并注入出站 client
+	s.wireInterceptReviewer()          // LLM 兜底审批:未命中拦截规则的命令交给模型判定
+	s.startC2IfEnabled(ctx)            // C2 默认关闭；仅 c2_enabled=on 时按台账拉起监听器
+	go s.c2IngressHealthLoop(ctx)      // P2-C：C2 入站中继健康巡检
+	s.proxyPool()                      // 代理池：加载全局/活动配置并注入出站 client
+	s.cleanupStaleMihomo()             // 出口控制面：清理上次受管进程/子目录
+	go s.recoverProxySubscription(ctx) // 出口控制面：按需恢复订阅源
 	if s.m != nil && s.m.pg != nil {
 		s.maintenance = newMaintenanceScheduler(s)
 		go s.maintenance.Run(s.ctx) // P1-4 维护调度：默认保留清理/CVE 关闭、代理池巡检开启（空池跳过）
@@ -3353,22 +3355,24 @@ func (s *Server) settingsPayload() map[string]any {
 		concLimit = defaultConcurrencyLimit // 关闭时也回显一个合理默认值给 UI
 	}
 	return map[string]any{
-		"traffic_capture":          s.m.TrafficEnabled(),
-		"c2_allow_non_loopback":    s.m.pg.GetBool("c2_allow_non_loopback", false),
-		"agent_traffic_binding":    s.m.pg.GetBool(settingAgentTrafficBinding, false),
-		"llm_record":               s.m.LLMRecordEnabled(),
-		"web_search_enabled":       on,
-		"web_search_backend":       backend,
-		"brave_key_set":            strings.TrimSpace(braveKey) != "",
-		"tavily_key_set":           strings.TrimSpace(tavilyKey) != "",
-		"web_search_proxy":         proxy,                       // 独立出口代理(http/https/socks5)，空=直连
-		"global_proxy":             s.m.GlobalProxy(),           // fixed 模式的固定出口代理(http/https/socks5)，空=直连
-		"egress_mode":              s.m.EgressMode(),            // direct | fixed | pool
-		"effective_proxy":          s.m.EffectiveProxy(),        // 当前实际生效出口
-		"python_interpreter":       strings.TrimSpace(pyStored), // 用户/自动设的值(空=用运行时检测)
-		"workers":                  s.m.Workers(),               // 并发工作 agent 数(默认3)；对之后启动的任务生效
-		"task_concurrency_enabled": concOn,                      // 任务并发上限开关(默认关)
-		"task_concurrency_limit":   concLimit,                   // 同时运行任务上限(开启后默认5)
+		"traffic_capture":              s.m.TrafficEnabled(),
+		"c2_allow_non_loopback":        s.m.pg.GetBool("c2_allow_non_loopback", false),
+		"agent_traffic_binding":        s.m.pg.GetBool(settingAgentTrafficBinding, false),
+		"llm_record":                   s.m.LLMRecordEnabled(),
+		"web_search_enabled":           on,
+		"web_search_backend":           backend,
+		"brave_key_set":                strings.TrimSpace(braveKey) != "",
+		"tavily_key_set":               strings.TrimSpace(tavilyKey) != "",
+		"web_search_proxy":             proxy,             // 独立出口代理(http/https/socks5)，空=直连
+		"global_proxy":                 s.m.GlobalProxy(), // fixed 模式的固定出口代理(http/https/socks5)，空=直连
+		"egress_mode":                  s.m.EgressMode(),  // direct | fixed | pool
+		"egress_fail_closed":           s.m.FailClosed(),  // pool 不可用时 target 是否阻断
+		"egress_control_plane_enabled": s.m.pg.GetBool("egress_control_plane_enabled", false),
+		"effective_proxy":              s.m.EffectiveProxy(),        // 当前实际生效出口
+		"python_interpreter":           strings.TrimSpace(pyStored), // 用户/自动设的值(空=用运行时检测)
+		"workers":                      s.m.Workers(),               // 并发工作 agent 数(默认3)；对之后启动的任务生效
+		"task_concurrency_enabled":     concOn,                      // 任务并发上限开关(默认关)
+		"task_concurrency_limit":       concLimit,                   // 同时运行任务上限(开启后默认5)
 		// LLM 轮询(故障转移)。默认关；开启后走全局激活配置的 agent 在当前配置不可用时
 		// 自动切到下一个配置。bind_fallback 仅在轮询开启时有意义(默认关)。
 		"llm_pool_enabled":       s.m.LLMPoolEnabled(),
@@ -3440,6 +3444,8 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		WebSearchProxy   *string `json:"web_search_proxy"`   // 独立出口代理(http/https/socks5)；null=不改，""=清空
 		GlobalProxy      *string `json:"global_proxy"`       // fixed 模式固定出口代理；null=不改，""=清空(直连)
 		EgressMode       *string `json:"egress_mode"`        // direct/fixed/pool；null=不改
+		FailClosed       *bool   `json:"egress_fail_closed"` // pool 无 active 时 target 是否阻断
+		ControlPlane     *bool   `json:"egress_control_plane_enabled"`
 		PythonInterp     *string `json:"python_interpreter"` // 自定义脚本工具的 python 解释器路径
 		Workers          *int    `json:"workers"`            // 并发工作 agent 数(>0)；对之后启动的任务生效
 		// 任务并发上限:同时「运行中」的任务数上限。关闭=不限;开启后新建任务超限则排队,有空位自动启动。
@@ -3599,6 +3605,23 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		if err := s.m.SetEgressMode(*req.EgressMode); err != nil {
 			writeErr(w, 400, err.Error())
 			return
+		}
+		changed = true
+	}
+	if req.FailClosed != nil {
+		if err := s.m.SetFailClosed(*req.FailClosed); err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+		changed = true
+	}
+	if req.ControlPlane != nil {
+		if err := s.m.pg.SetBool("egress_control_plane_enabled", *req.ControlPlane); err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+		if *req.ControlPlane {
+			go s.recoverProxySubscription(s.ctx)
 		}
 		changed = true
 	}

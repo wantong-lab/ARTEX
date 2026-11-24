@@ -362,3 +362,24 @@ P0-5 状态/UI/安全
 - DNS/IPv6/chain/ASN；
 - 完整审计、指标、SLO；
 - 单页出口与代理重构。
+
+## 实施记录（P0，2026-11-24）
+
+已实现：
+
+- db/migrations/0015_egress_sources.sql + db/egress_sources.go：单订阅源表、URL/last-good 加密、revision、状态字段。
+- 订阅启动/停止/刷新持久化；服务启动按 egress_control_plane_enabled 恢复 desired_state=active 的 source。
+- Supervisor 最小实现：proxySubMu 串行启动、PID 文件、端口优先复用、每端口独立配置目录、启动前清理上次受管目录、进程退出/停止清理。
+- Resolver：EgressTarget/EgressControl；pool 无 active 且 fail_closed=true 时 Blocked；control 固定/直连，不走 pool；traffic MITM 增加 blocked 失败关闭。
+- 配置清洗：删除 tun/external-controller/secret/proxy-providers/rule-providers/script/profile/interface-name；为避免 geodata 下载，删除 dns/proxy-groups/rules 并用第一个节点 MATCH。
+- API/UI：GET/POST/DELETE /api/proxy-pool/subscription、POST refresh；状态增加 source/observed/desired/managed_proxy/fail_closed/control_plane；页面订阅卡支持刷新；系统设置增加 fail-closed/控制面开关。
+- 测试：go build/vet、resolver/sanitize 单测；本机真机 E2E：启动 -> 本地出口 200 -> 刷新新端口 -> 重启恢复 -> 停止清理。
+
+未完成/偏差：
+
+- 自动定时刷新未启用（仅手动 refresh；egress_subscription_refresh_minutes 未消费）。
+- Windows 进程组/PID 归属未验证；当前 Unix ps 清理。
+- 源删除 API 未做；停止即 desired=disabled。
+- last-good 回滚路径已保存但尚未做故障注入 E2E。
+- 控制面 flag 默认 false；旧行为可回退。
+

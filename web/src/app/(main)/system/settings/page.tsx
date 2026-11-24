@@ -32,6 +32,8 @@ export default function SystemSettingsPage() {
   const [globalProxyInput, setGlobalProxyInput] = React.useState("");
   const [egressMode, setEgressMode] = React.useState("direct");
   const [effectiveProxy, setEffectiveProxy] = React.useState("");
+  const [failClosed, setFailClosed] = React.useState(true);
+  const [controlPlane, setControlPlane] = React.useState(false);
   const [savingGlobalProxy, setSavingGlobalProxy] = React.useState(false);
   const [testing, setTesting] = React.useState(false);
   const [loaded, setLoaded] = React.useState(false);
@@ -59,6 +61,8 @@ export default function SystemSettingsPage() {
     setGlobalProxyInput(s.global_proxy ?? "");
     setEgressMode(s.egress_mode || "direct");
     setEffectiveProxy(s.effective_proxy || "");
+    setFailClosed(s.egress_fail_closed !== false);
+    setControlPlane(!!s.egress_control_plane_enabled);
     setPyInterp(s.python_interpreter ?? "");
     setWorkers(String(s.workers ?? 3));
     setInjectPlanner(s.constraints_inject_planner !== false);
@@ -236,6 +240,18 @@ export default function SystemSettingsPage() {
       .finally(() => setSavingGlobalProxy(false));
   };
 
+  const saveEgressFlags = (patch: { egress_fail_closed?: boolean; egress_control_plane_enabled?: boolean }) => {
+    setSavingGlobalProxy(true);
+    api
+      .setSettings(patch)
+      .then((s) => {
+        apply(s);
+        toast.success("出口策略已保存");
+      })
+      .catch((e) => toast.error("保存失败：" + (e as Error).message))
+      .finally(() => setSavingGlobalProxy(false));
+  };
+
   const saveGlobalProxy = () => {
     setSavingGlobalProxy(true);
     api
@@ -394,6 +410,16 @@ export default function SystemSettingsPage() {
             <p className="text-muted-foreground text-xs">
               {egressMode === "pool" ? "代理池接管中：以代理池活动代理为实际出口" : egressMode === "direct" ? "直连模式：不使用固定代理" : globalProxyInput.trim() ? "已配置 · 所有目标流量经此代理出网" : "未配置 · 目标流量直连出网"}
             </p>
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <Switch checked={failClosed} disabled={!loaded || savingGlobalProxy} onCheckedChange={(v) => saveEgressFlags({ egress_fail_closed: v })} />
+                pool 无可用出口时阻断 target 流量
+              </label>
+              <label className="flex items-center gap-2">
+                <Switch checked={controlPlane} disabled={!loaded || savingGlobalProxy} onCheckedChange={(v) => saveEgressFlags({ egress_control_plane_enabled: v })} />
+                启用出口控制面（订阅持久化/重启恢复）
+              </label>
+            </div>
           </CardContent>
         </Card>
 

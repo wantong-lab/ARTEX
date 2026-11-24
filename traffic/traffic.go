@@ -170,6 +170,8 @@ type Traffic struct {
 	// transparent-passthrough paths honor it (go-mitmproxy's getUpstreamConn),
 	// so no host escapes it. Hot-swappable at runtime via SetUpstreamProxy.
 	upstream atomic.Pointer[url.URL]
+	// blocked makes every recorded request fail closed (no direct fallback).
+	blocked atomic.Bool
 }
 
 // Open initializes the traffic tree, blob store and SQLite index under dir.
@@ -218,7 +220,12 @@ func Open(dir, addr string) (*Traffic, error) {
 	// a direct dial. When a global egress proxy IS configured (SetUpstreamProxy),
 	// every captured request — intercepted AND transparently tunneled — is
 	// forwarded through it instead, so no host leaks the real source IP.
-	p.SetUpstreamProxy(func(*http.Request) (*url.URL, error) { return t.upstream.Load(), nil })
+	p.SetUpstreamProxy(func(*http.Request) (*url.URL, error) {
+		if t.blocked.Load() {
+			return nil, fmt.Errorf("egress blocked: no available proxy")
+		}
+		return t.upstream.Load(), nil
+	})
 	// Fail-open: MITM every host by default, EXCEPT ones a prior request proved we
 	// can't intercept without breaking (see maybePassthrough). Those are tunneled
 	// transparently so the request still reaches the target instead of being killed.
@@ -314,6 +321,11 @@ func (t *Traffic) ProxyAddr() string {
 // it, restoring direct dialing. The change is atomic and takes effect on the next
 // connection — no restart, no proxy rebuild. go-mitmproxy dials all three schemes
 // itself, so socks5 works uniformly here regardless of the target tool.
+// SetEgressBlocked makes the MITM fail closed instead of dialing direct.
+func (t *Traffic) SetEgressBlocked(on bool) {
+	t.blocked.Store(on)
+}
+
 func (t *Traffic) SetUpstreamProxy(raw string) error {
 	if strings.TrimSpace(raw) == "" {
 		t.upstream.Store(nil)

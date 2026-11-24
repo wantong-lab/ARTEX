@@ -81,6 +81,19 @@ export function ProxyPoolPanel() {
       .finally(() => setSubBusy(false));
   };
 
+  const refreshSubscriptionProxy = () => {
+    setSubBusy(true);
+    setError("");
+    api.proxyPoolSubscriptionRefresh()
+      .then(async (st) => {
+        setSubStatus(st);
+        setNotice("订阅已刷新");
+        await refresh();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setSubBusy(false));
+  };
+
   const stopSubscriptionProxy = () => {
     setSubBusy(true);
     setError("");
@@ -143,7 +156,7 @@ export function ProxyPoolPanel() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-medium text-sm">Clash 订阅代理（mihomo 内核，支持 vless/hysteria2）</p>
           <Badge variant={subStatus?.running ? "default" : "secondary"}>
-            {subStatus?.running ? "运行中" : "未运行"}
+            {subStatus?.observed_state || (subStatus?.running ? "ready" : "disabled")}
           </Badge>
         </div>
         <p className="text-muted-foreground text-xs">
@@ -156,7 +169,8 @@ export function ProxyPoolPanel() {
             本地代理：<code>{subStatus.local_proxy}</code> · 条目 #{subStatus.entry_id} · 已设为活动代理
           </p>
         ) : null}
-        {subStatus?.error ? <p className="text-destructive text-xs">{subStatus.error}</p> : null}
+        {subStatus?.last_error ? <p className="text-destructive text-xs">{subStatus.last_error}</p> : null}
+        {subStatus?.last_fetch_at ? <p className="text-muted-foreground text-xs">最近刷新：{subStatus.last_fetch_at}</p> : null}
         <div className="flex flex-wrap items-center gap-2">
           <Input
             className="min-w-64 flex-1"
@@ -164,6 +178,11 @@ export function ProxyPoolPanel() {
             value={subscriptionURL}
             onChange={(e) => setSubscriptionURL(e.target.value)}
           />
+          {subStatus?.running ? (
+            <Button size="sm" variant="outline" disabled={subBusy} onClick={refreshSubscriptionProxy}>
+              {subBusy ? "刷新中…" : "刷新订阅"}
+            </Button>
+          ) : null}
           {subStatus?.running ? (
             <Button size="sm" variant="destructive" disabled={subBusy} onClick={stopSubscriptionProxy}>
               {subBusy ? "停止中…" : "停止订阅代理"}

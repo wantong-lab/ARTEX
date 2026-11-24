@@ -1476,6 +1476,7 @@ export const api = {
   proxyPoolSubscription: () => get<ProxySubscriptionStatus>(`/proxy-pool/subscription`),
   proxyPoolSubscriptionStart: (url: string) => post<ProxySubscriptionStatus>(`/proxy-pool/subscription`, { url }),
   proxyPoolSubscriptionStop: () => del<ProxySubscriptionStatus>(`/proxy-pool/subscription`),
+  proxyPoolSubscriptionRefresh: () => post<ProxySubscriptionStatus>(`/proxy-pool/subscription/refresh`, {}),
 
   proxyPoolImportMihomo: (body: { yaml?: string; url?: string; name_prefix?: string }) =>
     post<MihomoImportResult>("/proxy-pool/import-mihomo", body),

@@ -64,7 +64,7 @@
 
 - [x] P4-34 Clash 订阅代理（mihomo 内核）：订阅自动 meta 格式 + 本地 mihomo mixed 口 + 代理池条目/启停/状态；用户订阅真机 E2E 通过。
 
-- [ ] P4-35 出口代理控制面（P0 精简稿已落）：复用 proxy_pool + 新增 egress_sources；resolver/fail-closed、supervisor、订阅 last-good、稳定端口；P0 待实施。
+- [~] P4-35 出口代理控制面 P0：egress_sources/恢复、resolver/fail-closed、supervisor PID/端口、订阅刷新/清洗、状态 UI 已实现；自动刷新/Windows/last-good 故障注入待补。
 
 ## 变更记录
 
@@ -89,3 +89,4 @@
 - 2026-11-24：P4-34 Clash 订阅代理完成；用户 vless/hysteria2 订阅真机启停/出口/清理验证通过。
 - 2026-11-24：P4-35 Egress Control Plane 设计稿/ P0 计划完成；代码 P0 待开工。
 - 2026-11-24：P4-35 设计稿按“不过度设计”修订为 P0 精简版；待 P0-1 开工。
+- 2026-11-24：P4-35 P0 代码实现并完成本机启动/刷新/重启恢复/停止 E2E；go build/vet/单测通过。

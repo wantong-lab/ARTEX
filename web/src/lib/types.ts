@@ -926,6 +926,8 @@ export interface Settings {
   // 全局出口代理(http/https/socks5，可带 user:pass)，所有目标流量走它。开启流量捕获时作为
   // MITM 上游；关闭捕获时直接注入 agent 的 bash/WebFetch。空=直连。
   global_proxy?: string;
+  egress_fail_closed?: boolean;
+  egress_control_plane_enabled?: boolean;
   // 统一出口模式：direct=直连；fixed=固定代理；pool=代理池接管。
   egress_mode?: "direct" | "fixed" | "pool";
   effective_proxy?: string;
@@ -1634,6 +1636,15 @@ export interface ProxyPoolState {
 
 export interface ProxySubscriptionStatus {
   mihomo_available: boolean;
+  source_id?: number;
+  desired_state?: string;
+  observed_state?: string;
+  managed_proxy_id?: number;
+  managed_port?: number;
+  last_fetch_at?: string;
+  last_error?: string;
+  fail_closed?: boolean;
+  control_plane_enabled?: boolean;
   mihomo_binary?: string;
   mihomo_error?: string;
   running: boolean;

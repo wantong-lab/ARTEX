@@ -2,7 +2,7 @@
   "schema": 1,
   "objective": "artex-product-parity",
   "phase": "complete",
-  "round": 59,
+  "round": 60,
   "current_pr": "done",
   "current_branch": "main",
   "development_branch": "main",
@@ -236,7 +236,8 @@
     "v0_4_9_clash_subscription_import": "出口代理池 Clash 订阅 URL 导入：UI 拉取订阅 + 后端 http/https 校验；复用 import-mihomo；go build/单测/web build 通过。",
     "v0_4_9_clash_subscription_mihomo": "Clash 订阅代理 mihomo：用户 base64 vless/hysteria2 订阅自动 flag=meta → 本地 mihomo mixed → 代理池条目；真机启动/出口 200/pool effective/停止清理通过。",
     "v0_4_9_egress_control_plane_design": "Egress Control Plane 设计稿完成：source/endpoint/policy/binding/event、reconciler、supervisor、fail-closed、last-good、P0-1..P0-6；代码待实施。",
-    "v0_4_9_egress_p0_lean": "Egress 控制面 P0 精简稿：复用 proxy_pool + 新增 egress_sources；target/control resolver、fail-closed、稳定端口、订阅原子切换、配置清洗；代码待实施。"
+    "v0_4_9_egress_p0_lean": "Egress 控制面 P0 精简稿：复用 proxy_pool + 新增 egress_sources；target/control resolver、fail-closed、稳定端口、订阅原子切换、配置清洗；代码待实施。",
+    "v0_4_9_egress_p0_impl": "Egress P0 实现：egress_sources 持久化/恢复、target/control resolver + fail-closed、MITM blocked、PID/端口/孤儿清理、订阅刷新/清洗、状态 API/UI；本机启动/刷新/重启恢复/停止 E2E 通过。"
   },
   "next_actions": [
     "总目标完成，goal 可标记 complete"

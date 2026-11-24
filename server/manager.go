@@ -253,6 +253,7 @@ type Manager struct {
 	// P2 统一出口：direct/fixed/pool；pool 时使用代理池活动代理，
 	// fallback 为池兜底代理（proxy_global_url），空则直连。
 	egressMode        string
+	failClosed        bool
 	poolActiveProxy   string
 	poolFallbackProxy string
 }
@@ -277,6 +278,7 @@ const (
 	// only routes the search backend) and the per-profile LLM proxy.
 	settingGlobalProxy = "global_proxy"
 	settingEgressMode  = "egress_mode"
+	settingFailClosed  = "egress_fail_closed"
 	settingWorkers     = "workers"
 	settingLLMRecord   = "llm_record"
 	// LLM 轮询(故障转移)。默认关闭——开启后走「全局激活配置」的 agent 在当前配置
@@ -451,6 +453,7 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 	if v, ok, _ := pg.GetSetting(settingGlobalProxy); ok {
 		m.globalProxy = strings.TrimSpace(v)
 	}
+	m.failClosed = pg.GetBool(settingFailClosed, true)
 	if v, ok, _ := pg.GetSetting(settingEgressMode); ok {
 		m.egressMode = normalizeEgressMode(v, m.globalProxy)
 	} else {
@@ -771,7 +774,11 @@ func (m *Manager) ProxyAddr() string {
 	if m.traffic != nil && m.TrafficEnabled() {
 		return m.traffic.ProxyAddr()
 	}
-	return m.EffectiveProxy()
+	res, err := m.ResolveEgress(context.Background(), EgressTarget)
+	if err != nil || res.Blocked {
+		return blockedEgressProxy
+	}
+	return res.ProxyURL
 }
 
 // ProxyCACert returns the CA cert path agents must trust to verify HTTPS through
@@ -859,10 +866,15 @@ func (m *Manager) SetPoolEgress(active, fallback string) {
 }
 
 func (m *Manager) applyEffectiveProxy() error {
-	effective := m.EffectiveProxy()
+	res, err := m.ResolveEgress(context.Background(), EgressTarget)
 	if m.traffic != nil {
-		if err := m.traffic.SetUpstreamProxy(effective); err != nil {
-			return err
+		if err != nil || res.Blocked {
+			m.traffic.SetEgressBlocked(true)
+		} else {
+			m.traffic.SetEgressBlocked(false)
+			if err := m.traffic.SetUpstreamProxy(res.ProxyURL); err != nil {
+				return err
+			}
 		}
 	}
 	m.syncBrowserMCPProxy()
@@ -2029,4 +2041,88 @@ func (t *Task) drainTriggers() []agent.TriggerEvent {
 	ev := t.pendingTriggers
 	t.pendingTriggers = nil
 	return ev
+}
+
+// EgressClass separates target traffic from platform control traffic.
+type EgressClass int
+
+const (
+	EgressTarget EgressClass = iota
+	EgressControl
+)
+
+type Resolution struct {
+	ProxyURL string
+	CACert   string
+	Source   string
+	Blocked  bool
+}
+
+// blockedEgressProxy is a dead local endpoint used only by legacy string callers
+// when fail-closed is active. New callers should use ResolveEgress and check error.
+const blockedEgressProxy = "socks5://127.0.0.1:1"
+
+// ResolveEgress resolves the effective endpoint for a target/control request.
+func (m *Manager) ResolveEgress(ctx context.Context, class EgressClass) (Resolution, error) {
+	m.mu.RLock()
+	mode := normalizeEgressMode(m.egressMode, m.globalProxy)
+	fixed := strings.TrimSpace(m.globalProxy)
+	active := strings.TrimSpace(m.poolActiveProxy)
+	fallback := strings.TrimSpace(m.poolFallbackProxy)
+	failClosed := m.failClosed
+	m.mu.RUnlock()
+
+	if class == EgressControl {
+		if fixed != "" {
+			return Resolution{ProxyURL: fixed, Source: "control-fixed"}, nil
+		}
+		return Resolution{Source: "control-direct"}, nil
+	}
+
+	switch mode {
+	case egressDirect:
+		return Resolution{Source: "direct"}, nil
+	case egressFixed:
+		if fixed == "" {
+			return Resolution{Source: "fixed-empty"}, nil
+		}
+		return Resolution{ProxyURL: fixed, Source: "fixed"}, nil
+	default:
+		if active != "" {
+			return Resolution{ProxyURL: active, Source: "pool-active"}, nil
+		}
+		if fallback != "" {
+			return Resolution{ProxyURL: fallback, Source: "pool-fallback"}, nil
+		}
+		if failClosed {
+			return Resolution{Blocked: true, Source: "pool-blocked"}, fmt.Errorf("出口不可用：代理池没有活动代理，且 fail-closed 已开启")
+		}
+		return Resolution{Source: "pool-direct"}, nil
+	}
+}
+
+// ControlProxy returns the proxy for platform maintenance traffic; empty = direct.
+func (m *Manager) ControlProxy() string {
+	res, err := m.ResolveEgress(context.Background(), EgressControl)
+	if err != nil || res.Blocked {
+		return ""
+	}
+	return res.ProxyURL
+}
+
+// FailClosed reports whether target pool failures block instead of direct dialing.
+func (m *Manager) FailClosed() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.failClosed
+}
+
+func (m *Manager) SetFailClosed(on bool) error {
+	if err := m.pg.SetBool(settingFailClosed, on); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	m.failClosed = on
+	m.mu.Unlock()
+	return m.applyEffectiveProxy()
 }

@@ -362,3 +362,10 @@
 - 复用 proxy_pool，只新增 egress_sources；
 - 明确 target/control resolver、fail-closed、稳定端口、订阅原子切换、配置清洗、迁移/回滚；
 - P0 拆为持久化、supervisor、resolver、订阅刷新、状态/UI。
+
+## 轮次 60 · 2026-11-24（Egress Control Plane P0 实现）
+- 0015 egress_sources + 加密 store；订阅启动/停止/刷新持久化与启动恢复；
+- resolver target/control、fail-closed、MITM blocked；配置清洗；
+- supervisor 串行启动、PID/端口复用/独立目录/孤儿清理；
+- API/UI 状态与刷新；系统设置 fail-closed/控制面开关；
+- 本机 E2E：启动/出口 200/刷新新端口/重启恢复/停止清理；go build/vet/单测通过。
