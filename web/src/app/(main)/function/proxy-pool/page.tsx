@@ -25,14 +25,14 @@ export default function ProxyPoolPage() {
   };
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <header className="flex flex-wrap items-end justify-between gap-2">
-        <div>
+      <header className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">出口 IP 代理池</h1>
           <p className="text-muted-foreground text-sm">
             管理出口代理条目、探测/切换活动代理与兜底。仅当右上角「接管出口」开启（egress_mode=pool）时订阅/代理池才真正生效；直连/固定代理模式不经过本页出口。
           </p>
         </div>
-        <div className="flex max-w-full flex-wrap items-center justify-end gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs xl:justify-end">
           <label className="flex items-center gap-2 rounded-full border px-2.5 py-1 text-muted-foreground">
             接管出口
             <Switch checked={takeover} disabled={!settings || savingMode} onCheckedChange={toggleTakeover} />
