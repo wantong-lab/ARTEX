@@ -4,6 +4,14 @@
 
 二开版本支持住宅 IP 服务商网关：一条网关 URL 通过用户名里的 region/sid 段生成多条住宅出口，支持 SID 轮换换 IP。主线当前只有订阅和静态 http/socks5 条目。
 
+
+## 模块归属
+
+- 本功能属于现有“出口 IP 代理池”模块，不新增顶级页面或侧边栏入口；
+- 前端统一放在 /function/proxy-pool，与 Clash 订阅、手工代理、节点选择共用同一页面；
+- 后端复用 egress_sources、proxy_subscription supervisor、proxy pool status/control；
+- 同一时间只允许一个 active 来源（subscription / links / gateway 三选一），避免多个 mihomo 入口和出口歧义。
+
 ## 目标
 
 - 新增 gateway 来源类型；
