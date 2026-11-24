@@ -3,6 +3,8 @@
 import * as React from "react";
 import { ChevronDownIcon, RefreshCwIcon } from "lucide-react";
 
+import { Switch } from "@/components/ui/switch";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,6 +31,7 @@ export function ProxyPoolPanel() {
   const [subBusy, setSubBusy] = React.useState(false);
   const [nodes, setNodes] = React.useState<ProxySubscriptionNode[]>([]);
   const [expandedNodeRow, setExpandedNodeRow] = React.useState<number | null>(null);
+  const [autoRotate, setAutoRotate] = React.useState(false);
   const [selectionMode, setSelectionMode] = React.useState("auto");
   const [nodeBusy, setNodeBusy] = React.useState("");
   const [delays, setDelays] = React.useState<Record<string, number>>({});
@@ -48,6 +51,7 @@ export function ProxyPoolPanel() {
       setSubStatus(sub);
       setNodes(nodeState?.nodes ?? []);
       setSelectionMode(nodeState?.selection_mode || sub?.selection_mode || "auto");
+      setAutoRotate(!!(sub?.auto_rotate ?? (nodeState?.selection_mode === "auto")));
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -135,6 +139,19 @@ export function ProxyPoolPanel() {
     setError("");
     api.proxyPoolSubscriptionProbe(name)
       .then((r) => setDelays((prev) => ({ ...prev, [name]: r.delay })))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setNodeBusy(""));
+  };
+
+  const toggleAutoRotate = (on: boolean) => {
+    setNodeBusy("auto-rotate");
+    setError("");
+    api.proxyPoolSubscriptionAutoRotate(on)
+      .then(async () => {
+        setAutoRotate(on);
+        setNotice(on ? "封禁自动换 IP 已开启" : "封禁自动换 IP 已关闭");
+        await refresh();
+      })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setNodeBusy(""));
   };
@@ -389,6 +406,10 @@ export function ProxyPoolPanel() {
                           >
                             自动选择
                           </Button>
+                          <label className="flex items-center gap-2 text-muted-foreground text-xs">
+                            封禁自动换 IP
+                            <Switch checked={autoRotate} disabled={!!nodeBusy || !subStatus?.running} onCheckedChange={toggleAutoRotate} />
+                          </label>
                           <span className="text-muted-foreground text-xs">
                             当前：{selectionMode === "auto" ? "自动" : subStatus?.selected_node || "-"}
                           </span>

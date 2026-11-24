@@ -28,6 +28,7 @@ type EgressSource struct {
 	ManagedPort    int
 	SelectedNode   string
 	SelectionMode  string
+	AutoRotate     bool
 	ETag           string
 	LastModified   string
 	LastFetchAt    time.Time
@@ -99,7 +100,7 @@ func hashText(v string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-const egressSourceCols = "id,name,kind,desired_state,observed_state,config_enc,config_hash,last_good_config_enc,last_good_hash,managed_proxy_id,managed_port,etag,last_modified,last_fetch_at,last_error,revision,created_at,updated_at,selected_node,selection_mode"
+const egressSourceCols = "id,name,kind,desired_state,observed_state,config_enc,config_hash,last_good_config_enc,last_good_hash,managed_proxy_id,managed_port,etag,last_modified,last_fetch_at,last_error,revision,created_at,updated_at,selected_node,selection_mode,auto_rotate"
 
 func (s *EgressSourceStore) scan(row interface{ Scan(...any) error }) (*EgressSource, error) {
 	var e EgressSource
@@ -109,7 +110,7 @@ func (s *EgressSourceStore) scan(row interface{ Scan(...any) error }) (*EgressSo
 	if err := row.Scan(&e.ID, &e.Name, &e.Kind, &e.DesiredState, &e.ObservedState,
 		&cfgEnc, &e.ConfigHash, &goodEnc, &e.LastGoodHash,
 		&managed, &e.ManagedPort, &e.ETag, &e.LastModified,
-		&lastFetch, &e.LastError, &e.Revision, &e.CreatedAt, &e.UpdatedAt, &e.SelectedNode, &e.SelectionMode); err != nil {
+		&lastFetch, &e.LastError, &e.Revision, &e.CreatedAt, &e.UpdatedAt, &e.SelectedNode, &e.SelectionMode, &e.AutoRotate); err != nil {
 		return nil, err
 	}
 	var err error
@@ -175,6 +176,16 @@ func (s *EgressSourceStore) SaveLastGood(ctx context.Context, id int64, cfg stri
 
 func (s *EgressSourceStore) UpdateSelection(ctx context.Context, id int64, mode, node string) error {
 	_, err := s.d.ExecContext(ctx, "UPDATE egress_sources SET selection_mode=$2,selected_node=$3,revision=revision+1,updated_at=now() WHERE id=$1", id, mode, node)
+	return err
+}
+
+func (s *EgressSourceStore) UpdateAutoRotate(ctx context.Context, id int64, enabled bool) error {
+	_, err := s.d.ExecContext(ctx, "UPDATE egress_sources SET auto_rotate=$2,revision=revision+1,updated_at=now() WHERE id=$1", id, enabled)
+	return err
+}
+
+func (s *EgressSourceStore) UpdateLastError(ctx context.Context, id int64, msg string) error {
+	_, err := s.d.ExecContext(ctx, "UPDATE egress_sources SET last_error=$2,revision=revision+1,updated_at=now() WHERE id=$1", id, msg)
 	return err
 }
 

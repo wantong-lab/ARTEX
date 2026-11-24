@@ -387,3 +387,11 @@
 
 ### 轮次 62 补充
 - 节点面板从订阅卡移到代理池表格 clash-sub 行下方，操作列“节点/收起节点”。
+
+## 轮次 63 · 2026-11-24（代理池作战能力补齐）
+- 0017 auto_rotate；403/429 自动换节点 + 5 分钟耗尽保护；
+- mihomo 30s 守护/退避重启；
+- 自动组 load-balance consistent-hashing；
+- Agent proxy_pool_control（status/auto/rotate/pin/unpin）；
+- UI 封禁自动换 IP 开关；
+- E2E：403 触发切换、kill 进程恢复、开关 API、工具入库。

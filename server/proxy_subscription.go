@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -27,18 +28,23 @@ import (
 )
 
 type proxySubscriptionState struct {
-	cmd       *exec.Cmd
-	port      int
-	entryID   int64
-	bin       string
-	dir       string
-	logPath   string
-	source    string
-	sourceID  int64
-	ctlPort   int
-	ctlSecret string
-	startedAt time.Time
-	lastErr   string
+	cmd        *exec.Cmd
+	port       int
+	entryID    int64
+	bin        string
+	dir        string
+	logPath    string
+	source     string
+	sourceID   int64
+	ctlPort    int
+	ctlSecret  string
+	nodes      []mihomoNode
+	current    string
+	autoRotate bool
+	banStrikes int
+	banWindow  []time.Time
+	startedAt  time.Time
+	lastErr    string
 }
 
 func (s *Server) egressSourceStore() *db.EgressSourceStore {
@@ -401,7 +407,7 @@ func buildMihomoConfigWithSelection(raw string, mixedPort int, selected, mode st
 		byName[n.Name] = true
 	}
 	autoGroup := map[string]any{
-		"name": "ARTEX-AUTO", "type": "url-test", "proxies": names,
+		"name": "ARTEX-AUTO", "type": "load-balance", "strategy": "consistent-hashing", "proxies": names,
 		"url": "http://www.gstatic.com/generate_204", "interval": 300,
 	}
 	selectNames := make([]any, 0, len(nodes)+1)
@@ -545,10 +551,15 @@ func (s *Server) startProxySubscription(ctx context.Context, rawURL string) (map
 	if s.proxySub != nil {
 		s.stopProxySubscriptionLocked(ctx, false)
 	}
+	go func(c *exec.Cmd) { _ = c.Wait() }(cmd)
 	s.proxySub = &proxySubscriptionState{
 		cmd: cmd, port: port, entryID: entryID, bin: bin, dir: dir,
 		logPath: logPath, source: rawURL, sourceID: src.ID, startedAt: time.Now(),
-		ctlPort: extPort, ctlSecret: secret,
+		ctlPort: extPort, ctlSecret: secret, nodes: parseMihomoNodes(rawCfg),
+		current: src.SelectedNode, autoRotate: src.AutoRotate,
+	}
+	if s.proxySub.current == "" {
+		s.proxySub.current = "ARTEX-AUTO"
 	}
 	_ = s.applyMihomoSelection(ctx, s.proxySub, src.SelectionMode, src.SelectedNode)
 	rt.mgr.SetActive(entryID)
@@ -631,6 +642,11 @@ func (s *Server) proxySubscriptionStatusLocked() map[string]any {
 		out["last_error"] = src.LastError
 		out["selected_node"] = src.SelectedNode
 		out["selection_mode"] = src.SelectionMode
+		out["auto_rotate"] = src.AutoRotate
+		if st := s.proxySub; st != nil {
+			out["ban_strikes"] = st.banStrikes
+			out["current_node"] = st.current
+		}
 	}
 	out["fail_closed"] = s.m.FailClosed()
 	out["control_plane_enabled"] = s.egressControlPlaneEnabled()
@@ -668,6 +684,70 @@ func (s *Server) recoverProxySubscription(ctx context.Context) {
 	}
 	if _, err := s.startProxySubscription(ctx, src.ConfigURL); err != nil {
 		_ = s.egressSourceStore().UpdateObserved(ctx, src.ID, "failed", fetchErrText(err), 0, 0)
+	}
+}
+
+func proxySubscriptionProcessAlive(st *proxySubscriptionState) bool {
+	if st == nil || st.cmd == nil || st.cmd.Process == nil || st.cmd.ProcessState != nil {
+		return false
+	}
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", st.port), 500*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+func (s *Server) watchProxySubscription(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	failures := 0
+	backoff := 5 * time.Second
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		if !s.egressControlPlaneEnabled() {
+			failures, backoff = 0, 5*time.Second
+			continue
+		}
+		src, err := s.egressSourceStore().GetSubscription(ctx)
+		if err != nil || src == nil || src.DesiredState != "active" || strings.TrimSpace(src.ConfigURL) == "" {
+			failures, backoff = 0, 5*time.Second
+			continue
+		}
+		s.proxySubMu.Lock()
+		alive := proxySubscriptionProcessAlive(s.proxySub)
+		s.proxySubMu.Unlock()
+		if alive {
+			failures, backoff = 0, 5*time.Second
+			continue
+		}
+		if failures >= 5 {
+			continue
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(backoff):
+		}
+		if _, err := s.startProxySubscription(ctx, src.ConfigURL); err != nil {
+			failures++
+			log.Printf("[egress] 订阅 mihomo 守护重启失败(%d): %v", failures, err)
+			switch backoff {
+			case 5 * time.Second:
+				backoff = 15 * time.Second
+			case 15 * time.Second:
+				backoff = 30 * time.Second
+			default:
+				backoff = 60 * time.Second
+			}
+		} else {
+			failures, backoff = 0, 5*time.Second
+		}
 	}
 }
 
@@ -726,6 +806,15 @@ func (s *Server) proxyPoolSubscriptionSelect(w http.ResponseWriter, r *http.Requ
 		node = body.Name
 	}
 	_ = s.egressSourceStore().UpdateSelection(r.Context(), src.ID, mode, node)
+	_ = s.egressSourceStore().UpdateAutoRotate(r.Context(), src.ID, mode == "auto")
+	s.proxySubMu.Lock()
+	if s.proxySub != nil {
+		s.proxySub.autoRotate = mode == "auto"
+		if mode == "manual" {
+			s.proxySub.current = node
+		}
+	}
+	s.proxySubMu.Unlock()
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "mode": mode, "selected_node": node})
 }
 
@@ -781,6 +870,102 @@ func (s *Server) proxyPoolSubscriptionProbe(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "delay": out.Delay})
+}
+
+func (s *Server) mihomoSelectNode(ctx context.Context, st *proxySubscriptionState, name string) error {
+	_, _, err := s.mihomoControllerRequest(ctx, st, http.MethodPut, "/proxies/ARTEX-SELECT", map[string]any{"name": name})
+	return err
+}
+
+// rotateProxySubscriptionLocked 按封禁信号切到下一个节点；调用方必须持有 proxySubMu。
+func (s *Server) rotateProxySubscriptionLocked(ctx context.Context, reason string) (string, error) {
+	st := s.proxySub
+	if st == nil || len(st.nodes) == 0 {
+		return "", fmt.Errorf("订阅代理未运行")
+	}
+	if !st.autoRotate {
+		return "", nil
+	}
+	now := time.Now()
+	cutoff := now.Add(-5 * time.Minute)
+	win := st.banWindow[:0]
+	for _, t := range st.banWindow {
+		if t.After(cutoff) {
+			win = append(win, t)
+		}
+	}
+	st.banWindow = append(win, now)
+	st.banStrikes++
+	if len(st.banWindow) >= len(st.nodes) {
+		st.autoRotate = false
+		_ = s.egressSourceStore().UpdateAutoRotate(ctx, st.sourceID, false)
+		_ = s.egressSourceStore().UpdateLastError(ctx, st.sourceID, fmt.Sprintf("节点池疑似耗尽（5 分钟内切换 %d 次），已暂停自动换 IP", len(st.banWindow)))
+		return "", fmt.Errorf("节点池疑似耗尽（5 分钟内切换 %d 次），已暂停自动换 IP", len(st.banWindow))
+	}
+	cur := st.current
+	next := ""
+	for i, n := range st.nodes {
+		if n.Name == cur {
+			next = st.nodes[(i+1)%len(st.nodes)].Name
+			break
+		}
+	}
+	if next == "" {
+		next = st.nodes[0].Name
+	}
+	if err := s.mihomoSelectNode(ctx, st, next); err != nil {
+		return "", err
+	}
+	st.current = next
+	_ = s.egressSourceStore().UpdateSelection(ctx, st.sourceID, "auto", next)
+	return next, nil
+}
+
+func (s *Server) noteProxyPoolBan(status int) {
+	if status != http.StatusForbidden && status != http.StatusTooManyRequests {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		s.proxySubMu.Lock()
+		defer s.proxySubMu.Unlock()
+		if s.proxySub == nil || !s.proxySub.autoRotate {
+			return
+		}
+		if _, err := s.rotateProxySubscriptionLocked(ctx, "http status"); err != nil {
+			log.Printf("[egress] 封禁自动切换失败: %v", err)
+		}
+	}()
+}
+
+func (s *Server) proxyPoolSubscriptionAutoRotate(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "请求体解析失败"})
+		return
+	}
+	src, err := s.egressSourceStore().GetSubscription(r.Context())
+	if err != nil || src == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "没有订阅源"})
+		return
+	}
+	if err := s.egressSourceStore().UpdateAutoRotate(r.Context(), src.ID, body.Enabled); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	s.proxySubMu.Lock()
+	if s.proxySub != nil {
+		s.proxySub.autoRotate = body.Enabled
+		if body.Enabled {
+			_ = s.applyMihomoSelection(r.Context(), s.proxySub, "auto", "")
+			s.proxySub.current = "ARTEX-AUTO"
+		}
+	}
+	s.proxySubMu.Unlock()
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "auto_rotate": body.Enabled})
 }
 
 func (s *Server) proxyPoolSubscriptionStatus(w http.ResponseWriter, r *http.Request) {

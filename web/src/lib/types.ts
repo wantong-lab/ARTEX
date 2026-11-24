@@ -1645,6 +1645,9 @@ export interface ProxySubscriptionNodes {
   nodes: ProxySubscriptionNode[];
   selected_node?: string;
   selection_mode?: string;
+  auto_rotate?: boolean;
+  ban_strikes?: number;
+  current_node?: string;
 }
 
 export interface ProxySubscriptionStatus {
@@ -1660,6 +1663,9 @@ export interface ProxySubscriptionStatus {
   control_plane_enabled?: boolean;
   selected_node?: string;
   selection_mode?: string;
+  auto_rotate?: boolean;
+  ban_strikes?: number;
+  current_node?: string;
   mihomo_binary?: string;
   mihomo_error?: string;
   running: boolean;

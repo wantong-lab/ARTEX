@@ -172,6 +172,7 @@ type Traffic struct {
 	upstream atomic.Pointer[url.URL]
 	// blocked makes every recorded request fail closed (no direct fallback).
 	blocked atomic.Bool
+	banHook atomic.Pointer[func(int)]
 }
 
 // Open initializes the traffic tree, blob store and SQLite index under dir.
@@ -316,6 +317,15 @@ func (t *Traffic) ProxyAddr() string {
 	return "http://" + t.addr
 }
 
+// SetBanHook installs a callback for 403/429 responses (proxy pool rotation).
+func (t *Traffic) SetBanHook(fn func(int)) {
+	if fn == nil {
+		t.banHook.Store(nil)
+		return
+	}
+	t.banHook.Store(&fn)
+}
+
 // SetUpstreamProxy points every captured request at a global egress proxy
 // (http/https/socks5, optional user:pass in the URL). An empty raw string clears
 // it, restoring direct dialing. The change is atomic and takes effect on the next
@@ -404,6 +414,11 @@ type sink struct {
 func (s *sink) Response(f *mproxy.Flow) {
 	if f.Request == nil || f.Response == nil {
 		return
+	}
+	if f.Response.StatusCode == 403 || f.Response.StatusCode == 429 {
+		if fn := s.t.banHook.Load(); fn != nil {
+			(*fn)(f.Response.StatusCode)
+		}
 	}
 	s.t.record(f)
 }

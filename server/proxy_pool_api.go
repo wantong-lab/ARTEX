@@ -136,6 +136,7 @@ func (s *Server) registerProxyPoolRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/proxy-pool/subscription/nodes", s.proxyPoolSubscriptionNodes)
 	mux.HandleFunc("POST /api/proxy-pool/subscription/select", s.proxyPoolSubscriptionSelect)
 	mux.HandleFunc("POST /api/proxy-pool/subscription/probe", s.proxyPoolSubscriptionProbe)
+	mux.HandleFunc("POST /api/proxy-pool/subscription/auto-rotate", s.proxyPoolSubscriptionAutoRotate)
 }
 
 func (s *Server) proxyPoolList(w http.ResponseWriter, r *http.Request) {

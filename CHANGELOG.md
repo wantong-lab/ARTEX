@@ -1080,3 +1080,4 @@
 - 出口代理池页面布局优化：Clash 订阅卡前置、手工/兜底两列、直接导入折叠为高级项、移除重复订阅 URL、列表全宽与空态优化。
 - 订阅节点选择：订阅卡展开节点列表，支持自动/手动选择、逐节点延迟探测；mihomo 增加 loopback 控制面；页面右上角“接管出口”开关直接切 egress_mode pool/direct。
 - 节点面板调整：从订阅卡移到代理池表格 clash-sub 行下方展开，操作列增加“节点/收起节点”。
+- 代理池作战能力补齐：403/429 封禁自动切节点、5 分钟耗尽保护、mihomo 30s 守护退避重启、load-balance consistent-hashing 自动组、Agent proxy_pool_control 工具、UI 自动换 IP 开关。

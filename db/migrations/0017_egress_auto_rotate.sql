@@ -1,0 +1,2 @@
+-- 0017: 封禁自动轮换开关。
+ALTER TABLE egress_sources ADD COLUMN IF NOT EXISTS auto_rotate BOOLEAN NOT NULL DEFAULT TRUE;

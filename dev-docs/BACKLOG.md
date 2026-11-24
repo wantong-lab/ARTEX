@@ -90,3 +90,4 @@
 - 2026-11-24：P4-35 Egress Control Plane 设计稿/ P0 计划完成；代码 P0 待开工。
 - 2026-11-24：P4-35 设计稿按“不过度设计”修订为 P0 精简版；待 P0-1 开工。
 - 2026-11-24：P4-35 P0 代码实现并完成本机启动/刷新/重启恢复/停止 E2E；go build/vet/单测通过。
+- [~] P4-36 代理池作战能力补齐：403/429 自动换节点、耗尽保护、mihomo 守护、load-balance、Agent proxy_pool_control、UI 开关已实现；gateway/分享链接解析待后续。

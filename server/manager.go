@@ -250,6 +250,7 @@ type Manager struct {
 	// capture is on it becomes the MITM's upstream; when capture is off it is
 	// injected into agent bash env / WebFetch directly. See ProxyAddr.
 	globalProxy string
+	banHook     func(int)
 	// P2 统一出口：direct/fixed/pool；pool 时使用代理池活动代理，
 	// fallback 为池兜底代理（proxy_global_url），空则直连。
 	egressMode        string
@@ -418,6 +419,9 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 		}
 		if tr != nil {
 			m.traffic = tr
+			if m.banHook != nil {
+				tr.SetBanHook(m.banHook)
+			}
 			go func() {
 				log.Printf("[traffic] recording proxy on %s (set HTTP_PROXY=%s + trust _ca CA)", proxyAddr, tr.ProxyAddr())
 				if err := tr.Start(); err != nil {
@@ -891,6 +895,15 @@ func (m *Manager) GlobalProxy() string {
 // SetGlobalProxy validates, persists and applies the global egress proxy
 // (http/https/socks5, optional user:pass; empty = direct). It updates the MITM's
 // upstream immediately; callers must rebuild agents (applyLLM) afterwards so the
+
+// SetEgressBanHook wires 403/429 target responses into proxy-pool rotation.
+func (m *Manager) SetEgressBanHook(fn func(int)) {
+	m.banHook = fn
+	if m.traffic != nil {
+		m.traffic.SetBanHook(fn)
+	}
+}
+
 // capture-off path (bash env / WebFetch) picks up the change too.
 func (m *Manager) SetGlobalProxy(raw string) error {
 	raw = strings.TrimSpace(raw)

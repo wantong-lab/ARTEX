@@ -1481,6 +1481,7 @@ export const api = {
   proxyPoolSubscriptionNodes: () => get<ProxySubscriptionNodes>(`/proxy-pool/subscription/nodes`),
   proxyPoolSubscriptionSelect: (body: { mode: "auto" | "manual"; name?: string }) => post<{ ok: boolean; mode: string; selected_node?: string }>(`/proxy-pool/subscription/select`, body),
   proxyPoolSubscriptionProbe: (name: string) => post<{ ok: boolean; delay: number }>(`/proxy-pool/subscription/probe`, { name }),
+  proxyPoolSubscriptionAutoRotate: (enabled: boolean) => post<{ ok: boolean; auto_rotate: boolean }>(`/proxy-pool/subscription/auto-rotate`, { enabled }),
 
   proxyPoolImportMihomo: (body: { yaml?: string; url?: string; name_prefix?: string }) =>
     post<MihomoImportResult>("/proxy-pool/import-mihomo", body),

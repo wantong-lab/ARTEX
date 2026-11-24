@@ -194,6 +194,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 		provByProfile:  map[int64]*provEntry{}, llmHealth: newLLMHealthRegistry(m.pg),
 		taskAgents: map[string]*taskAgentBundle{}, archiveWake: make(chan struct{}, 1),
 		metrics: newHTTPMetrics(), startedAt: time.Now()}
+	m.SetEgressBanHook(s.noteProxyPoolBan)
 	s.initSideQuestions()
 	// 熔断阈值/冷却是失败路径上的热参数，启动时把全局重试策略推给 Registry 一次；
 	// 之后每次保存策略再推一次（saveLLMRetryPolicy）。
@@ -263,6 +264,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 		wireAgentAugment(m.pg, s.skillDir, s.hostTools) // 可见 skills/MCP + 流量/编排 host 工具装配进 agent 工具集
 		domainReg := buildDomainReg(m.Assets())
 		wireTools(m.pg, domainReg) // 内置工具表：按 agent 过滤 + 覆盖描述/schema + 注入默认值
+		s.seedProxyPoolControlTool()
 		seedPrompts(m.pg)          // 内置 agent 默认提示词正文播种进 agent_prompts(仅空时)
 		s.seedOrchestrationTools() // P2 跨任务编排工具 seed 进 tools 表(可按 agent 绑定)
 		if err := s.seedFindingRetester(); err != nil {
@@ -304,6 +306,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 	s.proxyPool()                      // 代理池：加载全局/活动配置并注入出站 client
 	s.cleanupStaleMihomo()             // 出口控制面：清理上次受管进程/子目录
 	go s.recoverProxySubscription(ctx) // 出口控制面：按需恢复订阅源
+	go s.watchProxySubscription(ctx)   // 出口控制面：mihomo 进程守护
 	if s.m != nil && s.m.pg != nil {
 		s.maintenance = newMaintenanceScheduler(s)
 		go s.maintenance.Run(s.ctx) // P1-4 维护调度：默认保留清理/CVE 关闭、代理池巡检开启（空池跳过）
