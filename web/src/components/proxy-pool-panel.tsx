@@ -198,8 +198,14 @@ export function ProxyPoolPanel() {
         </Card>
       </div>
 
-      <Card className="flex flex-col gap-2 p-3">
-        <p className="font-medium text-sm">高级：直接导入 http/socks5 节点（YAML）</p>
+      <Card className="p-0">
+        <details className="group">
+          <summary className="flex cursor-pointer items-center justify-between gap-2 p-4 text-sm font-medium">
+            <span>高级：直接导入 http/socks5 节点（YAML）</span>
+            <span className="text-muted-foreground text-xs group-open:hidden">展开</span>
+            <span className="text-muted-foreground hidden text-xs group-open:inline">收起</span>
+          </summary>
+          <div className="flex flex-col gap-2 border-t p-4">
         <p className="text-muted-foreground text-xs">
           仅用于直接可用的 http/socks5 节点；Clash/vless 订阅请用上方 mihomo 订阅代理。
         </p>
@@ -252,9 +258,9 @@ export function ProxyPoolPanel() {
             ))}
           </div>
         ) : null}
+          </div>
+        </details>
       </Card>
-
-
 
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between p-2">

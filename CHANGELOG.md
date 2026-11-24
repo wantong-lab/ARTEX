@@ -1077,4 +1077,4 @@
 - 设计稿：出口代理控制面（Egress Control Plane），含 source/endpoint/policy/binding 数据模型、supervisor、fail-closed、订阅 last-good、P0/P1/P2 拆分。
 - 设计稿修订：出口控制面 P0 精简版，复用 proxy_pool，只新增 egress_sources；补 target/control resolver、fail-closed、稳定端口、订阅原子切换、配置清洗与迁移策略。
 - 出口控制面 P0 实现：egress_sources 持久化/启动恢复、target/control resolver + fail-closed、MITM blocked、PID/端口/孤儿清理、订阅刷新与配置清洗、状态 API/UI。
-- 出口代理池页面布局优化：Clash 订阅卡前置、手工/兜底两列、移除重复订阅 URL、列表全宽与空态优化。
+- 出口代理池页面布局优化：Clash 订阅卡前置、手工/兜底两列、直接导入折叠为高级项、移除重复订阅 URL、列表全宽与空态优化。
