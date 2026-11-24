@@ -1082,3 +1082,4 @@
 - 节点面板调整：从订阅卡移到代理池表格 clash-sub 行下方展开，操作列增加“节点/收起节点”。
 - 代理池作战能力补齐：403/429 封禁自动切节点、5 分钟耗尽保护、mihomo 30s 守护退避重启、load-balance consistent-hashing 自动组、Agent proxy_pool_control 工具、UI 自动换 IP 开关。
 - 设计稿：分享链接节点导入（vmess/ss/trojan/vless）与住宅网关 Gateway/SID 分别独立设计，待实施。
+- 分享链接节点导入已实现：vmess/ss/trojan/vless + base64，source_kind=links；住宅网关模式已实现：Gateway/SID 节点生成/轮换、source_kind=gateway。

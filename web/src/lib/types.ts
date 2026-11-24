@@ -1653,6 +1653,7 @@ export interface ProxySubscriptionNodes {
 export interface ProxySubscriptionStatus {
   mihomo_available: boolean;
   source_id?: number;
+  source_kind?: string;
   desired_state?: string;
   observed_state?: string;
   managed_proxy_id?: number;

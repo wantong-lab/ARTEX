@@ -400,3 +400,11 @@
 - 分享链接 vmess/ss/trojan/vless 导入独立设计；
 - 住宅网关 Gateway/SID 独立设计；
 - 两稿均标为待实施，不改变当前运行行为。
+
+## 轮次 65 · 2026-11-24（分享链接/住宅网关实施）
+- proxypool/uri.go 解析 vmess/ss/trojan/vless + base64；
+- egress_sources 支持 links/gateway kind 与 gateway_count；
+- 来源加载抽象 startProxySubscriptionLoaded，支持恢复/watchdog；
+- API nodes/import、gateway、gateway/rotate；
+- UI 分享链接卡 + 住宅网关卡；
+- E2E：links 2 节点、gateway count=3/rotate/重启恢复 3 节点。

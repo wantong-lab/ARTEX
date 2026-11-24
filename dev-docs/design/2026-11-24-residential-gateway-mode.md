@@ -146,3 +146,12 @@ egress_sources.kind 增加：
 - 不同服务商用户名模板差异大：先支持通用前缀/后缀规则，遇到不支持模板明确报错；
 - 频繁 rotate 可能触发服务商风控：增加最小间隔和手动确认；
 - 住宅出口延迟高：自动组仍按 load-balance，不做延迟最优保证。
+
+## 实施记录（v0.4.9）
+
+- gateway URL 解析、dynamic region/sid 检测、SID 节点生成；
+- 0019 迁移 egress_sources.gateway_count，重启按原节点数恢复；
+- POST /api/proxy-pool/gateway、POST /api/proxy-pool/gateway/rotate；
+- 代理池页新增住宅网关卡：URL/节点数/启动/轮换 SID；
+- E2E：count=3 启动、节点 3 条、rotate 成功、重启后仍为 3 条；
+- 密码仅加密落库，不写日志。

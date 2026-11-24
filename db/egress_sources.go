@@ -29,6 +29,7 @@ type EgressSource struct {
 	SelectedNode   string
 	SelectionMode  string
 	AutoRotate     bool
+	GatewayCount   int
 	ETag           string
 	LastModified   string
 	LastFetchAt    time.Time
@@ -100,7 +101,7 @@ func hashText(v string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-const egressSourceCols = "id,name,kind,desired_state,observed_state,config_enc,config_hash,last_good_config_enc,last_good_hash,managed_proxy_id,managed_port,etag,last_modified,last_fetch_at,last_error,revision,created_at,updated_at,selected_node,selection_mode,auto_rotate"
+const egressSourceCols = "id,name,kind,desired_state,observed_state,config_enc,config_hash,last_good_config_enc,last_good_hash,managed_proxy_id,managed_port,etag,last_modified,last_fetch_at,last_error,revision,created_at,updated_at,selected_node,selection_mode,auto_rotate,gateway_count"
 
 func (s *EgressSourceStore) scan(row interface{ Scan(...any) error }) (*EgressSource, error) {
 	var e EgressSource
@@ -110,7 +111,7 @@ func (s *EgressSourceStore) scan(row interface{ Scan(...any) error }) (*EgressSo
 	if err := row.Scan(&e.ID, &e.Name, &e.Kind, &e.DesiredState, &e.ObservedState,
 		&cfgEnc, &e.ConfigHash, &goodEnc, &e.LastGoodHash,
 		&managed, &e.ManagedPort, &e.ETag, &e.LastModified,
-		&lastFetch, &e.LastError, &e.Revision, &e.CreatedAt, &e.UpdatedAt, &e.SelectedNode, &e.SelectionMode, &e.AutoRotate); err != nil {
+		&lastFetch, &e.LastError, &e.Revision, &e.CreatedAt, &e.UpdatedAt, &e.SelectedNode, &e.SelectionMode, &e.AutoRotate, &e.GatewayCount); err != nil {
 		return nil, err
 	}
 	var err error
@@ -130,7 +131,7 @@ func (s *EgressSourceStore) scan(row interface{ Scan(...any) error }) (*EgressSo
 }
 
 func (s *EgressSourceStore) GetSubscription(ctx context.Context) (*EgressSource, error) {
-	row := s.d.QueryRowContext(ctx, "SELECT "+egressSourceCols+" FROM egress_sources WHERE kind='subscription' ORDER BY id LIMIT 1")
+	row := s.d.QueryRowContext(ctx, "SELECT "+egressSourceCols+" FROM egress_sources WHERE desired_state <> 'disabled' ORDER BY updated_at DESC, id DESC LIMIT 1")
 	e, err := s.scan(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -139,14 +140,23 @@ func (s *EgressSourceStore) GetSubscription(ctx context.Context) (*EgressSource,
 }
 
 func (s *EgressSourceStore) UpsertSubscription(ctx context.Context, name, rawURL string) (*EgressSource, error) {
-	enc, err := s.seal(rawURL)
+	return s.UpsertSource(ctx, name, "subscription", rawURL)
+}
+
+func (s *EgressSourceStore) UpsertSource(ctx context.Context, name, kind, config string) (*EgressSource, error) {
+	enc, err := s.seal(config)
 	if err != nil {
 		return nil, err
 	}
-	h := hashText(rawURL)
-	if _, err := s.d.ExecContext(ctx, "INSERT INTO egress_sources(name,kind,desired_state,observed_state,config_enc,config_hash) VALUES($1,'subscription','active','starting',$2,$3) ON CONFLICT (kind) DO UPDATE SET name=EXCLUDED.name, desired_state='active', observed_state='starting', config_enc=EXCLUDED.config_enc, config_hash=EXCLUDED.config_hash, last_error='', revision=egress_sources.revision+1, updated_at=now()", name, enc, h); err != nil {
+	h := hashText(config)
+	if _, err := s.d.ExecContext(ctx, "INSERT INTO egress_sources(name,kind,desired_state,observed_state,config_enc,config_hash) VALUES($1,$2,'active','starting',$3,$4) ON CONFLICT (kind) DO UPDATE SET name=EXCLUDED.name, desired_state='active', observed_state='starting', config_enc=EXCLUDED.config_enc, config_hash=EXCLUDED.config_hash, last_error='', revision=egress_sources.revision+1, updated_at=now()", name, kind, enc, h); err != nil {
 		return nil, err
 	}
+	src, err := s.GetSubscription(ctx)
+	if err != nil || src == nil {
+		return src, err
+	}
+	_, _ = s.d.ExecContext(ctx, "UPDATE egress_sources SET desired_state='disabled', observed_state='disabled', revision=revision+1, updated_at=now() WHERE id<>$1 AND desired_state<>'disabled'", src.ID)
 	return s.GetSubscription(ctx)
 }
 
@@ -186,6 +196,11 @@ func (s *EgressSourceStore) UpdateAutoRotate(ctx context.Context, id int64, enab
 
 func (s *EgressSourceStore) UpdateLastError(ctx context.Context, id int64, msg string) error {
 	_, err := s.d.ExecContext(ctx, "UPDATE egress_sources SET last_error=$2,revision=revision+1,updated_at=now() WHERE id=$1", id, msg)
+	return err
+}
+
+func (s *EgressSourceStore) UpdateGatewayCount(ctx context.Context, id int64, count int) error {
+	_, err := s.d.ExecContext(ctx, "UPDATE egress_sources SET gateway_count=$2,revision=revision+1,updated_at=now() WHERE id=$1", id, count)
 	return err
 }
 

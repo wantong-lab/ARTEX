@@ -156,3 +156,12 @@ startProxySubscription 改为按 source kind 选择 loader；节点列表、选�
 - 分享链接字段不完整导致 mihomo 拒绝配置：导入时按协议做最小字段校验；
 - 机场信息节点混入：沿用名称过滤，但不静默丢弃真实节点；
 - 节点量过大：限制 500 条/8MB。
+
+## 实施记录（v0.4.9）
+
+- proxypool/uri.go 实现 vmess/ss/trojan/vless 分享链接与 base64 整段解析；
+- 0018 迁移扩展 egress_sources.kind 支持 links/gateway；
+- 新增 UpsertSource/GetSubscription 泛化、startProxySubscriptionLoaded 来源加载抽象；
+- POST /api/proxy-pool/nodes/import；
+- 代理池页新增分享链接输入卡；
+- E2E：导入 vless+ss 两条链接，mihomo 启动、source_kind=links、节点数 2。

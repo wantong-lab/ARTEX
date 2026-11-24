@@ -35,6 +35,7 @@ type proxySubscriptionState struct {
 	dir        string
 	logPath    string
 	source     string
+	sourceKind string
 	sourceID   int64
 	ctlPort    int
 	ctlSecret  string
@@ -445,6 +446,12 @@ func (s *Server) startProxySubscription(ctx context.Context, rawURL string) (map
 	if err := validateSubscriptionURL(rawURL); err != nil {
 		return nil, err
 	}
+	return s.startProxySubscriptionLoaded(ctx, "clash-sub", "subscription", rawURL, func(ctx context.Context, _ *db.EgressSource) (string, error) {
+		return s.fetchClashSubscription(ctx, s.controlHTTPClient(), rawURL)
+	})
+}
+
+func (s *Server) startProxySubscriptionLoaded(ctx context.Context, name, kind, config string, load func(context.Context, *db.EgressSource) (string, error)) (map[string]any, error) {
 	s.proxySubMu.Lock()
 	defer s.proxySubMu.Unlock()
 	rt := s.proxyPool()
@@ -456,20 +463,19 @@ func (s *Server) startProxySubscription(ctx context.Context, rawURL string) (map
 		return nil, err
 	}
 	srcStore := s.egressSourceStore()
-	src, err := srcStore.UpsertSubscription(ctx, "clash-sub", rawURL)
+	src, err := srcStore.UpsertSource(ctx, name, kind, config)
 	if err != nil {
-		return nil, fmt.Errorf("保存订阅源失败: %w", err)
+		return nil, fmt.Errorf("保存来源失败: %w", err)
 	}
 	fail := func(e error) (map[string]any, error) {
 		_ = srcStore.UpdateObserved(ctx, src.ID, "failed", fetchErrText(e), 0, 0)
 		return nil, e
 	}
-	client := s.controlHTTPClient()
-	rawCfg, fetchErr := s.fetchClashSubscription(ctx, client, rawURL)
+	rawCfg, fetchErr := load(ctx, src)
 	degraded := false
 	if fetchErr != nil {
 		if strings.TrimSpace(src.LastGoodConfig) == "" {
-			return fail(fmt.Errorf("订阅拉取失败: %w", fetchErr))
+			return fail(fmt.Errorf("来源加载失败: %w", fetchErr))
 		}
 		rawCfg = src.LastGoodConfig
 		degraded = true
@@ -554,7 +560,7 @@ func (s *Server) startProxySubscription(ctx context.Context, rawURL string) (map
 	go func(c *exec.Cmd) { _ = c.Wait() }(cmd)
 	s.proxySub = &proxySubscriptionState{
 		cmd: cmd, port: port, entryID: entryID, bin: bin, dir: dir,
-		logPath: logPath, source: rawURL, sourceID: src.ID, startedAt: time.Now(),
+		logPath: logPath, source: config, sourceID: src.ID, sourceKind: kind, startedAt: time.Now(),
 		ctlPort: extPort, ctlSecret: secret, nodes: parseMihomoNodes(rawCfg),
 		current: src.SelectedNode, autoRotate: src.AutoRotate,
 	}
@@ -642,6 +648,7 @@ func (s *Server) proxySubscriptionStatusLocked() map[string]any {
 		out["last_error"] = src.LastError
 		out["selected_node"] = src.SelectedNode
 		out["selection_mode"] = src.SelectionMode
+		out["source_kind"] = src.Kind
 		out["auto_rotate"] = src.AutoRotate
 		if st := s.proxySub; st != nil {
 			out["ban_strikes"] = st.banStrikes
@@ -682,7 +689,7 @@ func (s *Server) recoverProxySubscription(ctx context.Context) {
 	if running {
 		return
 	}
-	if _, err := s.startProxySubscription(ctx, src.ConfigURL); err != nil {
+	if _, err := s.startProxySubscriptionSource(ctx, src); err != nil {
 		_ = s.egressSourceStore().UpdateObserved(ctx, src.ID, "failed", fetchErrText(err), 0, 0)
 	}
 }

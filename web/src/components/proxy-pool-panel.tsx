@@ -35,6 +35,10 @@ export function ProxyPoolPanel() {
   const [selectionMode, setSelectionMode] = React.useState("auto");
   const [nodeBusy, setNodeBusy] = React.useState("");
   const [delays, setDelays] = React.useState<Record<string, number>>({});
+  const [shareLinks, setShareLinks] = React.useState("");
+  const [gatewayURL, setGatewayURL] = React.useState("");
+  const [gatewayCount, setGatewayCount] = React.useState("5");
+  const [sourceBusy, setSourceBusy] = React.useState(false);
   const [mihomoPrefix, setMihomoPrefix] = React.useState("mh-");
   const [importing, setImporting] = React.useState(false);
   const [importResult, setImportResult] = React.useState<MihomoImportResult | null>(null);
@@ -156,6 +160,43 @@ export function ProxyPoolPanel() {
       .finally(() => setNodeBusy(""));
   };
 
+  const importShareLinks = () => {
+    setSourceBusy(true);
+    setError("");
+    api.proxyPoolNodesImport(shareLinks.trim())
+      .then(async () => {
+        setNotice("分享链接节点已导入并启动");
+        setShareLinks("");
+        await refresh();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setSourceBusy(false));
+  };
+
+  const startGateway = () => {
+    setSourceBusy(true);
+    setError("");
+    api.proxyPoolGatewayStart(gatewayURL.trim(), Number(gatewayCount) || 5)
+      .then(async () => {
+        setNotice("住宅网关已启动");
+        await refresh();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setSourceBusy(false));
+  };
+
+  const rotateGateway = () => {
+    setSourceBusy(true);
+    setError("");
+    api.proxyPoolGatewayRotate()
+      .then(async () => {
+        setNotice("已轮换住宅网关 SID");
+        await refresh();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setSourceBusy(false));
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {error ? <Card className="border-destructive/40 bg-destructive/5 p-3 text-destructive text-sm">{error}</Card> : null}
@@ -204,6 +245,49 @@ export function ProxyPoolPanel() {
         </div>
         <p className="text-muted-foreground text-xs">
           启动后自动登记 127.0.0.1 本地代理并设为活动代理；到「系统配置 → 出口代理」把出口模式切到「代理池接管」。
+        </p>
+      </Card>
+
+      <Card className="flex flex-col gap-2 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-medium text-sm">分享链接节点（vmess/ss/trojan/vless）</p>
+          <span className="text-muted-foreground text-xs">
+            当前来源：{subStatus?.source_kind || "无"}；导入会替换当前 active 来源
+          </span>
+        </div>
+        <textarea
+          className="min-h-20 rounded-md border bg-transparent p-2 font-mono text-xs"
+          placeholder="每行一条 vmess:// / ss:// / trojan:// / vless://，或整段 base64 订阅文本"
+          value={shareLinks}
+          onChange={(e) => setShareLinks(e.target.value)}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" disabled={sourceBusy || !shareLinks.trim()} onClick={importShareLinks}>
+            {sourceBusy ? "导入中…" : "导入并启动"}
+          </Button>
+          <span className="text-muted-foreground text-xs">解析后交给 mihomo，节点可在代理池行内展开选择/测延迟。</span>
+        </div>
+      </Card>
+
+      <Card className="flex flex-col gap-2 p-3">
+        <p className="font-medium text-sm">住宅网关（socks5/http/https）</p>
+        <div className="flex flex-wrap gap-2">
+          <Input
+            className="min-w-64 flex-1"
+            placeholder="socks5://user-region-XX-sid-rand@host:port"
+            value={gatewayURL}
+            onChange={(e) => setGatewayURL(e.target.value)}
+          />
+          <Input className="w-24" placeholder="节点数" value={gatewayCount} onChange={(e) => setGatewayCount(e.target.value)} />
+          <Button size="sm" disabled={sourceBusy || !gatewayURL.trim()} onClick={startGateway}>
+            {sourceBusy ? "处理中…" : "启动网关"}
+          </Button>
+          <Button size="sm" variant="outline" disabled={sourceBusy || subStatus?.source_kind !== "gateway"} onClick={rotateGateway}>
+            轮换 SID
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          网关用户名中的 region/sid 段会生成多条住宅出口；密码加密落库，不写日志。
         </p>
       </Card>
 

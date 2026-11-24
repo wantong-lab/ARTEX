@@ -46,5 +46,6 @@
 - Clash 订阅代理 mihomo（v0.4.9）：订阅自动 meta 格式 → 本地 mihomo mixed 口 → 代理池本地条目；用户 vless/hysteria2 订阅真机 E2E 通过。
 - Egress Control Plane P0（v0.4.9）：已实现 egress_sources 持久化/恢复、target/control resolver + fail-closed、MITM blocked、PID/端口/孤儿清理、订阅刷新/清洗、状态 API/UI；自动刷新/Windows/last-good 故障注入待补。
 - 订阅节点选择（v0.4.9）：节点展开/手动/自动/延迟探测；mihomo loopback 控制面；代理池页“接管出口”开关切换 egress_mode。
-- 代理池作战能力（v0.4.9）：403/429 封禁自动换节点、5 分钟耗尽保护、mihomo 30s 守护、load-balance consistent-hashing、Agent proxy_pool_control、UI 自动换 IP 开关；gateway/分享链接解析待后续。
+- 代理池作战能力（v0.4.9）：403/429 封禁自动换节点、5 分钟耗尽保护、mihomo 30s 守护、load-balance consistent-hashing、Agent proxy_pool_control、UI 自动换 IP 开关。
+- 代理来源扩展（v0.4.9）：分享链接 vmess/ss/trojan/vless + base64（kind=links）；住宅网关 Gateway/SID 生成、轮换、计数恢复（kind=gateway）。
 - C2 socks5 仍未内置；二开为外部 C2 MCP（Supershell manage_socks5）集成，主线如需内置走反向 SOCKS-over-C2 或外部 MCP，待定。
